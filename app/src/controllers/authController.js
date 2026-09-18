@@ -29,6 +29,16 @@ async function login(req, res, next) {
     }
     return res.status(200).json({ ok: true, usuario: { id: usuario.id, nombre: usuario.nombre } });
   } catch (err) {
+    // Un navegador que falla el login debe ver el formulario de nuevo con el
+    // error, no un JSON crudo — los clientes de API (tests, integraciones)
+    // siguen recibiendo la respuesta JSON de siempre vía next(err).
+    if (err instanceof AppError && req.accepts('html') && !req.is('json')) {
+      return res.status(err.statusCode).render('login', {
+        titulo: 'Login',
+        csrfToken: res.locals.csrfToken,
+        error: err.message,
+      });
+    }
     return next(err);
   }
 }
