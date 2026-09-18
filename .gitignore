@@ -2,3 +2,7 @@
 .env.*.local
 app/node_modules/
 app/coverage/
+
+# ai-dev-base tooling
+mcp-tools/node_modules/
+.claude/scheduled_tasks.lock
