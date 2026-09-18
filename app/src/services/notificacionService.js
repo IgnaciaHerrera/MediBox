@@ -19,4 +19,12 @@ async function marcarLeida(notificacionId, usuarioId) {
   return prisma.notificacion.update({ where: { id: notificacionId }, data: { leida: true } });
 }
 
-module.exports = { crearNotificacion, listarPorUsuario, marcarLeida };
+async function contarNoLeidas(usuarioId) {
+  return prisma.notificacion.count({ where: { usuarioId, leida: false } });
+}
+
+async function marcarTodasLeidas(usuarioId) {
+  await prisma.notificacion.updateMany({ where: { usuarioId, leida: false }, data: { leida: true } });
+}
+
+module.exports = { crearNotificacion, listarPorUsuario, marcarLeida, contarNoLeidas, marcarTodasLeidas };

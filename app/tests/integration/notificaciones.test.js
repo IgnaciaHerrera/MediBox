@@ -37,4 +37,18 @@ describe('Notificaciones', () => {
     expect(readRes.status).toBe(200);
     expect(readRes.body.leida).toBe(true);
   });
+
+  it('marks all of a user\'s notifications as read at once', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'notif-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+
+    await notificacionService.crearNotificacion({ usuarioId: usuario.id, mensaje: 'Segunda notificación de prueba' });
+    await notificacionService.crearNotificacion({ usuarioId: usuario.id, mensaje: 'Tercera notificación de prueba' });
+
+    const res = await agent.patch('/api/notificaciones/marcar-todas');
+    expect(res.status).toBe(204);
+
+    const restantes = await prisma.notificacion.count({ where: { usuarioId: usuario.id, leida: false } });
+    expect(restantes).toBe(0);
+  });
 });

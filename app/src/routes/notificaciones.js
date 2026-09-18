@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use(requireAuth, attachUsuario, requirePermission('notificaciones.read'));
 router.get('/', controller.index);
+router.patch('/marcar-todas', controller.marcarTodasLeidas);
 router.patch('/:id/leida', controller.marcarLeida);
 
 module.exports = router;

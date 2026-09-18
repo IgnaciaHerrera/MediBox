@@ -18,4 +18,13 @@ async function marcarLeida(req, res, next) {
   }
 }
 
-module.exports = { index, marcarLeida };
+async function marcarTodasLeidas(req, res, next) {
+  try {
+    await notificacionService.marcarTodasLeidas(req.usuario.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { index, marcarLeida, marcarTodasLeidas };
