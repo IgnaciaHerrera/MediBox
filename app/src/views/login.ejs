@@ -1,0 +1,7 @@
+<h1>Iniciar sesión — MediBox</h1>
+<form method="POST" action="/auth/login">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  <label>Email <input type="email" name="email" required /></label>
+  <label>Contraseña <input type="password" name="password" required /></label>
+  <button type="submit">Entrar</button>
+</form>

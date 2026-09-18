@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  rolId        Int      @map("rol_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  rol            Rol            @relation(fields: [rolId], references: [id])
+  citasEditadas  Cita[]         @relation("CitaUpdatedBy")
+  auditLogs      AuditLog[]
+  notificaciones Notificacion[]
+
+  @@map("usuarios")
+}
+
+model Rol {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @unique
+  descripcion String?
+  usuarios    Usuario[]
+  permisos    RolPermiso[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id    Int          @id @default(autoincrement())
+  clave String       @unique
+  roles RolPermiso[]
+
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     Int @map("rol_id")
+  permisoId Int @map("permiso_id")
+
+  rol     Rol     @relation(fields: [rolId], references: [id])
+  permiso Permiso @relation(fields: [permisoId], references: [id])
+
+  @@id([rolId, permisoId])
+  @@map("rol_permisos")
+}
+
+model Especialidad {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique
+  medicos Medico[]
+
+  @@map("especialidades")
+}
+
+model Medico {
+  id             Int    @id @default(autoincrement())
+  nombre         String
+  especialidadId Int    @map("especialidad_id")
+
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+  citas        Cita[]
+
+  @@map("medicos")
+}
+
+model Pasillo {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique
+  boxes  Box[]
+
+  @@map("pasillos")
+}
+
+model Box {
+  id        Int    @id @default(autoincrement())
+  nombre    String
+  pasilloId Int    @map("pasillo_id")
+
+  pasillo      Pasillo       @relation(fields: [pasilloId], references: [id])
+  instrumentos Instrumento[]
+  citas        Cita[]
+
+  @@unique([pasilloId, nombre])
+  @@map("boxes")
+}
+
+model Instrumento {
+  id     Int    @id @default(autoincrement())
+  nombre String
+  boxId  Int    @map("box_id")
+
+  box Box @relation(fields: [boxId], references: [id])
+
+  @@map("instrumentos")
+}
+
+model Paciente {
+  id                    Int      @id @default(autoincrement())
+  nombre                String
+  rutCifrado            Bytes    @map("rut_cifrado")
+  fechaNacimiento       DateTime @map("fecha_nacimiento") @db.Date
+  contacto              String
+  motivoConsultaCifrado Bytes    @map("motivo_consulta_cifrado")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  citas Cita[]
+
+  @@map("pacientes")
+}
+
+model Cita {
+  id          Int      @id @default(autoincrement())
+  pacienteId  Int      @map("paciente_id")
+  medicoId    Int      @map("medico_id")
+  boxId       Int      @map("box_id")
+  fecha       DateTime @db.Date
+  horaInicio  String   @map("hora_inicio")
+  horaFin     String   @map("hora_fin")
+  estado      String   @default("agendada")
+  anulada     Boolean  @default(false)
+  updatedById Int?     @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  paciente  Paciente @relation(fields: [pacienteId], references: [id])
+  medico    Medico   @relation(fields: [medicoId], references: [id])
+  box       Box      @relation(fields: [boxId], references: [id])
+  updatedBy Usuario? @relation("CitaUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([boxId, fecha])
+  @@index([medicoId, fecha])
+  @@map("citas")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int      @map("usuario_id")
+  accion    String
+  entidad   String
+  entidadId Int      @map("entidad_id")
+  timestamp DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+  @@map("audit_log")
+}
+
+model Notificacion {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int      @map("usuario_id")
+  mensaje   String
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@map("notificaciones")
+}
