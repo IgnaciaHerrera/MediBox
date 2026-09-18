@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'pacientes' }) %>
+
+  <main class="page-main">
+    <div class="contenedor-angosto">
+      <a class="volver" href="/pacientes">← Volver a pacientes</a>
+
+      <div class="page-head">
+        <h1><%= esEdicion ? 'Editar paciente' : 'Registrar paciente' %></h1>
+      </div>
+
+      <% if (error) { %>
+        <p class="field-error"><%= error %></p>
+      <% } %>
+
+    <form class="form-card" method="POST" action="<%= accion %>">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <div class="field">
+        <label for="nombre">Nombre completo</label>
+        <input type="text" id="nombre" name="nombre" value="<%= valores.nombre || '' %>" required />
+      </div>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="rut">RUT</label>
+          <input type="text" id="rut" name="rut" value="<%= valores.rut || '' %>" placeholder="12345678-9" autocomplete="off" required />
+          <span id="rut-ayuda" class="ayuda-error" hidden>El dígito verificador no coincide con ese RUT.</span>
+        </div>
+
+        <div class="field">
+          <label for="fechaNacimiento">Fecha de nacimiento</label>
+          <input type="date" id="fechaNacimiento" name="fechaNacimiento" value="<%= valores.fechaNacimiento || '' %>" required />
+        </div>
+
+        <div class="field field-full">
+          <label for="contacto">Contacto</label>
+          <input type="text" id="contacto" name="contacto" value="<%= valores.contacto || '' %>" placeholder="+56 9 1234 5678" required />
+        </div>
+
+        <div class="field field-full">
+          <label for="motivoConsulta">Motivo de consulta</label>
+          <input type="text" id="motivoConsulta" name="motivoConsulta" value="<%= valores.motivoConsulta || '' %>" required />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary"><%= esEdicion ? 'Guardar cambios' : 'Registrar paciente' %></button>
+    </form>
+    </div>
+  </main>
+  <script src="/js/pacientes-formulario.js"></script>
+</body>
+</html>

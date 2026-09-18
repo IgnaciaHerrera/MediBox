@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const CATEGORIA_ACCION = {
+    CREATE: 'crear', IMPORT: 'crear',
+    UPDATE: 'editar', UPDATE_ESTADO: 'editar',
+    ANULAR: 'eliminar', DELETE: 'eliminar',
+    READ: 'leer', LIST: 'leer',
+    EXPORT: 'exportar',
+  };
+  const ICONOS_ACCION = {
+    crear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    editar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-2.8l-1.2-1.2a2 2 0 0 0-2.8 0L4 15v5Z"/></svg>',
+    eliminar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>',
+    leer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5 12 5s9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    exportar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M12 3v11m0 0-3.5-3.5M12 14l3.5-3.5"/></svg>',
+  };
+  function categoriaDe(accion) { return CATEGORIA_ACCION[accion] || 'leer'; }
+
+  function urlEntidad(entidad, id) {
+    if (!id) return null;
+    if (entidad === 'Cita') return '/agenda/' + id;
+    if (entidad === 'Paciente') return '/pacientes/' + id;
+    return null;
+  }
+
+  function urlFiltros(cambios) {
+    const base = { ...filtros, ...cambios };
+    const params = Object.entries(base).filter(([, v]) => v).map(([k, v]) => k + '=' + encodeURIComponent(v));
+    return '/auditoria' + (params.length ? '?' + params.join('&') : '');
+  }
+
+  const usuarioSeleccionado = filtros.usuarioId ? usuarios.find((u) => String(u.id) === String(filtros.usuarioId)) : null;
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'auditoria' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Auditoría</h1>
+    </div>
+
+    <form class="filtros" method="GET" action="/auditoria">
+      <div class="field">
+        <label for="desde">Desde</label>
+        <input type="date" id="desde" name="desde" value="<%= filtros.desde %>" />
+      </div>
+      <div class="field">
+        <label for="hasta">Hasta</label>
+        <input type="date" id="hasta" name="hasta" value="<%= filtros.hasta %>" />
+      </div>
+      <div class="field">
+        <label for="accion">Acción</label>
+        <select id="accion" name="accion">
+          <option value="">Todas</option>
+          <% acciones.forEach(function(a) { %>
+            <option value="<%= a %>" <%= filtros.accion === a ? 'selected' : '' %>><%= a %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="entidad">Entidad</label>
+        <select id="entidad" name="entidad">
+          <option value="">Todas</option>
+          <% entidades.forEach(function(e) { %>
+            <option value="<%= e %>" <%= filtros.entidad === e ? 'selected' : '' %>><%= e %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="usuarioId">Usuario</label>
+        <select id="usuarioId" name="usuarioId">
+          <option value="">Todos</option>
+          <% usuarios.forEach(function(u) { %>
+            <option value="<%= u.id %>" <%= String(filtros.usuarioId) === String(u.id) ? 'selected' : '' %>><%= u.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+    </form>
+
+    <% if (filtros.accion || filtros.entidad || usuarioSeleccionado || filtros.desde || filtros.hasta) { %>
+      <div class="chip-filtros" style="margin-bottom: 1.5rem;">
+        <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= filtros.desde %> <span class="x">×</span></a><% } %>
+        <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= filtros.hasta %> <span class="x">×</span></a><% } %>
+        <% if (filtros.accion) { %><a class="chip-filtro" href="<%= urlFiltros({ accion: '' }) %>"><%= filtros.accion %> <span class="x">×</span></a><% } %>
+        <% if (filtros.entidad) { %><a class="chip-filtro" href="<%= urlFiltros({ entidad: '' }) %>"><%= filtros.entidad %> <span class="x">×</span></a><% } %>
+        <% if (usuarioSeleccionado) { %><a class="chip-filtro" href="<%= urlFiltros({ usuarioId: '' }) %>"><%= usuarioSeleccionado.nombre %> <span class="x">×</span></a><% } %>
+      </div>
+    <% } %>
+
+    <% if (registros.length === 0) { %>
+      <div class="empty-state"><p>No hay registros de auditoría para este filtro.</p></div>
+    <% } else { %>
+      <div class="panel-card panel-card--tabla">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Fecha y hora</th>
+              <th>Usuario</th>
+              <th>Acción</th>
+              <th>Entidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% registros.forEach(function(r) { %>
+              <% const categoria = categoriaDe(r.accion); %>
+              <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
+              <tr class="fila-auditoria" tabindex="0">
+                <td class="tiempo"><%= new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19) %></td>
+                <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
+                <td>
+                  <span class="badge-accion badge-accion--<%= categoria %>">
+                    <%- ICONOS_ACCION[categoria] %>
+                    <%= r.accion %>
+                  </span>
+                </td>
+                <td><%= r.entidad %> #<%= r.entidadId %></td>
+              </tr>
+              <tr class="fila-detalle" hidden>
+                <td colspan="4">
+                  <div class="detalle-auditoria">
+                    <span><strong>Usuario:</strong> <%= r.usuario ? r.usuario.nombre + ' (' + r.usuario.email + ')' : 'Usuario eliminado' %></span>
+                    <span><strong>Marca de tiempo completa:</strong> <%= new Date(r.timestamp).toISOString() %></span>
+                    <% if (enlace) { %><a class="btn-link" href="<%= enlace %>">Ver <%= r.entidad.toLowerCase() %> →</a><% } %>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.5rem;">
+        <span style="color: var(--ink-soft); font-size: 0.85rem;"><%= total %> registro<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
+        <div style="display:flex; gap:1rem;">
+          <% if (page > 1) { %><a href="<%= urlFiltros({ page: page - 1 }) %>" class="btn-link">Anterior</a><% } %>
+          <% if (page < totalPaginas) { %><a href="<%= urlFiltros({ page: page + 1 }) %>" class="btn-link">Siguiente</a><% } %>
+        </div>
+      </div>
+    <% } %>
+  </main>
+  <script src="/js/auditoria.js"></script>
+</body>
+</html>

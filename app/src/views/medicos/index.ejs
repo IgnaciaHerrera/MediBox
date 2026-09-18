@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  function iniciales(nombre) {
+    const partes = nombre.trim().split(/\s+/).filter((p) => !/^(Dr\.?|Dra\.?)$/i.test(p));
+    const primera = partes[0] ? partes[0][0] : '';
+    const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+    return (primera + ultima).toUpperCase();
+  }
+  const ICONOS = {
+    lapiz: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L5 14H2v-3l8.5-8.5z"/></svg>',
+    basura: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10M6.3 4.5V3a1 1 0 011-1h1.4a1 1 0 011 1v1.5M12.3 4.5l-.6 8.2a1 1 0 01-1 .9H5.3a1 1 0 01-1-.9l-.6-8.2"/></svg>',
+    check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.3l3.3 3.2L13 4.5"/></svg>',
+    equis: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+    mas: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+  };
+  function icono(nombre) { return ICONOS[nombre] || ''; }
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'medicos' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Médicos</h1>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <form class="filtros" method="GET" action="/medicos">
+      <div class="field">
+        <label for="filtroEspecialidad">Especialidad</label>
+        <select id="filtroEspecialidad" name="especialidadId">
+          <option value="">Todas</option>
+          <% especialidades.forEach(function(e) { %>
+            <option value="<%= e.id %>" <%= especialidadIdSeleccionada === e.id ? 'selected' : '' %>><%= e.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+    </form>
+
+    <% if (medicos.length === 0 && !esAdmin) { %>
+      <div class="empty-state"><p>No hay médicos <%= especialidadIdSeleccionada ? 'con esa especialidad.' : 'registrados.' %></p></div>
+    <% } else { %>
+      <div class="medicos-grid">
+        <% medicos.forEach(function(m) { %>
+          <% const citasHoy = citasHoyPorMedico.get(m.id) || 0; %>
+          <div class="medico-card" data-toggle-editar>
+            <div class="card-encabezado">
+              <span class="avatar avatar--grande"><%= iniciales(m.nombre) %></span>
+              <% if (esAdmin) { %>
+                <div class="card-iconos">
+                  <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar médico" aria-label="Editar médico"><%- icono('lapiz') %></button>
+                  <form method="POST" action="/medicos/<%= m.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar al médico «<%= m.nombre %>»? Esta acción no se puede deshacer.">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar médico" aria-label="Eliminar médico"><%- icono('basura') %></button>
+                  </form>
+                  <button type="submit" form="form-editar-medico-<%= m.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
+                  <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
+                </div>
+              <% } %>
+            </div>
+
+            <span class="medico-nombre" data-toggle-vista><%= m.nombre %></span>
+            <% if (esAdmin) { %>
+              <input
+                type="text"
+                form="form-editar-medico-<%= m.id %>"
+                name="nombre"
+                value="<%= m.nombre %>"
+                required
+                maxlength="150"
+                class="card-input-nombre"
+                data-toggle-formulario
+                hidden
+                aria-label="Nombre del médico"
+              />
+            <% } %>
+
+            <span class="especialidad-chip especialidad-chip--<%= m.especialidadId % 4 %>" data-toggle-vista><%= m.especialidad.nombre %></span>
+            <% const infoBox = boxActualPorMedico.get(m.id); %>
+            <% if (infoBox) { %>
+              <span class="medico-en-box" data-toggle-vista>En <%= infoBox.box %> · <%= infoBox.pasillo %> ahora</span>
+            <% } %>
+            <span class="medico-meta" data-toggle-vista><%= citasHoy %> cita<%= citasHoy === 1 ? '' : 's' %> hoy</span>
+            <% if (m.usuario) { %>
+              <span class="medico-meta" data-toggle-vista><%= m.usuario.email %></span>
+            <% } else { %>
+              <span class="medico-meta medico-meta--discreto" data-toggle-vista>Sin cuenta de acceso</span>
+            <% } %>
+
+            <% if (esAdmin) { %>
+              <form method="POST" action="/medicos/<%= m.id %>/editar" id="form-editar-medico-<%= m.id %>" class="card-form" data-toggle-formulario hidden>
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <select name="especialidadId" class="card-select" required aria-label="Especialidad del médico">
+                  <% especialidades.forEach(function(e) { %>
+                    <option value="<%= e.id %>" <%= e.id === m.especialidadId ? 'selected' : '' %>><%= e.nombre %></option>
+                  <% }) %>
+                </select>
+                <p class="card-form-ayuda">
+                  La cuenta de acceso se vincula desde <a href="/usuarios">Usuarios</a>.
+                </p>
+              </form>
+            <% } %>
+          </div>
+        <% }) %>
+
+        <% if (esAdmin) { %>
+          <div class="medico-card medico-card--nuevo" data-toggle-editar>
+            <div class="card-encabezado">
+              <div class="card-titulo">
+                <button type="button" class="card-agregar" data-toggle-vista data-toggle-activar>
+                  <span class="card-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
+                  <span>Agregar médico</span>
+                </button>
+                <input
+                  type="text"
+                  form="form-crear-medico"
+                  name="nombre"
+                  required
+                  maxlength="150"
+                  placeholder="Nombre del médico"
+                  class="card-input-nombre"
+                  data-toggle-formulario
+                  hidden
+                  aria-label="Nombre del nuevo médico"
+                />
+              </div>
+              <div class="card-iconos">
+                <button type="submit" form="form-crear-medico" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear médico" aria-label="Crear médico"><%- icono('check') %></button>
+                <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
+              </div>
+            </div>
+            <form method="POST" action="/medicos" id="form-crear-medico" class="card-form" data-toggle-formulario hidden>
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <select name="especialidadId" class="card-select" required aria-label="Especialidad del nuevo médico">
+                <option value="">Selecciona especialidad</option>
+                <% especialidades.forEach(function(e) { %>
+                  <option value="<%= e.id %>"><%= e.nombre %></option>
+                <% }) %>
+              </select>
+              <p class="card-form-ayuda">
+                La cuenta de acceso se vincula desde <a href="/usuarios">Usuarios</a>, una vez creado.
+              </p>
+            </form>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+
+    <h2 class="access-heading" style="margin-top:2.5rem;">Especialidades</h2>
+    <div class="especialidades-lista">
+      <% especialidades.forEach(function(e) { %>
+        <div class="especialidad-item" data-toggle-editar>
+          <span class="especialidad-chip especialidad-chip--<%= e.id % 4 %>" data-toggle-vista><%= e.nombre %></span>
+          <form method="POST" action="/medicos/especialidades/<%= e.id %>" id="form-renombrar-especialidad-<%= e.id %>" data-toggle-formulario hidden>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="text" name="nombre" value="<%= e.nombre %>" required maxlength="100" class="pasillo-nombre-input" aria-label="Nombre de la especialidad" />
+          </form>
+          <% if (esAdmin) { %>
+            <div class="card-iconos">
+              <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar especialidad" aria-label="Editar especialidad"><%- icono('lapiz') %></button>
+              <form method="POST" action="/medicos/especialidades/<%= e.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar la especialidad «<%= e.nombre %>»? No debe tener médicos asignados.">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar especialidad" aria-label="Eliminar especialidad"><%- icono('basura') %></button>
+              </form>
+              <button type="submit" form="form-renombrar-especialidad-<%= e.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
+              <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+
+      <% if (esAdmin) { %>
+        <div class="especialidad-item" data-toggle-editar>
+          <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
+            <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
+            <span>Agregar especialidad</span>
+          </button>
+          <form method="POST" action="/medicos/especialidades" id="form-crear-especialidad" data-toggle-formulario hidden>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="text" name="nombre" required maxlength="100" placeholder="Nombre de la especialidad" class="pasillo-nombre-input" aria-label="Nombre de la nueva especialidad" />
+          </form>
+          <div class="card-iconos">
+            <button type="submit" form="form-crear-especialidad" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear especialidad" aria-label="Crear especialidad"><%- icono('check') %></button>
+            <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+  <%- include('../partials/modal-confirmar') %>
+  <script src="/js/confirmar.js"></script>
+  <script src="/js/inline-editable.js"></script>
+  <script src="/js/medicos.js"></script>
+</body>
+</html>

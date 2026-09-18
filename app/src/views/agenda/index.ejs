@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const HORA_INICIO_GRID = 8;
+  const HORA_FIN_GRID = 20;
+  const PASO_MIN = 30;
+  const TOTAL_FILAS = ((HORA_FIN_GRID - HORA_INICIO_GRID) * 60) / PASO_MIN;
+
+  function filaDeHora(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const fila = Math.round(((h - HORA_INICIO_GRID) * 60 + m) / PASO_MIN);
+    return Math.max(0, Math.min(TOTAL_FILAS, fila));
+  }
+
+  function urlFiltros({ sinBox, sinMedico, sinPasillo, vistaNueva } = {}) {
+    const params = [];
+    if (fecha) params.push('fecha=' + encodeURIComponent(fecha));
+    if (!sinPasillo && pasilloIdSeleccionado) params.push('pasilloId=' + pasilloIdSeleccionado);
+    if (!sinBox && boxIdSeleccionado) params.push('boxId=' + boxIdSeleccionado);
+    if (!sinMedico && medicoIdSeleccionado) params.push('medicoId=' + medicoIdSeleccionado);
+    const vistaFinal = vistaNueva || vista;
+    if (vistaFinal === 'calendario') params.push('vista=calendario');
+    return '/agenda' + (params.length ? '?' + params.join('&') : '');
+  }
+
+  const pasilloSeleccionadoObj = !modoMia && pasilloIdSeleccionado ? pasillos.find((p) => p.id === pasilloIdSeleccionado) : null;
+  const boxSeleccionadoObj = !modoMia && boxIdSeleccionado ? boxes.find((b) => b.id === boxIdSeleccionado) : null;
+  const medicoSeleccionadoObj = !modoMia && medicoIdSeleccionado ? medicos.find((m) => m.id === medicoIdSeleccionado) : null;
+  const columnasTimeline = !modoMia ? (boxSeleccionadoObj ? [boxSeleccionadoObj] : boxes) : [];
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: modoMia ? 'mia' : 'agenda' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1><%= modoMia ? 'Mi agenda' : 'Agenda' %></h1>
+      <% if (puedeCrear) { %>
+        <a href="/agenda/nueva" class="btn btn-primary btn--auto">Nueva cita</a>
+      <% } %>
+    </div>
+
+    <% if (typeof sinPerfilMedico !== 'undefined' && sinPerfilMedico) { %>
+      <div class="empty-state">
+        <p>Tu cuenta de médico todavía no está vinculada a un registro del catálogo de médicos.</p>
+        <p>Pide a un administrador que la vincule para ver tu agenda personal.</p>
+      </div>
+    <% } else { %>
+      <form class="filtros" method="GET" action="<%= modoMia ? '/agenda/mia' : '/agenda' %>">
+        <% if (!modoMia && vista === 'calendario') { %>
+          <input type="hidden" name="vista" value="calendario" />
+        <% } %>
+        <div class="field">
+          <label for="fecha">Fecha</label>
+          <input type="date" id="fecha" name="fecha" value="<%= fecha %>" />
+        </div>
+        <% if (!modoMia) { %>
+          <div class="field">
+            <label for="pasilloId">Pasillo</label>
+            <select id="pasilloId" name="pasilloId">
+              <option value="">Todos</option>
+              <% pasillos.forEach(function(pasillo) { %>
+                <option value="<%= pasillo.id %>" <%= pasilloIdSeleccionado === pasillo.id ? 'selected' : '' %>><%= pasillo.nombre %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="boxId">Box</label>
+            <select id="boxId" name="boxId">
+              <option value="">Todos</option>
+              <% boxes.forEach(function(box) { %>
+                <option value="<%= box.id %>" <%= boxIdSeleccionado === box.id ? 'selected' : '' %>><%= box.pasillo.nombre %> — <%= box.nombre %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="field">
+            <label for="medicoId">Médico</label>
+            <select id="medicoId" name="medicoId">
+              <option value="">Todos</option>
+              <% medicos.forEach(function(medico) { %>
+                <option value="<%= medico.id %>" <%= medicoIdSeleccionado === medico.id ? 'selected' : '' %>><%= medico.nombre %></option>
+              <% }) %>
+            </select>
+          </div>
+        <% } %>
+      </form>
+
+      <% if (!modoMia) { %>
+        <div class="agenda-toolbar">
+          <div class="chip-filtros">
+            <% if (pasilloSeleccionadoObj) { %>
+              <a class="chip-filtro" href="<%= urlFiltros({ sinPasillo: true, sinBox: true }) %>"><%= pasilloSeleccionadoObj.nombre %> <span class="x">×</span></a>
+            <% } %>
+            <% if (boxSeleccionadoObj) { %>
+              <a class="chip-filtro" href="<%= urlFiltros({ sinBox: true }) %>"><%= boxSeleccionadoObj.pasillo.nombre %> — <%= boxSeleccionadoObj.nombre %> <span class="x">×</span></a>
+            <% } %>
+            <% if (medicoSeleccionadoObj) { %>
+              <a class="chip-filtro" href="<%= urlFiltros({ sinMedico: true }) %>"><%= medicoSeleccionadoObj.nombre %> <span class="x">×</span></a>
+            <% } %>
+          </div>
+          <div class="agenda-toolbar-right">
+            <input type="search" id="agenda-buscador" class="buscador" placeholder="Buscar médico o box…" />
+            <div class="vista-toggle">
+              <a href="<%= urlFiltros({ vistaNueva: 'lista' }) %>" class="vista-btn <%= vista === 'lista' ? 'activo' : '' %>">Lista</a>
+              <a href="<%= urlFiltros({ vistaNueva: 'calendario' }) %>" class="vista-btn <%= vista === 'calendario' ? 'activo' : '' %>">Calendario</a>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (vista === 'lista' || modoMia) { %>
+        <% if (citas.length === 0) { %>
+          <div class="empty-state">
+            <p>No hay citas agendadas para este filtro.</p>
+          </div>
+        <% } else { %>
+          <div class="panel-card panel-card--tabla">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Box</th>
+                  <th>Médico</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% citas.forEach(function(cita) { %>
+                  <tr id="cita-<%= cita.id %>" data-busqueda="<%= cita.medico.nombre %> <%= cita.box.nombre %> <%= cita.box.pasillo.nombre %>">
+                    <td class="tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></td>
+                    <td><%= cita.box.pasillo.nombre %> · <%= cita.box.nombre %></td>
+                    <td><a class="fila-link" href="/agenda/<%= cita.id %>"><%= cita.medico.nombre %></a></td>
+                    <td><span class="badge badge-<%= cita.estado %>"><%= cita.estado.replace('_', ' ') %></span></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      <% } else { %>
+        <% if (columnasTimeline.length === 0) { %>
+          <div class="empty-state"><p>Todavía no hay boxes registrados para mostrar en el calendario.</p></div>
+        <% } else { %>
+          <div class="timeline-scroll">
+            <div class="timeline-grid" style="grid-template-columns: 3.25rem repeat(<%= columnasTimeline.length %>, minmax(9rem, 1fr)); grid-template-rows: auto repeat(<%= TOTAL_FILAS %>, 2.25rem);">
+              <div class="timeline-corner"></div>
+              <% columnasTimeline.forEach(function(box) { %>
+                <div class="timeline-col-header"><%= box.pasillo.nombre %> — <%= box.nombre %></div>
+              <% }) %>
+
+              <% for (let f = 0; f < TOTAL_FILAS; f++) { %>
+                <% if (f % 2 === 0) { %>
+                  <div class="timeline-hora" style="grid-row: <%= f + 2 %> / span 2;"><%= String(HORA_INICIO_GRID + f / 2).padStart(2, '0') %>:00</div>
+                <% } %>
+                <% columnasTimeline.forEach(function(box, ci) { %>
+                  <div class="timeline-celda" style="grid-row: <%= f + 2 %>; grid-column: <%= ci + 2 %>;"></div>
+                <% }) %>
+              <% } %>
+
+              <% citas.forEach(function(cita) {
+                const colIndex = columnasTimeline.findIndex((b) => b.id === cita.box.id);
+                if (colIndex === -1) return;
+                const filaIni = filaDeHora(cita.horaInicio);
+                const filaFin = Math.max(filaIni + 1, filaDeHora(cita.horaFin));
+              %>
+                <a
+                  class="timeline-bloque badge-<%= cita.estado %>"
+                  data-busqueda="<%= cita.medico.nombre %> <%= cita.box.nombre %> <%= cita.box.pasillo.nombre %>"
+                  href="/agenda/<%= cita.id %>"
+                  style="grid-row: <%= filaIni + 2 %> / <%= filaFin + 2 %>; grid-column: <%= colIndex + 2 %>;"
+                >
+                  <span class="timeline-bloque-hora"><%= cita.horaInicio %>–<%= cita.horaFin %></span>
+                  <span class="timeline-bloque-medico"><%= cita.medico.nombre %></span>
+                </a>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+      <% } %>
+    <% } %>
+  </main>
+  <script src="/js/agenda.js"></script>
+</body>
+</html>

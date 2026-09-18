@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const ETIQUETAS_ACCION = {
+    CREATE: 'Cita creada',
+    UPDATE_ESTADO: 'Estado actualizado',
+    ANULAR: 'Cita anulada',
+  };
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'agenda' }) %>
+
+  <main class="page-main">
+    <a class="volver" href="/agenda">← Volver a la agenda</a>
+
+    <div class="page-head">
+      <h1><%= cita.medico.nombre %> · <%= cita.box.nombre %></h1>
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <span class="badge badge-<%= cita.anulada ? 'anulada' : cita.estado %>"><%= cita.anulada ? 'anulada' : cita.estado.replace('_', ' ') %></span>
+        <button type="button" class="btn-link" onclick="window.print()">Imprimir</button>
+      </div>
+    </div>
+
+    <% if (!paciente) { %>
+      <p class="aviso">Tu rol no tiene acceso a la identidad del paciente de esta cita.</p>
+    <% } %>
+
+    <div class="panel-card" style="margin-bottom: 1.75rem;">
+      <div class="detalle-grid" style="margin: 0;">
+        <div class="detalle-item">
+          <span class="etiqueta">Paciente</span>
+          <span class="valor"><%= paciente ? paciente.nombre : 'Reservado' %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Motivo de consulta</span>
+          <span class="valor"><%= paciente ? paciente.motivoConsulta : '—' %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Especialidad</span>
+          <span class="valor"><%= cita.medico.especialidad.nombre %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Espacio</span>
+          <span class="valor"><%= cita.box.pasillo.nombre %> — <%= cita.box.nombre %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Fecha</span>
+          <span class="valor tiempo"><%= cita.fecha.toISOString().slice(0, 10) %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Horario</span>
+          <span class="valor tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span>
+        </div>
+      </div>
+    </div>
+
+    <% if (puedeGestionar && !cita.anulada) { %>
+      <div class="acciones-cita">
+        <% if (cita.estado === 'agendada') { %>
+          <form method="POST" action="/agenda/<%= cita.id %>/estado">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="estado" value="atendido" />
+            <button type="submit" class="btn btn-primary btn--auto">Marcar atendido</button>
+          </form>
+          <form method="POST" action="/agenda/<%= cita.id %>/estado">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="hidden" name="estado" value="no_atendido" />
+            <button type="submit" class="btn btn-secondary">Marcar no atendido</button>
+          </form>
+        <% } %>
+        <form method="POST" action="/agenda/<%= cita.id %>/anular" data-confirmar="¿Anular esta cita? Esta acción no se puede deshacer.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button type="submit" class="btn btn-secondary">Anular cita</button>
+        </form>
+      </div>
+    <% } %>
+
+    <% if (historial && historial.length > 0) { %>
+      <div class="historial-timeline">
+        <h2 class="access-heading" style="margin-top:0;">Historial</h2>
+        <% historial.forEach(function(h) { %>
+          <div class="historial-item">
+            <span class="historial-punto"></span>
+            <div class="historial-texto">
+              <div class="accion"><%= ETIQUETAS_ACCION[h.accion] || h.accion %></div>
+              <div class="meta"><%= h.usuario ? h.usuario.nombre : 'Usuario eliminado' %> · <%= new Date(h.timestamp).toISOString().replace('T', ' ').slice(0, 19) %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </main>
+  <%- include('../partials/modal-confirmar') %>
+  <script src="/js/confirmar.js"></script>
+</body>
+</html>

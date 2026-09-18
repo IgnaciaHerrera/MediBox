@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  function iniciales(nombre) {
+    const partes = nombre.trim().split(/\s+/);
+    const primera = partes[0] ? partes[0][0] : '';
+    const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+    return (primera + ultima).toUpperCase();
+  }
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'pacientes' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Pacientes</h1>
+      <% if (puedeRegistrar) { %>
+        <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar paciente</a>
+      <% } %>
+    </div>
+
+    <form method="GET" action="/pacientes" class="filtros">
+      <div class="field" style="min-width: 18rem;">
+        <label for="q">Buscar por nombre</label>
+        <input type="search" id="q" name="q" value="<%= q %>" placeholder="Escribe un nombre…" />
+      </div>
+    </form>
+
+    <% if (pacientes.length === 0) { %>
+      <div class="empty-state">
+        <p><%= q ? 'No se encontraron pacientes con ese nombre.' : 'Todavía no hay pacientes registrados.' %></p>
+        <% if (!q && puedeRegistrar) { %>
+          <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar el primer paciente</a>
+        <% } %>
+      </div>
+    <% } else { %>
+      <div class="panel-card panel-card--tabla">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>Paciente</th>
+              <th>Contacto</th>
+              <th>Fecha de nacimiento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% pacientes.forEach(function(p) { %>
+              <tr>
+                <td>
+                  <a class="fila-link fila-persona" href="/pacientes/<%= p.id %>">
+                    <span class="avatar"><%= iniciales(p.nombre) %></span>
+                    <%= p.nombre %>
+                  </a>
+                </td>
+                <td><%= p.contacto %></td>
+                <td class="tiempo"><%= new Date(p.fechaNacimiento).toISOString().slice(0, 10) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="paginacion">
+        <span class="paginacion-info"><%= total %> paciente<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
+        <div class="paginacion-nav">
+          <% if (page > 1) { %><a href="/pacientes?page=<%= page - 1 %>&q=<%= encodeURIComponent(q) %>" class="btn-link">← Anterior</a><% } %>
+          <% if (page < totalPaginas) { %><a href="/pacientes?page=<%= page + 1 %>&q=<%= encodeURIComponent(q) %>" class="btn-link">Siguiente →</a><% } %>
+        </div>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

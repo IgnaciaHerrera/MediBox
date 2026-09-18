@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'espacios' }) %>
+
+  <main class="page-main">
+    <a class="volver" href="/espacios">← Volver a espacios</a>
+
+    <div class="page-head">
+      <h1><%= box.pasillo.nombre %> — <%= box.nombre %></h1>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <% if (puedeEditarBox) { %>
+      <form method="POST" action="/espacios/boxes/<%= box.id %>" class="form-card" style="margin-bottom:2.5rem;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="form-grid">
+          <div class="field">
+            <label for="nombre">Nombre</label>
+            <input type="text" id="nombre" name="nombre" value="<%= box.nombre %>" required />
+          </div>
+          <div class="field">
+            <label for="pasilloId">Pasillo</label>
+            <select id="pasilloId" name="pasilloId" required>
+              <% pasillos.forEach(function(p) { %>
+                <option value="<%= p.id %>" <%= p.id === box.pasilloId ? 'selected' : '' %>><%= p.nombre %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-secondary">Guardar cambios</button>
+      </form>
+
+      <form method="POST" action="/espacios/boxes/<%= box.id %>/eliminar" data-confirmar="¿Eliminar el box «<%= box.nombre %>»? Esta acción no se puede deshacer." style="margin-bottom:2.5rem;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" class="btn-link btn-link--peligro">Eliminar box</button>
+      </form>
+    <% } %>
+
+    <div id="instrumentos-panel" data-box-id="<%= box.id %>" data-csrf="<%= csrfToken %>">
+      <h2 class="access-heading">Instrumental</h2>
+
+      <p class="access-empty" id="instrumentos-vacio" <%= instrumentos.length > 0 ? 'hidden' : '' %>>Sin instrumental registrado en este box.</p>
+      <table class="tabla" id="tabla-instrumentos" <%= instrumentos.length === 0 ? 'hidden' : '' %>>
+        <tbody id="tbody-instrumentos">
+          <% instrumentos.forEach(function(inst) { %>
+            <tr data-instrumento-id="<%= inst.id %>">
+              <td class="instrumento-nombre"><%= inst.nombre %></td>
+              <% if (puedeGestionarInstrumental) { %>
+                <td style="text-align:right;">
+                  <form method="POST" action="/espacios/boxes/<%= box.id %>/instrumentos/<%= inst.id %>/eliminar" class="form-quitar-instrumento" data-confirmar="¿Quitar este instrumento?">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="btn-link">Quitar</button>
+                  </form>
+                </td>
+              <% } %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <% if (puedeGestionarInstrumental) { %>
+        <form method="POST" action="/espacios/boxes/<%= box.id %>/instrumentos" id="form-agregar-instrumento" style="max-width:20rem; margin-top:1.5rem;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <div class="field">
+            <label for="nombreInstrumento">Agregar instrumento</label>
+            <input type="text" id="nombreInstrumento" name="nombre" required />
+          </div>
+          <button type="submit" class="btn btn-secondary">Agregar</button>
+        </form>
+        <p class="field-error" id="instrumento-error" hidden></p>
+      <% } %>
+    </div>
+  </main>
+  <%- include('../partials/modal-confirmar') %>
+  <script src="/js/confirmar.js"></script>
+  <script src="/js/espacios-box.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const cuerpoRut = paciente.rut.slice(0, -1);
+  const dvRut = paciente.rut.slice(-1);
+  const rutEnmascarado = '•'.repeat(cuerpoRut.length) + '-' + dvRut;
+
+  function iniciales(nombre) {
+    const partes = nombre.trim().split(/\s+/);
+    const primera = partes[0] ? partes[0][0] : '';
+    const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+    return (primera + ultima).toUpperCase();
+  }
+
+  function calcularEdad(fechaNacimiento) {
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const noHaCumplidoAnios = hoy.getMonth() < nacimiento.getMonth()
+      || (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+    if (noHaCumplidoAnios) edad -= 1;
+    return edad;
+  }
+
+  const edad = calcularEdad(paciente.fechaNacimiento);
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'pacientes' }) %>
+
+  <main class="page-main">
+    <a class="volver" href="/pacientes">← Volver a pacientes</a>
+
+    <div class="page-head page-head--perfil">
+      <div class="fila-persona">
+        <span class="avatar avatar--grande"><%= iniciales(paciente.nombre) %></span>
+        <div>
+          <h1><%= paciente.nombre %></h1>
+          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= new Date(paciente.createdAt).toISOString().slice(0, 10) %></p>
+        </div>
+      </div>
+      <% if (puedeEditar) { %>
+        <a href="/pacientes/<%= paciente.id %>/editar" class="btn btn-secondary btn--auto">Editar</a>
+      <% } %>
+    </div>
+
+    <div class="panel-card">
+      <div class="detalle-grid detalle-grid--sin-margen">
+        <div class="detalle-item">
+          <span class="etiqueta">RUT</span>
+          <span class="valor tiempo rut-valor" data-rut="<%= paciente.rut %>" data-rut-oculto="<%= rutEnmascarado %>"><%= rutEnmascarado %></span>
+          <button type="button" class="btn-link btn-link--inline" id="btn-mostrar-rut">Mostrar</button>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Fecha de nacimiento</span>
+          <span class="valor tiempo"><%= new Date(paciente.fechaNacimiento).toISOString().slice(0, 10) %></span>
+        </div>
+        <div class="detalle-item">
+          <span class="etiqueta">Contacto</span>
+          <span class="valor"><%= paciente.contacto %></span>
+        </div>
+        <div class="detalle-item detalle-item--ancho">
+          <span class="etiqueta">Motivo de consulta</span>
+          <p class="valor motivo-texto" id="motivo-texto"><%= paciente.motivoConsulta %></p>
+          <button type="button" class="btn-link" id="btn-motivo-expandir" hidden>Ver más</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script src="/js/pacientes-detalle.js"></script>
+</body>
+</html>

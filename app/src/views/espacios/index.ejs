@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const ICONOS = {
+    lapiz: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L5 14H2v-3l8.5-8.5z"/></svg>',
+    basura: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h10M6.3 4.5V3a1 1 0 011-1h1.4a1 1 0 011 1v1.5M12.3 4.5l-.6 8.2a1 1 0 01-1 .9H5.3a1 1 0 01-1-.9l-.6-8.2"/></svg>',
+    check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.3l3.3 3.2L13 4.5"/></svg>',
+    equis: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+    mas: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+  };
+  function icono(nombre) { return ICONOS[nombre] || ''; }
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'espacios' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Espacios</h1>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <% if (pasillos.length === 0) { %>
+      <div class="empty-state">
+        <p>Todavía no hay pasillos registrados.</p>
+      </div>
+    <% } else { %>
+      <% pasillos.forEach(function(pasillo) { %>
+        <div class="access-heading pasillo-encabezado" style="margin-top: 2rem;" data-toggle-editar>
+          <div class="pasillo-nombre">
+            <span class="pasillo-nombre-texto" data-toggle-vista><%= pasillo.nombre %></span>
+            <form method="POST" action="/espacios/pasillos/<%= pasillo.id %>" id="form-renombrar-pasillo-<%= pasillo.id %>" class="form-renombrar-pasillo" data-toggle-formulario hidden>
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input
+                type="text"
+                name="nombre"
+                value="<%= pasillo.nombre %>"
+                required
+                maxlength="50"
+                class="pasillo-nombre-input"
+                aria-label="Nombre del pasillo"
+              />
+            </form>
+          </div>
+          <% if (puedeEscribir) { %>
+            <div class="pasillo-acciones">
+              <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar pasillo" aria-label="Editar pasillo"><%- icono('lapiz') %></button>
+              <form method="POST" action="/espacios/pasillos/<%= pasillo.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar el pasillo «<%= pasillo.nombre %>»? Debe estar vacío, sin boxes.">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar pasillo" aria-label="Eliminar pasillo"><%- icono('basura') %></button>
+              </form>
+              <button type="submit" form="form-renombrar-pasillo-<%= pasillo.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
+              <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
+            </div>
+          <% } %>
+        </div>
+        <% if (pasillo.boxes.length === 0 && !puedeEscribir) { %>
+          <p class="access-empty">Sin boxes en este pasillo.</p>
+        <% } else { %>
+          <div class="boxes-grid">
+            <% pasillo.boxes.forEach(function(box) { %>
+              <% const ocupado = boxesOcupados.has(box.id); %>
+              <div class="box-card" data-toggle-editar>
+                <div class="card-encabezado">
+                  <div class="card-titulo">
+                    <a class="box-card-nombre" href="/espacios/boxes/<%= box.id %>" data-toggle-vista><%= box.nombre %></a>
+                    <% if (puedeEscribir) { %>
+                      <input
+                        type="text"
+                        form="form-editar-box-<%= box.id %>"
+                        name="nombre"
+                        value="<%= box.nombre %>"
+                        required
+                        maxlength="50"
+                        class="card-input-nombre"
+                        data-toggle-formulario
+                        hidden
+                        aria-label="Nombre del box"
+                      />
+                    <% } %>
+                  </div>
+                  <% if (puedeEscribir) { %>
+                    <div class="card-iconos">
+                      <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar box" aria-label="Editar box"><%- icono('lapiz') %></button>
+                      <form method="POST" action="/espacios/boxes/<%= box.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar el box «<%= box.nombre %>»? Debe no tener citas registradas.">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                        <input type="hidden" name="volver" value="index" />
+                        <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar box" aria-label="Eliminar box"><%- icono('basura') %></button>
+                      </form>
+                      <button type="submit" form="form-editar-box-<%= box.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
+                      <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
+                    </div>
+                  <% } %>
+                </div>
+
+                <a class="box-card-cuerpo" href="/espacios/boxes/<%= box.id %>" data-toggle-vista>
+                  <span class="box-card-estado <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado ahora' : 'Libre ahora' %></span>
+                  <span class="box-card-instrumentos"><%= box._count.instrumentos %> instrumento<%= box._count.instrumentos === 1 ? '' : 's' %></span>
+                </a>
+
+                <% if (puedeEscribir) { %>
+                  <form method="POST" action="/espacios/boxes/<%= box.id %>" id="form-editar-box-<%= box.id %>" class="card-form" data-toggle-formulario hidden>
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <input type="hidden" name="volver" value="index" />
+                    <select name="pasilloId" class="card-select" aria-label="Pasillo del box">
+                      <% pasillos.forEach(function(p) { %>
+                        <option value="<%= p.id %>" <%= p.id === pasillo.id ? 'selected' : '' %>><%= p.nombre %></option>
+                      <% }) %>
+                    </select>
+                  </form>
+                <% } %>
+              </div>
+            <% }) %>
+
+            <% if (puedeEscribir) { %>
+              <div class="box-card box-card--nuevo" data-toggle-editar>
+                <div class="card-encabezado">
+                  <div class="card-titulo">
+                    <button type="button" class="card-agregar" data-toggle-vista data-toggle-activar>
+                      <span class="card-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
+                      <span>Agregar box</span>
+                    </button>
+                    <input
+                      type="text"
+                      form="form-crear-box-<%= pasillo.id %>"
+                      name="nombre"
+                      required
+                      maxlength="50"
+                      placeholder="Nombre del box"
+                      class="card-input-nombre"
+                      data-toggle-formulario
+                      hidden
+                      aria-label="Nombre del nuevo box"
+                    />
+                  </div>
+                  <div class="card-iconos">
+                    <button type="submit" form="form-crear-box-<%= pasillo.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear box" aria-label="Crear box"><%- icono('check') %></button>
+                    <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
+                  </div>
+                </div>
+                <form method="POST" action="/espacios/boxes" id="form-crear-box-<%= pasillo.id %>" data-toggle-formulario hidden>
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <input type="hidden" name="pasilloId" value="<%= pasillo.id %>" />
+                </form>
+              </div>
+            <% } %>
+          </div>
+        <% } %>
+      <% }) %>
+    <% } %>
+
+    <% if (puedeEscribir) { %>
+      <div class="access-heading pasillo-encabezado" style="margin-top: 2rem;" data-toggle-editar>
+        <div class="pasillo-nombre">
+          <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
+            <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
+            <span>Agregar pasillo</span>
+          </button>
+          <form method="POST" action="/espacios/pasillos" id="form-crear-pasillo" class="form-renombrar-pasillo" data-toggle-formulario hidden>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input
+              type="text"
+              name="nombre"
+              required
+              maxlength="50"
+              placeholder="Nombre del pasillo"
+              class="pasillo-nombre-input"
+              aria-label="Nombre del nuevo pasillo"
+            />
+          </form>
+        </div>
+        <div class="pasillo-acciones">
+          <button type="submit" form="form-crear-pasillo" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear pasillo" aria-label="Crear pasillo"><%- icono('check') %></button>
+          <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
+        </div>
+      </div>
+    <% } %>
+  </main>
+  <%- include('../partials/modal-confirmar') %>
+  <script src="/js/confirmar.js"></script>
+  <script src="/js/inline-editable.js"></script>
+</body>
+</html>
