@@ -26,6 +26,14 @@ describe('POST /api/medicos', () => {
   });
 
   afterAll(async () => {
+    await prisma.cita.deleteMany({ where: { medico: { nombre: 'Dr. Con Citas Test' } } });
+    // Limpieza defensiva: borra cualquier médico que este archivo haya creado
+    // en esta corrida o en una anterior interrumpida (Medico.nombre no es
+    // único, así que sin esto se acumula silenciosamente en cada corrida).
+    await prisma.medico.deleteMany({
+      where: { nombre: { in: ['Dr. Rechazado', 'Dr. Aceptado', 'Dr. Aceptado Editado', 'Dr. Con Citas Test', 'Dr. Para Eliminar Test'] } },
+    });
+    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [usuarioAdmin.id, usuarioMedico.id] } } });
     await prisma.usuario.deleteMany({ where: { id: { in: [usuarioAdmin.id, usuarioMedico.id] } } });
     await prisma.$disconnect();
   });
@@ -43,5 +51,59 @@ describe('POST /api/medicos', () => {
     const res = await agent.post('/api/medicos').send({ nombre: 'Dr. Aceptado', especialidadId: especialidad.id });
     expect(res.status).toBe(201);
     expect(res.body.nombre).toBe('Dr. Aceptado');
+  });
+
+  it('allows an admin to update a medico, including linking a usuario account', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'medico-admin-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+
+    const createRes = await agent.post('/api/medicos').send({ nombre: 'Dr. Aceptado', especialidadId: especialidad.id });
+    const updateRes = await agent.patch(`/api/medicos/${createRes.body.id}`).send({
+      nombre: 'Dr. Aceptado Editado',
+      especialidadId: especialidad.id,
+      usuarioId: usuarioMedico.id,
+    });
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.nombre).toBe('Dr. Aceptado Editado');
+    expect(updateRes.body.usuarioId).toBe(usuarioMedico.id);
+  });
+
+  it('rejects deleting a medico with citas (even anuladas), and allows it once history-free', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'medico-admin-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+
+    const conCitasRes = await agent.post('/api/medicos').send({ nombre: 'Dr. Con Citas Test', especialidadId: especialidad.id });
+    const pasillo = await prisma.pasillo.upsert({ where: { nombre: 'Pasillo Medicos Test' }, update: {}, create: { nombre: 'Pasillo Medicos Test' } });
+    const box = await prisma.box.upsert({
+      where: { pasilloId_nombre: { pasilloId: pasillo.id, nombre: 'Box Medicos Test' } },
+      update: {},
+      create: { nombre: 'Box Medicos Test', pasilloId: pasillo.id },
+    });
+    const KEY = process.env.PACIENTE_ENCRYPTION_KEY;
+    const [paciente] = await prisma.$queryRaw`
+      INSERT INTO pacientes (nombre, rut_cifrado, fecha_nacimiento, contacto, motivo_consulta_cifrado, created_at)
+      VALUES ('Paciente Medicos Test', pgp_sym_encrypt('22222222-2', ${KEY}), '1990-01-01'::date, '+56900000001', pgp_sym_encrypt('Test', ${KEY}), now())
+      RETURNING id
+    `;
+
+    const citaRes = await agent.post('/api/citas').send({
+      pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: '2027-06-01', horaInicio: '09:00', horaFin: '10:00',
+    });
+    expect(citaRes.status).toBe(201);
+    await agent.delete(`/api/citas/${citaRes.body.id}`);
+
+    const bloqueado = await agent.delete(`/api/medicos/${conCitasRes.body.id}`);
+    expect(bloqueado.status).toBe(400);
+
+    const sinCitasRes = await agent.post('/api/medicos').send({ nombre: 'Dr. Para Eliminar Test', especialidadId: especialidad.id });
+    const permitido = await agent.delete(`/api/medicos/${sinCitasRes.body.id}`);
+    expect(permitido.status).toBe(204);
+
+    await prisma.cita.deleteMany({ where: { medicoId: conCitasRes.body.id } });
+    await prisma.medico.delete({ where: { id: conCitasRes.body.id } });
+    await prisma.paciente.delete({ where: { id: paciente.id } });
+    await prisma.instrumento.deleteMany({ where: { boxId: box.id } });
+    await prisma.box.delete({ where: { id: box.id } });
+    await prisma.pasillo.delete({ where: { id: pasillo.id } });
   });
 });

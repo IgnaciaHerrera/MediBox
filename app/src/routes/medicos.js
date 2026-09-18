@@ -9,5 +9,7 @@ const router = express.Router();
 router.use(requireAuth, attachUsuario);
 router.get('/', requirePermission('medicos.read'), controller.index);
 router.post('/', requirePermission('admin.system'), controller.store);
+router.patch('/:id', requirePermission('admin.system'), controller.update);
+router.delete('/:id', requirePermission('admin.system'), controller.destroy);
 
 module.exports = router;
