@@ -14,7 +14,8 @@ async function index(req, res, next) {
   try {
     const page = Number(req.query.page) || 1;
     const pageSize = Number(req.query.pageSize) || 20;
-    res.json(await pacienteService.listarPacientes({ page, pageSize }, req.usuario.id));
+    const q = req.query.q;
+    res.json(await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario.id));
   } catch (err) {
     next(err);
   }
@@ -40,4 +41,16 @@ async function store(req, res, next) {
   }
 }
 
-module.exports = { index, show, store };
+async function update(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) throw new AppError('Id inválido', 400);
+    const { error, value } = crearSchema.validate(req.body);
+    if (error) throw new AppError(error.details[0].message, 400);
+    res.json(await pacienteService.actualizarPaciente(id, value, req.usuario.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { index, show, store, update };

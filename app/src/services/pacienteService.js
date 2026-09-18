@@ -1,3 +1,4 @@
+const { Prisma } = require('@prisma/client');
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
 const { AppError } = require('../lib/AppError');
@@ -47,18 +48,76 @@ async function obtenerPacientePorId(id, usuarioId) {
   return paciente;
 }
 
-async function listarPacientes({ page = 1, pageSize = 20 } = {}, usuarioId) {
+async function actualizarPaciente(id, datos, usuarioId) {
+  const { nombre, rut, fechaNacimiento, contacto, motivoConsulta } = datos;
+
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw`
+      UPDATE pacientes SET
+        nombre = ${nombre},
+        rut_cifrado = pgp_sym_encrypt(${rut}, ${KEY()}),
+        fecha_nacimiento = ${fechaNacimiento}::date,
+        contacto = ${contacto},
+        motivo_consulta_cifrado = pgp_sym_encrypt(${motivoConsulta}, ${KEY()})
+      WHERE id = ${id}
+      RETURNING id, nombre, fecha_nacimiento AS "fechaNacimiento", contacto, created_at AS "createdAt"
+    `;
+
+    const paciente = rows[0];
+    if (!paciente) throw new AppError('Paciente no encontrado', 404);
+
+    await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id }, tx);
+    return paciente;
+  });
+}
+
+async function listarPacientes({ page = 1, pageSize = 20, q } = {}, usuarioId) {
   const offset = (page - 1) * pageSize;
+  const filtro = q ? Prisma.sql`WHERE nombre ILIKE ${`%${q}%`}` : Prisma.empty;
+
   const items = await prisma.$queryRaw`
     SELECT id, nombre, fecha_nacimiento AS "fechaNacimiento", contacto, created_at AS "createdAt"
     FROM pacientes
+    ${filtro}
     ORDER BY created_at DESC
     OFFSET ${offset} LIMIT ${pageSize}
   `;
-  const totalRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM pacientes`;
+  const totalRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM pacientes ${filtro}`;
 
   await registrar({ usuarioId, accion: 'LIST', entidad: 'Paciente', entidadId: 0 });
   return { items, total: totalRows[0].count, page, pageSize };
 }
 
-module.exports = { crearPaciente, obtenerPacientePorId, listarPacientes };
+async function listarTodosParaExport(usuarioId) {
+  const items = await prisma.$queryRaw`
+    SELECT
+      id,
+      nombre,
+      pgp_sym_decrypt(rut_cifrado, ${KEY()}) AS rut,
+      fecha_nacimiento AS "fechaNacimiento",
+      contacto,
+      pgp_sym_decrypt(motivo_consulta_cifrado, ${KEY()}) AS "motivoConsulta",
+      created_at AS "createdAt"
+    FROM pacientes
+    ORDER BY created_at DESC
+  `;
+
+  await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Paciente', entidadId: 0 });
+  return items;
+}
+
+// Sin auditar: es un conteo agregado, no expone la identidad de ningún
+// paciente en particular (a diferencia de listarPacientes/obtenerPacientePorId).
+async function contar() {
+  const filas = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM pacientes`;
+  return filas[0].count;
+}
+
+module.exports = {
+  crearPaciente,
+  obtenerPacientePorId,
+  actualizarPaciente,
+  listarPacientes,
+  listarTodosParaExport,
+  contar,
+};
