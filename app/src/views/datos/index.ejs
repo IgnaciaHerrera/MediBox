@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'datos' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Importar y exportar datos</h1>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <% if (resultado) { %>
+      <p class="aviso-exito">
+        Importación completada: <%= resultado.totalFilas %> fila<%= resultado.totalFilas === 1 ? '' : 's' %> procesada<%= resultado.totalFilas === 1 ? '' : 's' %>,
+        <%= resultado.pasillosCreados %> pasillo<%= resultado.pasillosCreados === 1 ? '' : 's' %> nuevo<%= resultado.pasillosCreados === 1 ? '' : 's' %> y
+        <%= resultado.boxesCreados %> box<%= resultado.boxesCreados === 1 ? '' : 'es' %> nuevo<%= resultado.boxesCreados === 1 ? '' : 's' %>.
+      </p>
+    <% } %>
+
+    <% if (tarjetasExport.length > 0) { %>
+      <section>
+        <h2 class="access-heading">Exportar</h2>
+        <p class="descripcion">
+          Cada descarga queda registrada en la <a href="/auditoria">auditoría</a> a nombre de tu usuario.
+        </p>
+        <div class="exportar-grid">
+          <% tarjetasExport.forEach(function(t) { %>
+            <div class="exportar-card">
+              <div class="exportar-card-encabezado">
+                <span class="exportar-card-titulo"><%= t.etiqueta %></span>
+                <a class="btn-link" href="<%= t.url %>">Descargar CSV</a>
+              </div>
+              <p class="exportar-card-meta">
+                <% if (t.ultimo) { %>
+                  Última exportación: <strong><%= t.ultimo.usuario ? t.ultimo.usuario.nombre : 'usuario eliminado' %></strong>
+                  · <span class="tiempo"><%= new Date(t.ultimo.timestamp).toISOString().replace('T', ' ').slice(0, 16) %></span>
+                <% } else { %>
+                  Todavía no se ha exportado.
+                <% } %>
+              </p>
+            </div>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
+
+    <% if (usuario.permisos.includes('data.import') && usuario.permisos.includes('box.write')) { %>
+      <section class="seccion-separada">
+        <h2 class="access-heading">Importar espacios</h2>
+        <p class="descripcion">
+          Sube un archivo CSV o pega su contenido con el formato <code>pasillo,box</code> (una fila por línea).
+          Los pasillos y boxes que ya existan se omiten; no se crean duplicados.
+        </p>
+
+        <form method="POST" action="/datos/importar/espacios" class="form-card" id="form-importar-espacios">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+          <div class="dropzone" id="dropzone-csv" tabindex="0" role="button" aria-label="Subir archivo CSV">
+            <p class="dropzone-texto">Arrastra un archivo CSV aquí, o <span class="dropzone-enlace">haz clic para elegir uno</span></p>
+            <input type="file" id="archivo-csv" accept=".csv,text/csv" hidden />
+          </div>
+
+          <div class="field">
+            <label for="csv">O pega el contenido directamente</label>
+            <textarea id="csv" name="csv" rows="6" required placeholder="pasillo,box&#10;Pasillo A,Box 1&#10;Pasillo A,Box 2"></textarea>
+          </div>
+
+          <div id="csv-vista-previa" class="vista-previa" hidden>
+            <div class="vista-previa-resumen">
+              <span id="vista-previa-total"></span>
+              <span id="vista-previa-errores" class="vista-previa-aviso-error" hidden></span>
+            </div>
+            <div class="vista-previa-scroll">
+              <table class="tabla">
+                <thead><tr><th>Pasillo</th><th>Box</th></tr></thead>
+                <tbody id="vista-previa-cuerpo"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn--auto">Confirmar importación</button>
+        </form>
+      </section>
+    <% } %>
+  </main>
+  <script src="/js/datos-importar.js"></script>
+</body>
+</html>
