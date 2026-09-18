@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  function iniciales(nombre) {
+    const partes = nombre.trim().split(/\s+/);
+    const primera = partes[0] ? partes[0][0] : '';
+    const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+    return (primera + ultima).toUpperCase();
+  }
+  const medicosDisponibles = medicos.filter((m) => !m.usuarioId);
+  function medicoVinculadoDe(usuarioId) {
+    return medicos.find((m) => m.usuarioId === usuarioId) || null;
+  }
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'usuarios' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Usuarios</h1>
+      <button type="button" class="btn btn-primary btn--auto" id="btn-crear-usuario">Crear usuario</button>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <div class="filtros" style="border-bottom: none; padding-bottom: 0;">
+      <div class="field" style="min-width: 18rem;">
+        <label for="usuarios-buscador">Buscar</label>
+        <input type="search" id="usuarios-buscador" placeholder="Nombre o correo…" />
+      </div>
+    </div>
+
+    <div class="panel-card panel-card--tabla">
+      <table class="tabla">
+        <thead>
+          <tr><th>Usuario</th><th>Correo</th><th>Rol</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% usuarios.forEach(function(u) { %>
+            <% const medicoVinculado = medicoVinculadoDe(u.id); %>
+            <tr data-busqueda="<%= u.nombre %> <%= u.email %>">
+              <td>
+                <span class="fila-persona">
+                  <span class="avatar"><%= iniciales(u.nombre) %></span>
+                  <%= u.nombre %>
+                </span>
+              </td>
+              <td><%= u.email %></td>
+              <td><span class="rol-chip rol-chip--<%= u.rol.nombre %>"><%= u.rol.nombre %></span></td>
+              <td style="text-align:right;">
+                <a
+                  class="fila-link btn-editar-usuario"
+                  href="/usuarios/<%= u.id %>/editar"
+                  data-id="<%= u.id %>"
+                  data-nombre="<%= u.nombre %>"
+                  data-email="<%= u.email %>"
+                  data-rol-id="<%= u.rolId %>"
+                  data-es-uno-mismo="<%= u.id === usuario.id ? '1' : '0' %>"
+                  <% if (medicoVinculado) { %>
+                    data-medico-id="<%= medicoVinculado.id %>"
+                    data-medico-nombre="<%= medicoVinculado.nombre %>"
+                  <% } %>
+                >Editar</a>
+              </td>
+            </tr>
+          <% }) %>
+          <tr id="fila-sin-resultados" hidden><td colspan="4" class="access-empty">Sin resultados para esa búsqueda.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="modal-crear-usuario" class="modal">
+    <h3>Crear usuario</h3>
+    <form method="POST" action="/usuarios">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <div class="field">
+        <label for="crear-nombre">Nombre completo</label>
+        <input type="text" id="crear-nombre" name="nombre" required />
+      </div>
+      <div class="field">
+        <label for="crear-email">Correo institucional</label>
+        <input type="email" id="crear-email" name="email" required />
+      </div>
+      <div class="field">
+        <label for="crear-password">Contraseña</label>
+        <input type="password" id="crear-password" name="password" minlength="8" required />
+      </div>
+      <div class="field">
+        <label for="crear-rolId">Rol</label>
+        <select id="crear-rolId" name="rolId" required data-rol-medico-id="<%= rolMedicoId %>">
+          <option value="">Selecciona</option>
+          <% roles.forEach(function(r) { %>
+            <option value="<%= r.id %>"><%= r.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="field" id="crear-campo-medico" hidden>
+        <label for="crear-medicoId">Perfil de médico</label>
+        <select id="crear-medicoId" name="medicoId">
+          <option value="">Sin vincular</option>
+          <% medicosDisponibles.forEach(function(m) { %>
+            <option value="<%= m.id %>"><%= m.nombre %> — <%= m.especialidad.nombre %></option>
+          <% }) %>
+        </select>
+        <p class="ayuda-error" style="color: var(--ink-soft);">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
+      </div>
+      <div class="modal-acciones">
+        <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
+        <button type="submit" class="btn btn-primary btn--auto">Crear usuario</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="modal-editar-usuario" class="modal">
+    <h3>Editar usuario</h3>
+    <form method="POST" id="form-editar-usuario">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <div class="field">
+        <label for="editar-nombre">Nombre completo</label>
+        <input type="text" id="editar-nombre" name="nombre" required />
+      </div>
+      <div class="field">
+        <label>Correo</label>
+        <input type="email" id="editar-email" disabled />
+      </div>
+      <div class="field">
+        <label for="editar-rolId">Rol</label>
+        <select id="editar-rolId" name="rolId" required data-rol-medico-id="<%= rolMedicoId %>">
+          <% roles.forEach(function(r) { %>
+            <option value="<%= r.id %>"><%= r.nombre %></option>
+          <% }) %>
+        </select>
+        <input type="hidden" id="editar-rolId-oculto" name="rolId" disabled />
+        <p id="editar-aviso-rol" class="ayuda-error" hidden>No puedes cambiar tu propio rol.</p>
+      </div>
+      <div class="field" id="editar-campo-medico" hidden>
+        <label for="editar-medicoId">Perfil de médico</label>
+        <select id="editar-medicoId" name="medicoId">
+          <option value="">Sin vincular</option>
+          <% medicosDisponibles.forEach(function(m) { %>
+            <option value="<%= m.id %>"><%= m.nombre %> — <%= m.especialidad.nombre %></option>
+          <% }) %>
+        </select>
+        <p class="ayuda-error" style="color: var(--ink-soft);">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
+      </div>
+      <div class="field">
+        <label for="editar-nuevaPassword">Nueva contraseña (opcional)</label>
+        <input type="password" id="editar-nuevaPassword" name="nuevaPassword" minlength="8" placeholder="Dejar en blanco para no cambiarla" />
+      </div>
+      <div class="modal-acciones">
+        <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
+        <button type="submit" class="btn btn-primary btn--auto">Guardar cambios</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/js/usuarios.js"></script>
+</body>
+</html>

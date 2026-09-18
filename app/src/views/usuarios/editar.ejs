@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const medicoVinculado = medicos.find((m) => m.usuarioId === usuarioEditar.id) || null;
+  const medicosDisponibles = medicos.filter((m) => !m.usuarioId || m.id === (medicoVinculado && medicoVinculado.id));
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'usuarios' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Editar usuario</h1>
+    </div>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <form class="form-card" method="POST" action="/usuarios/<%= usuarioEditar.id %>/editar">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <div class="field">
+        <label for="nombre">Nombre completo</label>
+        <input type="text" id="nombre" name="nombre" value="<%= usuarioEditar.nombre %>" required />
+      </div>
+
+      <div class="field">
+        <label>Correo</label>
+        <input type="email" value="<%= usuarioEditar.email %>" disabled />
+      </div>
+
+      <div class="field">
+        <label for="rolId">Rol</label>
+        <select id="rolId" name="rolId" required <%= esUnoMismo ? 'disabled' : '' %>>
+          <% roles.forEach(function(r) { %>
+            <option value="<%= r.id %>" <%= r.id === usuarioEditar.rolId ? 'selected' : '' %>><%= r.nombre %></option>
+          <% }) %>
+        </select>
+        <% if (esUnoMismo) { %>
+          <input type="hidden" name="rolId" value="<%= usuarioEditar.rolId %>" />
+          <p style="font-size:0.8rem; color: var(--ink-soft); margin-top:0.4rem;">No puedes cambiar tu propio rol.</p>
+        <% } %>
+      </div>
+
+      <div class="field">
+        <label for="medicoId">Perfil de médico (solo aplica si el rol es médico)</label>
+        <select id="medicoId" name="medicoId">
+          <option value="">Sin vincular</option>
+          <% medicosDisponibles.forEach(function(m) { %>
+            <option value="<%= m.id %>" <%= medicoVinculado && medicoVinculado.id === m.id ? 'selected' : '' %>><%= m.nombre %> — <%= m.especialidad.nombre %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="nuevaPassword">Nueva contraseña (opcional)</label>
+        <input type="password" id="nuevaPassword" name="nuevaPassword" minlength="8" placeholder="Dejar en blanco para no cambiarla" />
+      </div>
+
+      <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    </form>
+  </main>
+</body>
+</html>
