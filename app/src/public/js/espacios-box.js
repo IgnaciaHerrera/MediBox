@@ -33,7 +33,7 @@
     tr.appendChild(tdNombre);
 
     var tdAcciones = document.createElement('td');
-    tdAcciones.style.textAlign = 'right';
+    tdAcciones.className = 'celda-derecha';
     var boton = document.createElement('button');
     boton.type = 'button';
     boton.className = 'btn-link';

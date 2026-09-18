@@ -28,7 +28,7 @@
     </div>
 
     <% if (error) { %>
-      <p class="field-error"><%= error %></p>
+      <p class="field-error" role="alert"><%= error %></p>
     <% } %>
 
     <form class="filtros" method="GET" action="/medicos">
@@ -152,7 +152,7 @@
       </div>
     <% } %>
 
-    <h2 class="access-heading" style="margin-top:2.5rem;">Especialidades</h2>
+    <h2 class="access-heading seccion-siguiente">Especialidades</h2>
     <div class="especialidades-lista">
       <% especialidades.forEach(function(e) { %>
         <div class="especialidad-item" data-toggle-editar>

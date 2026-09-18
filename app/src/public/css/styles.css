@@ -1087,6 +1087,23 @@ table.tabla a.fila-link:hover {
   min-width: 18rem;
 }
 
+.seccion-siguiente {
+  margin-top: 2rem;
+}
+
+.espaciado-inferior {
+  margin-bottom: 2.5rem;
+}
+
+.celda-derecha {
+  text-align: right;
+}
+
+.form-agregar-instrumento {
+  max-width: 20rem;
+  margin-top: 1.5rem;
+}
+
 .detalle-item .etiqueta {
   display: block;
   font-size: 0.78rem;

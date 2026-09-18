@@ -22,7 +22,7 @@
     </div>
 
     <% if (error) { %>
-      <p class="field-error"><%= error %></p>
+      <p class="field-error" role="alert"><%= error %></p>
     <% } %>
 
     <% if (pasillos.length === 0) { %>
@@ -31,7 +31,7 @@
       </div>
     <% } else { %>
       <% pasillos.forEach(function(pasillo) { %>
-        <div class="access-heading pasillo-encabezado" style="margin-top: 2rem;" data-toggle-editar>
+        <div class="access-heading pasillo-encabezado seccion-siguiente" data-toggle-editar>
           <div class="pasillo-nombre">
             <span class="pasillo-nombre-texto" data-toggle-vista><%= pasillo.nombre %></span>
             <form method="POST" action="/espacios/pasillos/<%= pasillo.id %>" id="form-renombrar-pasillo-<%= pasillo.id %>" class="form-renombrar-pasillo" data-toggle-formulario hidden>
@@ -155,7 +155,7 @@
     <% } %>
 
     <% if (puedeEscribir) { %>
-      <div class="access-heading pasillo-encabezado" style="margin-top: 2rem;" data-toggle-editar>
+      <div class="access-heading pasillo-encabezado seccion-siguiente" data-toggle-editar>
         <div class="pasillo-nombre">
           <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
             <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>

@@ -25,7 +25,7 @@
     </div>
 
     <% if (error) { %>
-      <p class="field-error"><%= error %></p>
+      <p class="field-error" role="alert"><%= error %></p>
     <% } %>
 
     <div class="filtros" style="border-bottom: none; padding-bottom: 0;">
@@ -52,7 +52,7 @@
               </td>
               <td><%= u.email %></td>
               <td><span class="rol-chip rol-chip--<%= u.rol.nombre %>"><%= u.rol.nombre %></span></td>
-              <td style="text-align:right;">
+              <td class="celda-derecha">
                 <a
                   class="fila-link btn-editar-usuario"
                   href="/usuarios/<%= u.id %>/editar"
