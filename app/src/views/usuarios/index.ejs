@@ -75,8 +75,8 @@
     </div>
   </main>
 
-  <dialog id="modal-crear-usuario" class="modal">
-    <h3>Crear usuario</h3>
+  <dialog id="modal-crear-usuario" class="modal" aria-labelledby="modal-crear-usuario-titulo">
+    <h3 id="modal-crear-usuario-titulo">Crear usuario</h3>
     <form method="POST" action="/usuarios">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <div class="field">
@@ -117,8 +117,8 @@
     </form>
   </dialog>
 
-  <dialog id="modal-editar-usuario" class="modal">
-    <h3>Editar usuario</h3>
+  <dialog id="modal-editar-usuario" class="modal" aria-labelledby="modal-editar-usuario-titulo">
+    <h3 id="modal-editar-usuario-titulo">Editar usuario</h3>
     <form method="POST" id="form-editar-usuario">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <div class="field">

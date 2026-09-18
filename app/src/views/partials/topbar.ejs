@@ -1,34 +1,42 @@
+<%
+  // aria-current="page" es lo que le dice a un lector de pantalla cuál link
+  // de este menú es la página actual — la clase "activo" solo lo muestra
+  // visualmente. Se centraliza acá para no repetir la condición 9 veces.
+  function navAttrs(clave) {
+    return activo === clave ? 'class="activo" aria-current="page"' : '';
+  }
+%>
 <header class="topbar">
   <div class="topbar-left">
     <a class="topbar-brand" href="/dashboard">MediBox</a>
     <nav class="topbar-nav">
-      <a href="/dashboard" class="<%= activo === 'dashboard' ? 'activo' : '' %>">Panel</a>
-      <a href="/agenda" class="<%= activo === 'agenda' ? 'activo' : '' %>">Agenda</a>
+      <a href="/dashboard" <%- navAttrs('dashboard') %>>Panel</a>
+      <a href="/agenda" <%- navAttrs('agenda') %>>Agenda</a>
       <% if (usuario.rolNombre === 'medico') { %>
-        <a href="/agenda/mia" class="<%= activo === 'mia' ? 'activo' : '' %>">Mi agenda</a>
+        <a href="/agenda/mia" <%- navAttrs('mia') %>>Mi agenda</a>
       <% } %>
       <% if (usuario.permisos.includes('paciente.read')) { %>
-        <a href="/pacientes" class="<%= activo === 'pacientes' ? 'activo' : '' %>">Pacientes</a>
+        <a href="/pacientes" <%- navAttrs('pacientes') %>>Pacientes</a>
       <% } %>
-      <a href="/espacios" class="<%= activo === 'espacios' ? 'activo' : '' %>">Espacios</a>
-      <a href="/medicos" class="<%= activo === 'medicos' ? 'activo' : '' %>">Médicos</a>
-      <a href="/notificaciones" class="<%= activo === 'notificaciones' ? 'activo' : '' %>">
+      <a href="/espacios" <%- navAttrs('espacios') %>>Espacios</a>
+      <a href="/medicos" <%- navAttrs('medicos') %>>Médicos</a>
+      <a href="/notificaciones" <%- navAttrs('notificaciones') %>>
         Notificaciones
         <% if (usuario.notificacionesNoLeidas > 0) { %>
           <span class="topbar-badge"><%= usuario.notificacionesNoLeidas > 9 ? '9+' : usuario.notificacionesNoLeidas %></span>
         <% } %>
       </a>
       <% if (usuario.permisos.includes('auditoria.read')) { %>
-        <a href="/auditoria" class="<%= activo === 'auditoria' ? 'activo' : '' %>">Auditoría</a>
+        <a href="/auditoria" <%- navAttrs('auditoria') %>>Auditoría</a>
       <% } %>
       <% if (usuario.permisos.includes('admin.users')) { %>
-        <a href="/usuarios" class="<%= activo === 'usuarios' ? 'activo' : '' %>">Usuarios</a>
+        <a href="/usuarios" <%- navAttrs('usuarios') %>>Usuarios</a>
       <% } %>
       <% if (usuario.permisos.includes('admin.roles')) { %>
-        <a href="/roles" class="<%= activo === 'roles' ? 'activo' : '' %>">Roles</a>
+        <a href="/roles" <%- navAttrs('roles') %>>Roles</a>
       <% } %>
       <% if (usuario.permisos.includes('data.export') || usuario.permisos.includes('data.import')) { %>
-        <a href="/datos" class="<%= activo === 'datos' ? 'activo' : '' %>">Datos</a>
+        <a href="/datos" <%- navAttrs('datos') %>>Datos</a>
       <% } %>
     </nav>
   </div>
