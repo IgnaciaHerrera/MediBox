@@ -85,6 +85,7 @@
             </select>
           </div>
         <% } %>
+        <button type="submit" class="btn btn-secondary btn--auto">Filtrar</button>
       </form>
 
       <% if (!modoMia) { %>
@@ -101,7 +102,7 @@
             <% } %>
           </div>
           <div class="agenda-toolbar-right">
-            <input type="search" id="agenda-buscador" class="buscador" placeholder="Buscar médico o box…" />
+            <input type="search" id="agenda-buscador" class="buscador" placeholder="Buscar médico o box…" aria-label="Buscar médico o box" />
             <div class="vista-toggle">
               <a href="<%= urlFiltros({ vistaNueva: 'lista' }) %>" class="vista-btn <%= vista === 'lista' ? 'activo' : '' %>">Lista</a>
               <a href="<%= urlFiltros({ vistaNueva: 'calendario' }) %>" class="vista-btn <%= vista === 'calendario' ? 'activo' : '' %>">Calendario</a>

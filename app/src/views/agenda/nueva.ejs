@@ -19,7 +19,7 @@
       </div>
 
       <% if (error) { %>
-        <p class="field-error"><%= error %></p>
+        <p class="field-error" role="alert"><%= error %></p>
       <% } %>
 
       <% if (pacientes.length === 0) { %>
@@ -40,9 +40,13 @@
             placeholder="Escribe un nombre para buscar…"
             value="<%= pacienteSeleccionado ? pacienteSeleccionado.etiqueta : '' %>"
             required
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="pacienteBuscador-lista"
+            aria-autocomplete="list"
           />
           <input type="hidden" name="pacienteId" value="<%= valores.pacienteId || '' %>" />
-          <div class="combobox-lista" hidden></div>
+          <div class="combobox-lista" id="pacienteBuscador-lista" role="listbox" hidden></div>
           <script type="application/json"><%- JSON.stringify(pacientesOpciones) %></script>
         </div>
 
@@ -85,7 +89,7 @@
           </div>
         </div>
 
-        <div id="aviso-conflicto" class="aviso-conflicto" hidden>
+        <div id="aviso-conflicto" class="aviso-conflicto" role="alert" aria-live="polite" hidden>
           Ya hay una cita para ese médico o box en ese horario. Puedes enviarla igual, pero probablemente sea rechazada.
         </div>
 

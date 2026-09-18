@@ -27,7 +27,7 @@
       <div class="dash-stats">
         <% stats.forEach(function(s, i) { %>
           <div class="stat-card" style="animation-delay: <%= i * 60 %>ms;">
-            <span class="icono"><%- ICONOS[s.icono] %></span>
+            <span class="icono" aria-hidden="true"><%- ICONOS[s.icono] %></span>
             <span class="valor" data-count-to="<%= s.valor %>"><%= s.valor %></span>
             <span class="etiqueta"><%= s.etiqueta %></span>
           </div>
@@ -38,7 +38,7 @@
     <% if (atajos.length > 0) { %>
       <div class="dash-quickactions">
         <% atajos.forEach(function(a) { %>
-          <a class="quick-action" href="<%= a.href %>"><%- ICONOS[a.icono] %><%= a.etiqueta %></a>
+          <a class="quick-action" href="<%= a.href %>"><span aria-hidden="true"><%- ICONOS[a.icono] %></span><%= a.etiqueta %></a>
         <% }) %>
       </div>
     <% } %>
@@ -52,8 +52,8 @@
           <% agendaHoy.items.forEach(function(c) { %>
             <a class="agenda-preview-item" href="/agenda/<%= c.id %>">
               <span>
-                <span class="tiempo" style="font-weight:600;"><%= c.horaInicio %>–<%= c.horaFin %></span>
-                <span class="agenda-preview-titulo" style="display:block; color: var(--ink-soft); font-size:0.88rem;">
+                <span class="tiempo"><%= c.horaInicio %>–<%= c.horaFin %></span>
+                <span class="agenda-preview-titulo">
                   <%= c.medico.nombre %> · <%= c.box.pasillo.nombre %> — <%= c.box.nombre %>
                 </span>
               </span>
@@ -61,7 +61,7 @@
             </a>
           <% }) %>
         <% } %>
-        <a class="btn-link" href="<%= agendaHoy.href %>" style="display:inline-block; margin-top: 0.5rem;">Ver agenda completa →</a>
+        <a class="btn-link btn-link-block" href="<%= agendaHoy.href %>">Ver agenda completa →</a>
       </div>
 
       <div class="panel-card">
