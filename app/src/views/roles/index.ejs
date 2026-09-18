@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const rolAdmin = roles.find(function (r) { return r.nombre === 'admin'; });
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'roles' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <h1>Roles y permisos</h1>
+    </div>
+
+    <p class="matriz-ayuda">
+      Marca o desmarca los permisos de cada rol. Los cambios no se aplican hasta que presiones «Guardar cambios».
+    </p>
+
+    <% if (error) { %>
+      <p class="field-error"><%= error %></p>
+    <% } %>
+
+    <form method="POST" action="/roles/actualizar-todo" id="form-matriz">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <% roles.forEach(function(rol) { %>
+        <input type="hidden" name="rolesEnviados" value="<%= rol.id %>" />
+      <% }) %>
+      <% if (rolAdmin) { %>
+        <input type="hidden" name="permisos_<%= rolAdmin.id %>" value="admin.roles" />
+      <% } %>
+
+      <div class="panel-card panel-card--tabla matriz-envoltorio">
+        <div class="matriz-scroll">
+          <table class="matriz">
+            <thead>
+              <tr>
+                <th>Permiso</th>
+                <% roles.forEach(function(rol) { %>
+                  <th><span class="rol-chip rol-chip--<%= rol.nombre %>"><%= rol.nombre %></span></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% grupos.forEach(function(grupo) { %>
+                <tr class="matriz-grupo">
+                  <td colspan="<%= roles.length + 1 %>"><%= grupo.etiqueta %></td>
+                </tr>
+                <% grupo.permisos.forEach(function(permiso) { %>
+                  <tr>
+                    <td><%= permiso.etiqueta %></td>
+                    <% roles.forEach(function(rol) { %>
+                      <%
+                        const esAdminRoles = rol.nombre === 'admin' && permiso.clave === 'admin.roles';
+                      %>
+                      <td>
+                        <input
+                          type="checkbox"
+                          name="permisos_<%= rol.id %>"
+                          value="<%= permiso.clave %>"
+                          <%= rol.clavesActivas.has(permiso.clave) ? 'checked' : '' %>
+                          <%= esAdminRoles ? 'disabled title="El administrador siempre conserva este permiso"' : '' %>
+                        />
+                      </td>
+                    <% }) %>
+                  </tr>
+                <% }) %>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <div class="barra-guardar" id="barra-guardar" hidden>
+    <span id="barra-guardar-texto">Cambios sin guardar</span>
+    <div class="barra-guardar-acciones">
+      <button type="reset" form="form-matriz" class="btn btn-secondary btn--auto">Descartar</button>
+      <button type="submit" form="form-matriz" class="btn btn-primary btn--auto">Guardar cambios</button>
+    </div>
+  </div>
+
+  <script src="/js/roles.js"></script>
+</body>
+</html>
