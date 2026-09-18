@@ -19,6 +19,7 @@ model Usuario {
   citasEditadas  Cita[]         @relation("CitaUpdatedBy")
   auditLogs      AuditLog[]
   notificaciones Notificacion[]
+  medico         Medico?
 
   @@map("usuarios")
 }
@@ -64,8 +65,10 @@ model Medico {
   id             Int    @id @default(autoincrement())
   nombre         String
   especialidadId Int    @map("especialidad_id")
+  usuarioId      Int?   @unique @map("usuario_id")
 
   especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
   citas        Cita[]
 
   @@map("medicos")
