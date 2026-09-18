@@ -1,0 +1,42 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="topbar-brand" href="/dashboard">MediBox</a>
+    <nav class="topbar-nav">
+      <a href="/dashboard" class="<%= activo === 'dashboard' ? 'activo' : '' %>">Panel</a>
+      <a href="/agenda" class="<%= activo === 'agenda' ? 'activo' : '' %>">Agenda</a>
+      <% if (usuario.rolNombre === 'medico') { %>
+        <a href="/agenda/mia" class="<%= activo === 'mia' ? 'activo' : '' %>">Mi agenda</a>
+      <% } %>
+      <% if (usuario.permisos.includes('paciente.read')) { %>
+        <a href="/pacientes" class="<%= activo === 'pacientes' ? 'activo' : '' %>">Pacientes</a>
+      <% } %>
+      <a href="/espacios" class="<%= activo === 'espacios' ? 'activo' : '' %>">Espacios</a>
+      <a href="/medicos" class="<%= activo === 'medicos' ? 'activo' : '' %>">Médicos</a>
+      <a href="/notificaciones" class="<%= activo === 'notificaciones' ? 'activo' : '' %>">
+        Notificaciones
+        <% if (usuario.notificacionesNoLeidas > 0) { %>
+          <span class="topbar-badge"><%= usuario.notificacionesNoLeidas > 9 ? '9+' : usuario.notificacionesNoLeidas %></span>
+        <% } %>
+      </a>
+      <% if (usuario.permisos.includes('auditoria.read')) { %>
+        <a href="/auditoria" class="<%= activo === 'auditoria' ? 'activo' : '' %>">Auditoría</a>
+      <% } %>
+      <% if (usuario.permisos.includes('admin.users')) { %>
+        <a href="/usuarios" class="<%= activo === 'usuarios' ? 'activo' : '' %>">Usuarios</a>
+      <% } %>
+      <% if (usuario.permisos.includes('admin.roles')) { %>
+        <a href="/roles" class="<%= activo === 'roles' ? 'activo' : '' %>">Roles</a>
+      <% } %>
+      <% if (usuario.permisos.includes('data.export') || usuario.permisos.includes('data.import')) { %>
+        <a href="/datos" class="<%= activo === 'datos' ? 'activo' : '' %>">Datos</a>
+      <% } %>
+    </nav>
+  </div>
+  <div class="topbar-user">
+    <span><strong><%= usuario.nombre %></strong></span>
+    <form method="POST" action="/auth/logout">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="btn btn-secondary">Salir</button>
+    </form>
+  </div>
+</header>

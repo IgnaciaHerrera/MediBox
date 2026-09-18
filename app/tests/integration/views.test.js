@@ -64,7 +64,8 @@ describe('Views', () => {
       // 3. Follow the redirect to the dashboard using the session cookie.
       const dashboardRes = await agent.get('/dashboard');
       expect(dashboardRes.status).toBe(200);
-      expect(dashboardRes.text).toContain('Hola, Test View Flow');
+      // The dashboard greets by first name only (design choice), not the full name.
+      expect(dashboardRes.text).toContain('Hola, Test');
 
       // 4. Log out as a browser form submission and confirm the redirect
       //    target, then confirm the session is actually gone. `/auth/logout`
