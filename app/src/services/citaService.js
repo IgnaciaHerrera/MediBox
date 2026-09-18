@@ -1,7 +1,9 @@
 const { Prisma } = require('@prisma/client');
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
+const { crearNotificacion } = require('./notificacionService');
 const { AppError } = require('../lib/AppError');
+const { logger } = require('../lib/logger');
 
 const MAX_INTENTOS_SERIALIZACION = 3;
 
@@ -23,7 +25,7 @@ async function crearCita(datos, usuarioId) {
 
   for (let intento = 1; intento <= MAX_INTENTOS_SERIALIZACION; intento += 1) {
     try {
-      return await prisma.$transaction(
+      const cita = await prisma.$transaction(
         async (tx) => {
           const conflicto = await tx.cita.findFirst({
             where: {
@@ -38,15 +40,32 @@ async function crearCita(datos, usuarioId) {
             throw new AppError('Conflicto de horario para el box o el médico seleccionado', 409);
           }
 
-          const cita = await tx.cita.create({
+          const nuevaCita = await tx.cita.create({
             data: { pacienteId, medicoId, boxId, fecha: new Date(fecha), horaInicio, horaFin, estado: 'agendada', updatedById: usuarioId },
           });
 
-          await registrar({ usuarioId, accion: 'CREATE', entidad: 'Cita', entidadId: cita.id }, tx);
-          return cita;
+          await registrar({ usuarioId, accion: 'CREATE', entidad: 'Cita', entidadId: nuevaCita.id }, tx);
+          return nuevaCita;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+
+      // La cita ya quedó agendada (transacción comprometida); una falla al
+      // notificar no debe revertirla ni hacer fallar la respuesta al cliente,
+      // así que corre fuera de la transacción y solo se registra si falla.
+      try {
+        const medico = await prisma.medico.findUnique({ where: { id: medicoId }, select: { usuarioId: true } });
+        if (medico?.usuarioId) {
+          await crearNotificacion({
+            usuarioId: medico.usuarioId,
+            mensaje: `Nueva cita agendada para el ${new Date(fecha).toISOString().slice(0, 10)} de ${horaInicio} a ${horaFin}.`,
+          });
+        }
+      } catch (notifErr) {
+        logger.error({ err: notifErr, citaId: cita.id }, 'No se pudo crear la notificación de nueva cita');
+      }
+
+      return cita;
     } catch (err) {
       const esFalloSerializacion = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034';
       if (esFalloSerializacion && intento < MAX_INTENTOS_SERIALIZACION) {
@@ -79,29 +98,82 @@ async function anularCita(citaId, usuarioId) {
   const cita = await prisma.cita.findUnique({ where: { id: citaId } });
   if (!cita || cita.anulada) throw new AppError('Cita no encontrada', 404);
 
-  return prisma.$transaction(async (tx) => {
-    const anulada = await tx.cita.update({
+  const anulada = await prisma.$transaction(async (tx) => {
+    const resultado = await tx.cita.update({
       where: { id: citaId },
       data: { anulada: true, updatedById: usuarioId },
     });
 
     await registrar({ usuarioId, accion: 'ANULAR', entidad: 'Cita', entidadId: citaId }, tx);
-    return anulada;
+    return resultado;
   });
+
+  try {
+    const medico = await prisma.medico.findUnique({ where: { id: cita.medicoId }, select: { usuarioId: true } });
+    if (medico?.usuarioId) {
+      await crearNotificacion({
+        usuarioId: medico.usuarioId,
+        mensaje: `Se anuló la cita del ${anulada.fecha.toISOString().slice(0, 10)} de ${anulada.horaInicio} a ${anulada.horaFin}.`,
+      });
+    }
+  } catch (notifErr) {
+    logger.error({ err: notifErr, citaId }, 'No se pudo crear la notificación de cita anulada');
+  }
+
+  return anulada;
 }
 
-async function listarCitas({ boxId, medicoId, fecha, page = 1, pageSize = 20 } = {}) {
+async function listarCitas({ boxId, medicoId, pasilloId, fecha, page = 1, pageSize = 20 } = {}) {
   const where = {
     anulada: false,
     ...(boxId ? { boxId: Number(boxId) } : {}),
     ...(medicoId ? { medicoId: Number(medicoId) } : {}),
+    ...(pasilloId ? { box: { pasilloId: Number(pasilloId) } } : {}),
     ...(fecha ? { fecha: new Date(fecha) } : {}),
   };
   const [items, total] = await Promise.all([
-    prisma.cita.findMany({ where, skip: (page - 1) * pageSize, take: pageSize, orderBy: { horaInicio: 'asc' } }),
+    prisma.cita.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { horaInicio: 'asc' },
+      include: { medico: true, box: { include: { pasillo: true } } },
+    }),
     prisma.cita.count({ where }),
   ]);
   return { items, total, page, pageSize };
 }
 
-module.exports = { verificarConflicto, crearCita, actualizarEstadoCita, anularCita, listarCitas };
+// No incluye datos de Paciente a propósito: esta restricción global del
+// proyecto exige que toda lectura de datos de paciente pase por
+// pacienteService (con su propia auditoría), nunca por un include aquí.
+async function obtenerCitaPorId(id) {
+  const cita = await prisma.cita.findUnique({
+    where: { id },
+    include: { medico: { include: { especialidad: true } }, box: { include: { pasillo: true } } },
+  });
+  if (!cita) throw new AppError('Cita no encontrada', 404);
+  return cita;
+}
+
+// No incluye datos de Paciente, por la misma razón que obtenerCitaPorId: se
+// exporta únicamente el id de referencia, nunca nombre ni datos clínicos.
+async function listarTodasParaExport(usuarioId) {
+  const items = await prisma.cita.findMany({
+    orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
+    include: { medico: true, box: { include: { pasillo: true } } },
+  });
+
+  await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Cita', entidadId: 0 });
+  return items;
+}
+
+module.exports = {
+  verificarConflicto,
+  crearCita,
+  actualizarEstadoCita,
+  anularCita,
+  listarCitas,
+  obtenerCitaPorId,
+  listarTodasParaExport,
+};

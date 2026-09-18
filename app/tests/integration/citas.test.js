@@ -6,6 +6,7 @@ const { loginAgent } = require('../helpers/csrf');
 
 describe('Agenda: conflict prevention and soft delete', () => {
   let usuarioOperador;
+  let usuarioMedicoNotif;
   let medico;
   let box;
   let pasillo;
@@ -53,9 +54,14 @@ describe('Agenda: conflict prevention and soft delete', () => {
       await prisma.paciente.deleteMany({ where: { id: { in: pacienteIds } } });
     }
     await prisma.box.delete({ where: { id: box.id } });
+    await prisma.medico.update({ where: { id: medico.id }, data: { usuarioId: null } });
     await prisma.medico.delete({ where: { id: medico.id } });
     await prisma.auditLog.deleteMany({ where: { usuarioId: usuarioOperador.id } });
     await prisma.usuario.delete({ where: { id: usuarioOperador.id } });
+    if (usuarioMedicoNotif) {
+      await prisma.notificacion.deleteMany({ where: { usuarioId: usuarioMedicoNotif.id } });
+      await prisma.usuario.delete({ where: { id: usuarioMedicoNotif.id } });
+    }
     await prisma.$disconnect();
   });
 
@@ -76,6 +82,37 @@ describe('Agenda: conflict prevention and soft delete', () => {
       pacienteId: pacienteRes.body.id, medicoId: medico.id, boxId: box.id, fecha: '2026-11-01', horaInicio: '09:00', horaFin: '10:00',
     });
     expect(citaRes.status).toBe(201);
+  });
+
+  it('GET /api/citas/conflicto reports true for an overlapping slot and false otherwise', async () => {
+    const agent = await login();
+
+    const solapada = await agent.get('/api/citas/conflicto').query({
+      medicoId: medico.id, boxId: box.id, fecha: '2026-11-01', horaInicio: '09:30', horaFin: '10:30',
+    });
+    expect(solapada.status).toBe(200);
+    expect(solapada.body).toEqual({ conflicto: true });
+
+    const libre = await agent.get('/api/citas/conflicto').query({
+      medicoId: medico.id, boxId: box.id, fecha: '2026-11-01', horaInicio: '11:00', horaFin: '12:00',
+    });
+    expect(libre.status).toBe(200);
+    expect(libre.body).toEqual({ conflicto: false });
+  });
+
+  it('GET /api/citas?pasilloId filters by the box\'s pasillo', async () => {
+    const agent = await login();
+    const otroPasillo = await prisma.pasillo.upsert({ where: { nombre: 'Pasillo Citas Otro' }, update: {}, create: { nombre: 'Pasillo Citas Otro' } });
+
+    const conElPasillo = await agent.get('/api/citas').query({ fecha: '2026-11-01', pasilloId: pasillo.id });
+    expect(conElPasillo.status).toBe(200);
+    expect(conElPasillo.body.items.some((c) => c.boxId === box.id)).toBe(true);
+
+    const conOtroPasillo = await agent.get('/api/citas').query({ fecha: '2026-11-01', pasilloId: otroPasillo.id });
+    expect(conOtroPasillo.status).toBe(200);
+    expect(conOtroPasillo.body.items.some((c) => c.boxId === box.id)).toBe(false);
+
+    await prisma.pasillo.delete({ where: { id: otroPasillo.id } });
   });
 
   it('rejects a second cita that overlaps the same box and time with 409', async () => {
@@ -187,5 +224,38 @@ describe('Agenda: conflict prevention and soft delete', () => {
 
     const auditRowsHuerfanas = await prisma.auditLog.findMany({ where: { entidad: 'Cita', entidadId: citaIdDentroDeTx } });
     expect(auditRowsHuerfanas).toHaveLength(0);
+  });
+
+  it('notifies the linked medico usuario when a cita is created and again when it is anulada', async () => {
+    const rolMedico = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'medico' } });
+    usuarioMedicoNotif = await prisma.usuario.upsert({
+      where: { email: 'citas-notif-medico-test@medibox.local' },
+      update: {},
+      create: { nombre: 'Medico Notif Test', email: 'citas-notif-medico-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolMedico.id },
+    });
+    await prisma.medico.update({ where: { id: medico.id }, data: { usuarioId: usuarioMedicoNotif.id } });
+
+    const agent = await login();
+    const pacienteRes = await agent.post('/api/pacientes').send({
+      nombre: 'Paciente Notificacion', rut: '40404040-4', fechaNacimiento: '1994-04-04', contacto: '+56900007777', motivoConsulta: 'Consulta con notificación',
+    });
+    pacienteIds.push(pacienteRes.body.id);
+
+    const citaRes = await agent.post('/api/citas').send({
+      pacienteId: pacienteRes.body.id, medicoId: medico.id, boxId: box.id, fecha: '2027-02-01', horaInicio: '11:00', horaFin: '12:00',
+    });
+    expect(citaRes.status).toBe(201);
+
+    const notifsTrasCrear = await prisma.notificacion.findMany({ where: { usuarioId: usuarioMedicoNotif.id } });
+    expect(notifsTrasCrear.length).toBe(1);
+    expect(notifsTrasCrear[0].mensaje).toMatch(/Nueva cita agendada/);
+
+    await agent.delete(`/api/citas/${citaRes.body.id}`);
+
+    const notifsTrasAnular = await prisma.notificacion.findMany({ where: { usuarioId: usuarioMedicoNotif.id } });
+    expect(notifsTrasAnular.length).toBe(2);
+    expect(notifsTrasAnular.some((n) => /anuló/.test(n.mensaje))).toBe(true);
+
+    await prisma.medico.update({ where: { id: medico.id }, data: { usuarioId: null } });
   });
 });

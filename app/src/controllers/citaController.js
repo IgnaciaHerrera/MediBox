@@ -13,10 +13,18 @@ const crearSchema = Joi.object({
 
 const estadoSchema = Joi.object({ estado: Joi.string().valid('agendada', 'atendido', 'no_atendido').required() });
 
+const conflictoSchema = Joi.object({
+  medicoId: Joi.number().integer().positive().required(),
+  boxId: Joi.number().integer().positive().required(),
+  fecha: Joi.date().iso().required(),
+  horaInicio: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
+  horaFin: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
+});
+
 async function index(req, res, next) {
   try {
-    const { boxId, medicoId, fecha, page, pageSize } = req.query;
-    res.json(await citaService.listarCitas({ boxId, medicoId, fecha, page: Number(page) || 1, pageSize: Number(pageSize) || 20 }));
+    const { boxId, medicoId, pasilloId, fecha, page, pageSize } = req.query;
+    res.json(await citaService.listarCitas({ boxId, medicoId, pasilloId, fecha, page: Number(page) || 1, pageSize: Number(pageSize) || 20 }));
   } catch (err) {
     next(err);
   }
@@ -50,4 +58,15 @@ async function anular(req, res, next) {
   }
 }
 
-module.exports = { index, store, actualizarEstado, anular };
+async function conflicto(req, res, next) {
+  try {
+    const { error, value } = conflictoSchema.validate(req.query);
+    if (error) throw new AppError(error.details[0].message, 400);
+    const hayConflicto = await citaService.verificarConflicto(value);
+    res.json({ conflicto: hayConflicto });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { index, store, actualizarEstado, anular, conflicto };
