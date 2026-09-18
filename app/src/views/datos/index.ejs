@@ -16,7 +16,7 @@
     <% } %>
 
     <% if (resultado) { %>
-      <p class="aviso-exito">
+      <p class="aviso-exito" role="status">
         Importación completada: <%= resultado.totalFilas %> fila<%= resultado.totalFilas === 1 ? '' : 's' %> procesada<%= resultado.totalFilas === 1 ? '' : 's' %>,
         <%= resultado.pasillosCreados %> pasillo<%= resultado.pasillosCreados === 1 ? '' : 's' %> nuevo<%= resultado.pasillosCreados === 1 ? '' : 's' %> y
         <%= resultado.boxesCreados %> box<%= resultado.boxesCreados === 1 ? '' : 'es' %> nuevo<%= resultado.boxesCreados === 1 ? '' : 's' %>.

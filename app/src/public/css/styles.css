@@ -255,6 +255,13 @@ input {
   margin-top: 0.35rem;
 }
 
+.ayuda {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  margin-top: 0.35rem;
+}
+
 .ayuda-error[hidden] {
   display: none;
 }
@@ -771,6 +778,11 @@ input {
   margin-bottom: 1.75rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--line);
+}
+
+.filtros--sin-borde {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .filtros .field {

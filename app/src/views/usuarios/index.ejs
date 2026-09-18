@@ -28,8 +28,8 @@
       <p class="field-error" role="alert"><%= error %></p>
     <% } %>
 
-    <div class="filtros" style="border-bottom: none; padding-bottom: 0;">
-      <div class="field" style="min-width: 18rem;">
+    <div class="filtros filtros--sin-borde">
+      <div class="field field--busqueda">
         <label for="usuarios-buscador">Buscar</label>
         <input type="search" id="usuarios-buscador" placeholder="Nombre o correo…" />
       </div>
@@ -108,7 +108,7 @@
             <option value="<%= m.id %>"><%= m.nombre %> — <%= m.especialidad.nombre %></option>
           <% }) %>
         </select>
-        <p class="ayuda-error" style="color: var(--ink-soft);">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
+        <p class="ayuda">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
       </div>
       <div class="modal-acciones">
         <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
@@ -147,7 +147,7 @@
             <option value="<%= m.id %>"><%= m.nombre %> — <%= m.especialidad.nombre %></option>
           <% }) %>
         </select>
-        <p class="ayuda-error" style="color: var(--ink-soft);">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
+        <p class="ayuda">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
       </div>
       <div class="field">
         <label for="editar-nuevaPassword">Nueva contraseña (opcional)</label>

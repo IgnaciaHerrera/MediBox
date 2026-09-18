@@ -59,6 +59,7 @@
                           type="checkbox"
                           name="permisos_<%= rol.id %>"
                           value="<%= permiso.clave %>"
+                          aria-label="<%= permiso.etiqueta %> — <%= rol.nombre %><%= esAdminRoles ? ' (el administrador siempre lo conserva)' : '' %>"
                           <%= rol.clavesActivas.has(permiso.clave) ? 'checked' : '' %>
                           <%= esAdminRoles ? 'disabled title="El administrador siempre conserva este permiso"' : '' %>
                         />
@@ -74,7 +75,7 @@
     </form>
   </main>
 
-  <div class="barra-guardar" id="barra-guardar" hidden>
+  <div class="barra-guardar" id="barra-guardar" role="status" aria-live="polite" hidden>
     <span id="barra-guardar-texto">Cambios sin guardar</span>
     <div class="barra-guardar-acciones">
       <button type="reset" form="form-matriz" class="btn btn-secondary btn--auto">Descartar</button>
