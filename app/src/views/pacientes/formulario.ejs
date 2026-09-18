@@ -15,7 +15,7 @@
       </div>
 
       <% if (error) { %>
-        <p class="field-error"><%= error %></p>
+        <p class="field-error" role="alert"><%= error %></p>
       <% } %>
 
     <form class="form-card" method="POST" action="<%= accion %>">
@@ -29,8 +29,8 @@
       <div class="form-grid">
         <div class="field">
           <label for="rut">RUT</label>
-          <input type="text" id="rut" name="rut" value="<%= valores.rut || '' %>" placeholder="12345678-9" autocomplete="off" required />
-          <span id="rut-ayuda" class="ayuda-error" hidden>El dígito verificador no coincide con ese RUT.</span>
+          <input type="text" id="rut" name="rut" value="<%= valores.rut || '' %>" placeholder="12345678-9" autocomplete="off" required aria-describedby="rut-ayuda" />
+          <span id="rut-ayuda" class="ayuda-error" role="alert" hidden>El dígito verificador no coincide con ese RUT.</span>
         </div>
 
         <div class="field">

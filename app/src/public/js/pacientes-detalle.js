@@ -3,10 +3,12 @@
   var btnRut = document.getElementById('btn-mostrar-rut');
   if (rutSpan && btnRut) {
     var mostrando = false;
+    btnRut.setAttribute('aria-pressed', 'false');
     btnRut.addEventListener('click', function () {
       mostrando = !mostrando;
       rutSpan.textContent = mostrando ? rutSpan.dataset.rut : rutSpan.dataset.rutOculto;
       btnRut.textContent = mostrando ? 'Ocultar' : 'Mostrar';
+      btnRut.setAttribute('aria-pressed', String(mostrando));
     });
   }
 
@@ -21,10 +23,12 @@
         motivoTexto.classList.remove('motivo-texto--truncado');
       }
     });
+    btnMotivo.setAttribute('aria-pressed', 'false');
     btnMotivo.addEventListener('click', function () {
       var expandido = motivoTexto.classList.toggle('motivo-texto--expandido');
       motivoTexto.classList.toggle('motivo-texto--truncado', !expandido);
       btnMotivo.textContent = expandido ? 'Ver menos' : 'Ver más';
+      btnMotivo.setAttribute('aria-pressed', String(expandido));
     });
   }
 })();

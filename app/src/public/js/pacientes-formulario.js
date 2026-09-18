@@ -37,14 +37,17 @@
       rutInput.value = formatearRut(rutInput.value);
       rutAyuda.hidden = true;
       rutInput.classList.remove('field-invalido');
+      rutInput.removeAttribute('aria-invalid');
     });
     rutInput.addEventListener('blur', function () {
       if (rutInput.value && !rutValido(rutInput.value)) {
         rutAyuda.hidden = false;
         rutInput.classList.add('field-invalido');
+        rutInput.setAttribute('aria-invalid', 'true');
       } else {
         rutAyuda.hidden = true;
         rutInput.classList.remove('field-invalido');
+        rutInput.removeAttribute('aria-invalid');
       }
     });
   }

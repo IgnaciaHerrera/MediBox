@@ -23,10 +23,11 @@
     </div>
 
     <form method="GET" action="/pacientes" class="filtros">
-      <div class="field" style="min-width: 18rem;">
+      <div class="field field--busqueda">
         <label for="q">Buscar por nombre</label>
         <input type="search" id="q" name="q" value="<%= q %>" placeholder="Escribe un nombre…" />
       </div>
+      <button type="submit" class="btn btn-secondary btn--auto">Buscar</button>
     </form>
 
     <% if (pacientes.length === 0) { %>

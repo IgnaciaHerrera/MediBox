@@ -1069,6 +1069,24 @@ table.tabla a.fila-link:hover {
   margin: 0;
 }
 
+.page-head-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.panel-card--con-espacio {
+  margin-bottom: 1.75rem;
+}
+
+.sin-margen-superior {
+  margin-top: 0;
+}
+
+.field--busqueda {
+  min-width: 18rem;
+}
+
 .detalle-item .etiqueta {
   display: block;
   font-size: 0.78rem;

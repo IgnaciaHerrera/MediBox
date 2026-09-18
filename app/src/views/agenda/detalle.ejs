@@ -18,7 +18,7 @@
 
     <div class="page-head">
       <h1><%= cita.medico.nombre %> · <%= cita.box.nombre %></h1>
-      <div style="display:flex; align-items:center; gap:0.75rem;">
+      <div class="page-head-acciones">
         <span class="badge badge-<%= cita.anulada ? 'anulada' : cita.estado %>"><%= cita.anulada ? 'anulada' : cita.estado.replace('_', ' ') %></span>
         <button type="button" class="btn-link" onclick="window.print()">Imprimir</button>
       </div>
@@ -28,8 +28,8 @@
       <p class="aviso">Tu rol no tiene acceso a la identidad del paciente de esta cita.</p>
     <% } %>
 
-    <div class="panel-card" style="margin-bottom: 1.75rem;">
-      <div class="detalle-grid" style="margin: 0;">
+    <div class="panel-card panel-card--con-espacio">
+      <div class="detalle-grid detalle-grid--sin-margen">
         <div class="detalle-item">
           <span class="etiqueta">Paciente</span>
           <span class="valor"><%= paciente ? paciente.nombre : 'Reservado' %></span>
@@ -80,7 +80,7 @@
 
     <% if (historial && historial.length > 0) { %>
       <div class="historial-timeline">
-        <h2 class="access-heading" style="margin-top:0;">Historial</h2>
+        <h2 class="access-heading sin-margen-superior">Historial</h2>
         <% historial.forEach(function(h) { %>
           <div class="historial-item">
             <span class="historial-punto"></span>
