@@ -82,7 +82,7 @@
     </form>
 
     <% if (filtros.accion || filtros.entidad || usuarioSeleccionado || filtros.desde || filtros.hasta) { %>
-      <div class="chip-filtros" style="margin-bottom: 1.5rem;">
+      <div class="chip-filtros chip-filtros--espaciado">
         <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= filtros.desde %> <span class="x">×</span></a><% } %>
         <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= filtros.hasta %> <span class="x">×</span></a><% } %>
         <% if (filtros.accion) { %><a class="chip-filtro" href="<%= urlFiltros({ accion: '' }) %>"><%= filtros.accion %> <span class="x">×</span></a><% } %>
@@ -108,12 +108,12 @@
             <% registros.forEach(function(r) { %>
               <% const categoria = categoriaDe(r.accion); %>
               <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
-              <tr class="fila-auditoria" tabindex="0">
+              <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
                 <td class="tiempo"><%= new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19) %></td>
                 <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
                 <td>
                   <span class="badge-accion badge-accion--<%= categoria %>">
-                    <%- ICONOS_ACCION[categoria] %>
+                    <span aria-hidden="true"><%- ICONOS_ACCION[categoria] %></span>
                     <%= r.accion %>
                   </span>
                 </td>
@@ -133,11 +133,11 @@
         </table>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.5rem;">
-        <span style="color: var(--ink-soft); font-size: 0.85rem;"><%= total %> registro<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
-        <div style="display:flex; gap:1rem;">
-          <% if (page > 1) { %><a href="<%= urlFiltros({ page: page - 1 }) %>" class="btn-link">Anterior</a><% } %>
-          <% if (page < totalPaginas) { %><a href="<%= urlFiltros({ page: page + 1 }) %>" class="btn-link">Siguiente</a><% } %>
+      <div class="paginacion">
+        <span class="paginacion-info"><%= total %> registro<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
+        <div class="paginacion-nav">
+          <% if (page > 1) { %><a href="<%= urlFiltros({ page: page - 1 }) %>" class="btn-link">← Anterior</a><% } %>
+          <% if (page < totalPaginas) { %><a href="<%= urlFiltros({ page: page + 1 }) %>" class="btn-link">Siguiente →</a><% } %>
         </div>
       </div>
     <% } %>

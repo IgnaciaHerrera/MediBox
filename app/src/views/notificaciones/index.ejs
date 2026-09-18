@@ -53,13 +53,13 @@
         <% notificaciones.forEach(function(n, indice) { %>
           <% const etiqueta = etiquetaFecha(n.createdAt); %>
           <% if (etiqueta !== grupoActual) { grupoActual = etiqueta; %>
-            <h2 class="access-heading" style="<%= indice === 0 ? 'margin-top:0;' : '' %>"><%= etiqueta %></h2>
+            <h2 class="access-heading <%= indice === 0 ? 'sin-margen-superior' : '' %>"><%= etiqueta %></h2>
           <% } %>
           <% const tipo = tipoNotificacion(n.mensaje); %>
           <div class="notif-item <%= n.leida ? 'notif-item--leida' : '' %>" data-id="<%= n.id %>">
-            <span class="notif-icono notif-icono--<%= tipo %>"><%- ICONOS[tipo] %></span>
+            <span class="notif-icono notif-icono--<%= tipo %>" aria-hidden="true"><%- ICONOS[tipo] %></span>
             <div class="notif-cuerpo">
-              <p class="notif-mensaje"><%= n.mensaje %></p>
+              <p class="notif-mensaje"><% if (!n.leida) { %><span class="sr-only">Sin leer: </span><% } %><%= n.mensaje %></p>
               <span class="notif-hora tiempo"><%= new Date(n.createdAt).toISOString().slice(11, 16) %></span>
             </div>
             <% if (!n.leida) { %>

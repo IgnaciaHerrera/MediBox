@@ -1104,6 +1104,25 @@ table.tabla a.fila-link:hover {
   margin-top: 1.5rem;
 }
 
+/* Contenido presente para lectores de pantalla, invisible en pantalla —
+   patron estandar (no display:none/visibility:hidden, que lo sacarian
+   tambien del arbol de accesibilidad). */
+.chip-filtros--espaciado {
+  margin-bottom: 1.5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .detalle-item .etiqueta {
   display: block;
   font-size: 0.78rem;

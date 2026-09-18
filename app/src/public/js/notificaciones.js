@@ -28,6 +28,8 @@
         .then(function (r) {
           if (!r.ok) throw new Error('No se pudo marcar como leída');
           item.classList.add('notif-item--leida');
+          var srSinLeer = item.querySelector('.sr-only');
+          if (srSinLeer) srSinLeer.remove();
           form.remove();
           actualizarBadge(-1);
         })
@@ -52,6 +54,8 @@
             item.classList.add('notif-item--leida');
             var boton = item.querySelector('.form-marcar-leida');
             if (boton) boton.remove();
+            var srSinLeer = item.querySelector('.sr-only');
+            if (srSinLeer) srSinLeer.remove();
           });
           formTodas.remove();
           var badge = document.querySelector('.topbar-badge');

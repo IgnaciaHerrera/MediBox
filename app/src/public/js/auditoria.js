@@ -8,6 +8,7 @@
       var detalle = fila.nextElementSibling;
       if (detalle && detalle.classList.contains('fila-detalle')) {
         detalle.hidden = !detalle.hidden;
+        fila.setAttribute('aria-expanded', String(!detalle.hidden));
       }
     }
     fila.addEventListener('click', alternar);
