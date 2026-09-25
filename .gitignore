@@ -6,3 +6,21 @@ app/coverage/
 # ai-dev-base tooling
 mcp-tools/node_modules/
 .claude/scheduled_tasks.lock
+
+
+# Herramientas de Claude / skills (no forman parte del proyecto)
+.claude/
+.superpowers/
+skills/
+agents/
+hooks/
+mcp-tools/
+references/
+scripts/
+logs/
+docs/
+.mcp.json
+CLAUDE.md
+AGENTS.md
+CONTEXT.md
+CHANGELOG.md
