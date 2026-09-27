@@ -32,6 +32,16 @@
     <% } %>
 
     <form class="filtros" method="GET" action="/medicos">
+      <div class="field field--busqueda">
+        <label for="medicos-buscador">Buscar por nombre</label>
+        <div class="buscador-wrap">
+          <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="medicos-buscador" class="buscador" placeholder="Escribe un nombre…" />
+          <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="field">
         <label for="filtroEspecialidad">Especialidad</label>
         <select id="filtroEspecialidad" name="especialidadId">
@@ -43,13 +53,15 @@
       </div>
     </form>
 
+    <p class="access-empty sin-resultados" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
+
     <% if (medicos.length === 0 && !esAdmin) { %>
       <div class="empty-state"><p>No hay médicos <%= especialidadIdSeleccionada ? 'con esa especialidad.' : 'registrados.' %></p></div>
     <% } else { %>
       <div class="medicos-grid">
         <% medicos.forEach(function(m) { %>
           <% const citasHoy = citasHoyPorMedico.get(m.id) || 0; %>
-          <div class="medico-card" data-toggle-editar>
+          <div class="medico-card" data-toggle-editar data-busqueda="<%= m.nombre %>">
             <div class="card-encabezado">
               <span class="avatar avatar--grande"><%= iniciales(m.nombre) %></span>
               <% if (esAdmin) { %>

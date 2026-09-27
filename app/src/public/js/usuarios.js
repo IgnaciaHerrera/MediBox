@@ -89,6 +89,14 @@
       });
       var sinResultados = document.getElementById('fila-sin-resultados');
       if (sinResultados) sinResultados.hidden = algunaVisible || filas.length === 0;
+      limpiar.hidden = buscador.value.length === 0;
+    });
+
+    var limpiar = document.querySelector('[data-buscador-limpiar]');
+    limpiar.addEventListener('click', function () {
+      buscador.value = '';
+      buscador.dispatchEvent(new Event('input'));
+      buscador.focus();
     });
   }
 })();

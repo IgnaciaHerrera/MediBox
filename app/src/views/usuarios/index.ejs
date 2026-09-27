@@ -21,7 +21,7 @@
   <main class="page-main">
     <div class="page-head">
       <h1>Usuarios</h1>
-      <button type="button" class="btn btn-primary btn--auto" id="btn-crear-usuario">Crear usuario</button>
+      <button type="button" class="btn btn-primary btn--auto btn--control" id="btn-crear-usuario">Crear usuario</button>
     </div>
 
     <% if (error) { %>
@@ -31,7 +31,13 @@
     <div class="filtros filtros--sin-borde">
       <div class="field field--busqueda">
         <label for="usuarios-buscador">Buscar</label>
-        <input type="search" id="usuarios-buscador" placeholder="Nombre o correo…" />
+        <div class="buscador-wrap">
+          <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="usuarios-buscador" class="buscador" placeholder="Nombre o correo…" />
+          <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -69,7 +75,7 @@
               </td>
             </tr>
           <% }) %>
-          <tr id="fila-sin-resultados" hidden><td colspan="4" class="access-empty">Sin resultados para esa búsqueda.</td></tr>
+          <tr id="fila-sin-resultados" hidden><td colspan="4" class="access-empty sin-resultados">Sin resultados para esa búsqueda.</td></tr>
         </tbody>
       </table>
     </div>
@@ -111,8 +117,8 @@
         <p class="ayuda">Habilita que esta cuenta vea "Mi agenda" con las citas de ese médico.</p>
       </div>
       <div class="modal-acciones">
-        <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
-        <button type="submit" class="btn btn-primary btn--auto">Crear usuario</button>
+        <button type="button" class="btn btn-secondary btn--auto btn--control" data-cerrar-modal>Cancelar</button>
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Crear usuario</button>
       </div>
     </form>
   </dialog>
@@ -154,8 +160,8 @@
         <input type="password" id="editar-nuevaPassword" name="nuevaPassword" minlength="8" placeholder="Dejar en blanco para no cambiarla" />
       </div>
       <div class="modal-acciones">
-        <button type="button" class="btn btn-secondary" data-cerrar-modal>Cancelar</button>
-        <button type="submit" class="btn btn-primary btn--auto">Guardar cambios</button>
+        <button type="button" class="btn btn-secondary btn--auto btn--control" data-cerrar-modal>Cancelar</button>
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Guardar cambios</button>
       </div>
     </form>
   </dialog>

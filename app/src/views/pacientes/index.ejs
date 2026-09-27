@@ -18,18 +18,24 @@
     <div class="page-head">
       <h1>Pacientes</h1>
       <% if (puedeRegistrar) { %>
-        <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar paciente</a>
+        <a href="/pacientes/nuevo" class="btn btn-primary btn--auto btn--control">Registrar paciente</a>
       <% } %>
     </div>
 
     <form method="GET" action="/pacientes" class="filtros">
       <div class="field field--busqueda">
         <label for="q">Buscar por nombre</label>
-        <input type="search" id="q" name="q" value="<%= q %>" placeholder="Escribe un nombre…" />
+        <div class="buscador-wrap">
+          <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="q" name="q" class="buscador" value="<%= q %>" placeholder="Escribe un nombre…" />
+          <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" <%= q ? '' : 'hidden' %>>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
       </div>
-      <button type="submit" class="btn btn-secondary btn--auto">Buscar</button>
     </form>
 
+    <div id="pacientes-resultados" aria-live="polite">
     <% if (pacientes.length === 0) { %>
       <div class="empty-state">
         <p><%= q ? 'No se encontraron pacientes con ese nombre.' : 'Todavía no hay pacientes registrados.' %></p>
@@ -72,6 +78,8 @@
         </div>
       </div>
     <% } %>
+    </div>
   </main>
+  <script src="/js/pacientes.js"></script>
 </body>
 </html>

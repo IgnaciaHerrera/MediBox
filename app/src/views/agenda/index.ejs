@@ -38,7 +38,10 @@
     <div class="page-head">
       <h1><%= modoMia ? 'Mi agenda' : 'Agenda' %></h1>
       <% if (puedeCrear) { %>
-        <a href="/agenda/nueva" class="btn btn-primary btn--auto">Nueva cita</a>
+        <a href="/agenda/nueva" class="btn btn-primary btn--auto btn--control btn--icono">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Nueva cita
+        </a>
       <% } %>
     </div>
 
@@ -85,7 +88,13 @@
             </select>
           </div>
         <% } %>
-        <button type="submit" class="btn btn-secondary btn--auto">Filtrar</button>
+        <a
+          class="btn btn--control btn-limpiar"
+          href="<%= modoMia ? '/agenda/mia' : '/agenda' + (vista === 'calendario' ? '?vista=calendario' : '') %>"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          Limpiar filtros
+        </a>
       </form>
 
       <% if (!modoMia) { %>
@@ -102,7 +111,13 @@
             <% } %>
           </div>
           <div class="agenda-toolbar-right">
-            <input type="search" id="agenda-buscador" class="buscador" placeholder="Buscar médico o box…" aria-label="Buscar médico o box" />
+            <div class="buscador-wrap">
+              <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="search" id="agenda-buscador" class="buscador" placeholder="Buscar médico o box…" aria-label="Buscar médico o box" />
+              <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
             <div class="vista-toggle">
               <a href="<%= urlFiltros({ vistaNueva: 'lista' }) %>" class="vista-btn <%= vista === 'lista' ? 'activo' : '' %>">Lista</a>
               <a href="<%= urlFiltros({ vistaNueva: 'calendario' }) %>" class="vista-btn <%= vista === 'calendario' ? 'activo' : '' %>">Calendario</a>
@@ -136,6 +151,7 @@
                     <td><span class="badge badge-<%= cita.estado %>"><%= cita.estado.replace('_', ' ') %></span></td>
                   </tr>
                 <% }) %>
+                <tr data-sin-resultados hidden><td colspan="4" class="access-empty sin-resultados">Sin resultados para esa búsqueda.</td></tr>
               </tbody>
             </table>
           </div>
@@ -144,6 +160,7 @@
         <% if (columnasTimeline.length === 0) { %>
           <div class="empty-state"><p>Todavía no hay boxes registrados para mostrar en el calendario.</p></div>
         <% } else { %>
+          <p class="access-empty sin-resultados" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
           <div class="timeline-scroll">
             <div class="timeline-grid" style="grid-template-columns: 3.25rem repeat(<%= columnasTimeline.length %>, minmax(9rem, 1fr)); grid-template-rows: auto repeat(<%= TOTAL_FILAS %>, 2.25rem);">
               <div class="timeline-corner"></div>

@@ -19,10 +19,22 @@
   if (buscador) {
     buscador.addEventListener('input', function () {
       var termino = buscador.value.trim().toLowerCase();
+      var algunaVisible = false;
       document.querySelectorAll('[data-busqueda]').forEach(function (el) {
         var coincide = el.dataset.busqueda.toLowerCase().indexOf(termino) !== -1;
         el.hidden = termino.length > 0 && !coincide;
+        if (!el.hidden) algunaVisible = true;
       });
+      var sinResultados = document.querySelector('[data-sin-resultados]');
+      if (sinResultados) sinResultados.hidden = algunaVisible || termino.length === 0;
+      limpiar.hidden = buscador.value.length === 0;
+    });
+
+    var limpiar = document.querySelector('[data-buscador-limpiar]');
+    limpiar.addEventListener('click', function () {
+      buscador.value = '';
+      buscador.dispatchEvent(new Event('input'));
+      buscador.focus();
     });
   }
 })();

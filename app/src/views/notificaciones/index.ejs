@@ -39,7 +39,7 @@
       <% if (hayNoLeidas) { %>
         <form method="POST" action="/notificaciones/marcar-todas" id="form-marcar-todas">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button type="submit" class="btn btn-secondary btn--auto">Marcar todas como leídas</button>
+          <button type="submit" class="btn btn-secondary btn--auto btn--control">Marcar todas como leídas</button>
         </form>
       <% } %>
     </div>
