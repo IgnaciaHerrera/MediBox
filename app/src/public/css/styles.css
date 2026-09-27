@@ -311,18 +311,24 @@ input {
 /* ---------- Dashboard ---------- */
 
 .topbar {
-  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  padding: 1.1rem 2rem;
+  column-gap: 2.5rem;
+  min-height: 4rem;
+  padding: 0 2rem;
   border-bottom: 1px solid var(--line);
   background: var(--paper-raised);
 }
 
-.topbar-left {
+.topbar-start {
+  justify-self: start;
   display: flex;
   align-items: center;
-  gap: 2.25rem;
+  gap: 0.5rem;
 }
 
 .topbar-brand {
@@ -335,36 +341,47 @@ input {
 
 .topbar-nav {
   display: flex;
-  gap: 1.5rem;
+  justify-self: center;
+  align-items: center;
+  gap: 1.9rem;
 }
 
 .topbar-nav a {
-  color: var(--ink-soft);
-  text-decoration: none;
-  font-size: 0.92rem;
-  font-weight: 500;
-  padding-bottom: 0.2rem;
-  border-bottom: 2px solid transparent;
-}
-
-.topbar-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  padding: 0 0.3rem;
-  margin-left: 0.3rem;
-  border-radius: 999px;
-  background: var(--brick);
-  color: var(--paper);
-  font-size: 0.68rem;
-  font-weight: 700;
-  vertical-align: middle;
+  gap: 0.45rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.topbar-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.topbar-icon[hidden] {
+  display: none;
+}
+
+.topbar-nav a .topbar-icon {
+  opacity: 0.75;
+  transition: opacity var(--dur-fast) ease;
 }
 
 .topbar-nav a:hover {
   color: var(--ink);
+}
+
+.topbar-nav a:hover .topbar-icon,
+.topbar-nav a.activo .topbar-icon {
+  opacity: 1;
 }
 
 .topbar-nav a.activo {
@@ -372,17 +389,206 @@ input {
   border-bottom-color: var(--teal);
 }
 
+.topbar-nav a.activo .topbar-icon {
+  color: var(--teal);
+}
+
 .topbar-user {
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
 
-.topbar-user strong {
+.topbar-bell,
+.topbar-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.topbar-bell:hover,
+.topbar-menu:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.topbar-bell.activo {
+  color: var(--teal);
+}
+
+.topbar-bell .topbar-icon,
+.topbar-menu .topbar-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.topbar-badge {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.7rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border: 2px solid var(--paper-raised);
+  border-radius: 999px;
+  background: var(--brick);
+  color: var(--paper);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.topbar-identity {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.topbar-identity strong {
   color: var(--ink);
   font-weight: 600;
+}
+
+.topbar-identity span {
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+
+.topbar-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--brick);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.topbar-logout:hover,
+.topbar-logout:focus-visible {
+  border-color: rgba(168, 67, 42, 0.35);
+  background: rgba(168, 67, 42, 0.06);
+}
+
+.topbar-menu,
+.topbar-nav-head,
+.topbar-nav-foot,
+.topbar-velo {
+  display: none;
+}
+
+@media (max-width: 1320px) {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    padding: 0 1rem 0 0.75rem;
+  }
+
+  .topbar-desktop {
+    display: none;
+  }
+
+  .topbar-menu {
+    display: inline-flex;
+  }
+
+  .topbar-velo:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(27, 33, 31, 0.32);
+  }
+
+  .topbar-nav {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: min(18rem, 85vw);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.1rem;
+    padding: 0 0.75rem 1.25rem;
+    overflow-y: auto;
+    background: var(--paper-raised);
+    border-right: 1px solid var(--line);
+    box-shadow: var(--shadow-md);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--dur-base) var(--ease-out), visibility 0s linear var(--dur-base);
+  }
+
+  .topbar.abierto .topbar-nav {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .topbar-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 4rem;
+    margin-bottom: 0.5rem;
+    padding-left: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .topbar-nav a {
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    border-bottom: none;
+    border-left: 2px solid transparent;
+    font-size: 0.95rem;
+  }
+
+  .topbar-nav a.activo {
+    border-left-color: var(--teal);
+    background: var(--paper);
+  }
+
+  .topbar-nav-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding: 1rem 0.25rem 0 0.75rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .topbar-nav-foot .topbar-identity {
+    text-align: left;
+    white-space: normal;
+  }
+}
+
+body.sin-scroll {
+  overflow: hidden;
 }
 
 .dashboard-main {
