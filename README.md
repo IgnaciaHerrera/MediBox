@@ -105,6 +105,26 @@ Con Docker, cada comando se ejecuta dentro del contenedor de la app, por
 ejemplo `docker compose run --rm app npm run cifrado:migrar`. Una base nueva
 (o la de CI) aplica ambos pasos de corrido, sin intervención.
 
+## Respaldos cifrados
+
+`ops/respaldar-db.sh` vuelca la base con `pg_dump` y la cifra con gpg
+(AES-256, modo simétrico) en el mismo pipe, sin escribir nunca el volcado en
+claro. `ops/restaurar-db.sh` primero verifica el archivo completo (gpg rechaza
+una frase de paso incorrecta o un archivo alterado) y luego restaura en una
+sola transacción. Ambos requieren `gpg` y la base levantada con Docker Compose.
+
+```bash
+# La frase de paso vive en un archivo fuera del repositorio y separado de
+# los respaldos (por ejemplo, en el gestor de secretos del equipo).
+openssl rand -base64 32 > ~/medibox-respaldo.clave
+
+MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/respaldar-db.sh
+MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/restaurar-db.sh respaldos/medibox-AAAAMMDD-HHMMSS.dump.gpg --confirmar
+```
+
+Un respaldo solo sirve si se puede restaurar: conviene probar la
+restauración periódicamente, no solo generar los archivos.
+
 ## Notas técnicas
 
 - El `docker-compose.yml` local remapea el puerto 5432 del contenedor al 5433 del host (solo en esta máquina de desarrollo). En CI/CD (GitHub Actions), Postgres usa el puerto 5432 estándar sin remap.
