@@ -24,10 +24,10 @@
 
     <form method="GET" action="/pacientes" class="filtros">
       <div class="field field--busqueda">
-        <label for="q">Buscar por nombre</label>
+        <label for="q">Buscar por nombre o RUT</label>
         <div class="buscador-wrap">
           <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="search" id="q" name="q" class="buscador" value="<%= q %>" placeholder="Escribe un nombre…" />
+          <input type="search" id="q" name="q" class="buscador" value="<%= q %>" placeholder="Nombre o RUT…" />
           <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" <%= q ? '' : 'hidden' %>>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
@@ -38,7 +38,7 @@
     <div id="pacientes-resultados" aria-live="polite">
     <% if (pacientes.length === 0) { %>
       <div class="empty-state">
-        <p><%= q ? 'No se encontraron pacientes con ese nombre.' : 'Todavía no hay pacientes registrados.' %></p>
+        <p><%= q ? 'No se encontraron pacientes con ese nombre o RUT.' : 'Todavía no hay pacientes registrados.' %></p>
         <% if (!q && puedeRegistrar) { %>
           <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar el primer paciente</a>
         <% } %>

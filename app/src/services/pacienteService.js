@@ -19,7 +19,7 @@ const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true, motivoConsultaCifrad
  * @param {string} rut - RUT en cualquier formato.
  * @returns {Buffer} valor de la columna rut_indice.
  *
- * Consumidores: cifrarPaciente().
+ * Consumidores: cifrarPaciente(), buscarPorRut().
  */
 function indiceRut(rut) {
   return indiceCiego('paciente.rut', normalizarRut(rut));
@@ -87,6 +87,19 @@ async function buscarPorNombre(texto) {
   return filas.filter((fila) => sinTildes(descifrar('paciente.nombre', fila.nombreCifrado)).includes(aguja)).map(resumen);
 }
 
+// Un texto con forma de RUT (solo dígitos, puntos, guion y K) se busca por el
+// índice ciego; cualquier otro, por nombre. Se mira la forma y no el dígito
+// verificador porque hay pacientes migrados con RUT anteriores a esa
+// validación, y un nombre nunca contiene dígitos.
+const FORMA_DE_RUT = /^[\d.\s]+-?[\dkK]$/;
+
+// Búsqueda exacta por el índice ciego: la base compara HMACs y nunca ve el
+// RUT. Usa el índice único, así que no recorre la tabla.
+async function buscarPorRut(rut) {
+  const fila = await prisma.paciente.findUnique({ where: { rutIndice: indiceRut(rut) }, select: SELECT_RESUMEN });
+  return fila ? [resumen(fila)] : [];
+}
+
 async function crearPaciente(datos, usuarioId) {
   return prisma
     .$transaction(async (tx) => {
@@ -128,7 +141,7 @@ async function listarPacientes({ page = 1, pageSize = 20, q } = {}, usuarioId) {
   let total;
 
   if (busqueda) {
-    const coincidencias = await buscarPorNombre(busqueda);
+    const coincidencias = FORMA_DE_RUT.test(busqueda) ? await buscarPorRut(busqueda) : await buscarPorNombre(busqueda);
     total = coincidencias.length;
     items = coincidencias.slice((page - 1) * pageSize, page * pageSize);
   } else {

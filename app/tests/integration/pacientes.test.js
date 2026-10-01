@@ -3,6 +3,7 @@ const { Prisma } = require('@prisma/client');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
+const { cifrarPaciente } = require('../../src/services/pacienteService');
 
 describe('Paciente encryption and access control', () => {
   let usuarioOperador;
@@ -108,6 +109,41 @@ describe('Paciente encryption and access control', () => {
     const sinCoincidencia = await agent.get('/api/pacientes').query({ q: 'NombreQueNoExisteEnNadie' });
     expect(sinCoincidencia.status).toBe(200);
     expect(sinCoincidencia.body.items.some((p) => p.id === createRes.body.id)).toBe(false);
+  });
+
+  it('GET /api/pacientes?q finds a patient by full RUT through the blind index', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+
+    const createRes = await agent.post('/api/pacientes').send({
+      nombre: 'Rosa Busqueda Rut',
+      rut: '18181818-2',
+      fechaNacimiento: '1966-06-06',
+      contacto: '+56944445555',
+      motivoConsulta: 'Consulta de prueba de búsqueda por RUT',
+    });
+    expect(createRes.status).toBe(201);
+    pacienteIds.push(createRes.body.id);
+
+    const porRut = await agent.get('/api/pacientes').query({ q: '18.181.818-2' });
+    expect(porRut.status).toBe(200);
+    expect(porRut.body.items.map((p) => p.id)).toEqual([createRes.body.id]);
+    expect(porRut.body.items[0].nombre).toBe('Rosa Busqueda Rut');
+
+    const rutParcial = await agent.get('/api/pacientes').query({ q: '18181818' });
+    expect(rutParcial.body.items.some((p) => p.id === createRes.body.id)).toBe(false);
+
+    // Un paciente migrado puede traer un RUT anterior a la validación del
+    // dígito verificador; igual debe poder encontrarse por él.
+    const migrado = await prisma.paciente.create({
+      data: {
+        ...cifrarPaciente({ nombre: 'Paciente Migrado Test', rut: '11111111-2', contacto: '+56912121212', motivoConsulta: 'Control' }),
+        fechaNacimiento: new Date('1950-01-01'),
+      },
+    });
+    pacienteIds.push(migrado.id);
+    const porRutAntiguo = await agent.get('/api/pacientes').query({ q: '11.111.111-2' });
+    expect(porRutAntiguo.body.items.map((p) => p.id)).toEqual([migrado.id]);
   });
 
   it('decrypts rut and motivo_consulta for an authorized read and writes an audit row', async () => {
