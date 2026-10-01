@@ -159,8 +159,3 @@ verifica de forma automatizada en ningún punto del proyecto actualmente**:
   también (o combinar ambos con `--coverage` y `collectCoverageFrom` ajustado) e incorporar
   ese paso al workflow de CI. Ninguna de las dos cosas está hecha; queda como trabajo
   pendiente explícito, no como un descuido silencioso.
-
-## Documentación de diseño
-
-- [Spec de diseño](docs/superpowers/specs/2026-09-11-medibox-design.md)
-- [Plan de implementación](docs/superpowers/plans/2026-09-11-medibox-implementation.md)
