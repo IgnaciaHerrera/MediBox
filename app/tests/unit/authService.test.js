@@ -29,6 +29,14 @@ describe('authService', () => {
     await expect(autenticar('nadie@medibox.local', 'x')).resolves.toBeNull();
   });
 
+  it('autenticar still runs a bcrypt comparison when the user does not exist (no timing oracle)', async () => {
+    prisma.usuario.findUnique.mockResolvedValue(null);
+    const compare = jest.spyOn(bcrypt, 'compare');
+    await autenticar('nadie@medibox.local', 'Secreto123!');
+    expect(compare).toHaveBeenCalledTimes(1);
+    compare.mockRestore();
+  });
+
   it('autenticar returns the user without passwordHash on a match', async () => {
     const passwordHash = await bcrypt.hash('Secreto123!', 12);
     prisma.usuario.findUnique.mockResolvedValue({
