@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const pinoHttp = require('pino-http');
-const { logger } = require('./lib/logger');
+const { logger, serializadoresHttp } = require('./lib/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
 const { issueCsrfToken, verifyCsrf } = require('./middleware/csrf');
@@ -36,7 +36,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(pinoHttp({ logger }));
+app.use(pinoHttp({ logger, serializers: serializadoresHttp }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(sessionMiddleware);
