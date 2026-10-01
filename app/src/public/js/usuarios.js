@@ -26,7 +26,7 @@
   }
 
   var campoMedicoCrear = document.getElementById('crear-campo-medico');
-  var actualizarCampoMedicoCrear = conectarCampoMedico(document.getElementById('crear-rolId'), campoMedicoCrear);
+  conectarCampoMedico(document.getElementById('crear-rolId'), campoMedicoCrear);
 
   var dialogEditar = document.getElementById('modal-editar-usuario');
   var formEditar = document.getElementById('form-editar-usuario');

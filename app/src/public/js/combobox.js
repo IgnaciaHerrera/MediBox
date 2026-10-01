@@ -6,7 +6,7 @@
     var datos = [];
     try {
       datos = JSON.parse(contenedor.querySelector('script[type="application/json"]').textContent);
-    } catch (e) {
+    } catch {
       datos = [];
     }
 
