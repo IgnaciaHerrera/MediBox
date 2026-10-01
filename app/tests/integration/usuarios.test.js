@@ -55,6 +55,16 @@ describe('Gestión de usuarios (admin.users)', () => {
     expect(stored.passwordHash).not.toBe('Password123!');
   });
 
+  it('rejects a password longer than the 72 bytes bcrypt can use', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'usuarios-admin-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+    const res = await agent.post('/api/usuarios').send({
+      nombre: 'Clave Larga', email: 'usuario-clave-larga-test@medibox.local', password: 'x'.repeat(73), rolId: rolConsulta.id,
+    });
+    expect(res.status).toBe(400);
+    expect(await prisma.usuario.findUnique({ where: { email: 'usuario-clave-larga-test@medibox.local' } })).toBeNull();
+  });
+
   it('rejects creating a user with a duplicate email with 409', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'usuarios-admin-test@medibox.local', password });
     expect(loginRes.status).toBe(200);

@@ -1,10 +1,25 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { prisma } = require('../lib/prisma');
+const { AppError } = require('../lib/AppError');
 
 const SALT_ROUNDS = 12;
+// bcrypt ignora en silencio todo lo que pase de 72 bytes: dos contraseñas que
+// solo difieren después del byte 72 darían el mismo hash.
+const BCRYPT_MAX_BYTES = 72;
 
+/**
+ * @param {string} password - contraseña en claro.
+ * @returns {Promise<string>} hash bcrypt con sal propia y costo SALT_ROUNDS.
+ * @throws {AppError} 400 si la contraseña supera los 72 bytes que bcrypt usa.
+ *
+ * Consumidores: usuarioService.crear(), usuarioService.cambiarPassword(),
+ *   obtenerHashSimulado().
+ */
 async function hashPassword(password) {
+  if (Buffer.byteLength(password, 'utf8') > BCRYPT_MAX_BYTES) {
+    throw new AppError(`La contraseña no puede superar los ${BCRYPT_MAX_BYTES} bytes`, 400);
+  }
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 

@@ -14,6 +14,12 @@ describe('authService', () => {
     await expect(bcrypt.compare('Secreto123!', hash)).resolves.toBe(true);
   });
 
+  it('hashPassword rejects passwords over 72 bytes, counting bytes rather than characters', async () => {
+    await expect(hashPassword('a'.repeat(72))).resolves.toMatch(/^\$2b\$12\$/);
+    // 37 caracteres, pero 74 bytes en UTF-8: bcrypt descartaría los últimos.
+    await expect(hashPassword('ñ'.repeat(37))).rejects.toThrow(/72 bytes/);
+  });
+
   it('verifyPassword returns true for a matching password', async () => {
     const hash = await bcrypt.hash('Secreto123!', 12);
     await expect(verifyPassword('Secreto123!', hash)).resolves.toBe(true);
