@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
+const { cifrarPaciente } = require('../../src/services/pacienteService');
 const { loginAgent } = require('../helpers/csrf');
 
 describe('Espacios físicos', () => {
@@ -135,12 +136,12 @@ describe('Espacios físicos', () => {
 
     const especialidad = await prisma.especialidad.upsert({ where: { nombre: 'Especialidad Espacios Test' }, update: {}, create: { nombre: 'Especialidad Espacios Test' } });
     const medico = await prisma.medico.create({ data: { nombre: 'Dr. Espacios Test', especialidadId: especialidad.id } });
-    const KEY = process.env.PACIENTE_ENCRYPTION_KEY;
-    const [paciente] = await prisma.$queryRaw`
-      INSERT INTO pacientes (nombre, rut_cifrado, fecha_nacimiento, contacto, motivo_consulta_cifrado, created_at)
-      VALUES ('Paciente Espacios Test', pgp_sym_encrypt('11111111-1', ${KEY}), '1990-01-01'::date, '+56900000000', pgp_sym_encrypt('Test', ${KEY}), now())
-      RETURNING id
-    `;
+    const paciente = await prisma.paciente.create({
+      data: {
+        ...cifrarPaciente({ nombre: 'Paciente Espacios Test', rut: '13131313-6', contacto: '+56900000000', motivoConsulta: 'Test' }),
+        fechaNacimiento: new Date('1990-01-01'),
+      },
+    });
 
     const boxConCitasRes = await agent.post('/api/boxes').send({ nombre: 'Box Con Citas Test', pasilloId: pasillo.id });
     const citaRes = await agent.post('/api/citas').send({

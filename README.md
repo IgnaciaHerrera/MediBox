@@ -13,7 +13,8 @@ un ramo de Seguridad y Protección de Datos.
 
 ```bash
 cp .env.example .env
-# editar .env con valores propios (no usar los de ejemplo en producción)
+# editar .env con valores propios (no usar los de ejemplo en producción);
+# las llaves de cifrado se generan como indica el propio .env.example
 docker compose up --build
 ```
 
@@ -41,17 +42,12 @@ npm run seed         # datos de catálogo + usuario admin de desarrollo
 
 ### Variables de entorno para tests locales
 
-Para correr tests desde el host (fuera de Docker), se requieren **tres** variables de entorno:
+Los tests cargan el `.env` de la raíz (ver `tests/setup-env.js`), así que
+`SESSION_SECRET` y las llaves `PACIENTE_*_KEY` salen de ahí. Desde el host
+(fuera de Docker) solo hay que apuntar `DATABASE_URL` al puerto publicado:
 
-- `DATABASE_URL`: conexión a PostgreSQL (ej: `postgresql://medibox:change-me@localhost:5433/medibox`)
-- `SESSION_SECRET`: clave para sesiones
-- `PACIENTE_ENCRYPTION_KEY`: clave de cifrado para datos sensibles de pacientes (es fácil olvidarla y los tests de Paciente fallarán sin ella)
-
-Ejemplo:
 ```bash
 export DATABASE_URL="postgresql://medibox:change-me@localhost:5433/medibox"
-export SESSION_SECRET="test-secret"
-export PACIENTE_ENCRYPTION_KEY="test-key"
 npm test
 ```
 
@@ -62,6 +58,47 @@ Tras ejecutar `npm run seed`, se crea un usuario admin de desarrollo:
 - Contraseña: `Admin123!`
 
 **⚠️ Cambiar estas credenciales antes de cualquier uso real.**
+
+## Cifrado de datos de pacientes
+
+Nombre, RUT, contacto y motivo de consulta se cifran en la aplicación con
+AES-256-GCM (`app/src/lib/cifrado.js`) antes de llegar a PostgreSQL; la base
+solo guarda blobs cifrados y nunca recibe las llaves. Cada categoría tiene su
+propia llave:
+
+| Variable | Protege |
+|---|---|
+| `PACIENTE_IDENTIDAD_KEY` | nombre y RUT |
+| `PACIENTE_CONTACTO_KEY` | teléfono / correo |
+| `PACIENTE_CLINICO_KEY` | motivo de consulta |
+| `PACIENTE_RUT_HMAC_KEY` | índice ciego del RUT (HMAC-SHA256): búsqueda exacta y unicidad sin descifrar |
+
+Perder una llave significa perder los datos que protege: deben respaldarse
+fuera del servidor y separadas de los respaldos de la base.
+
+### Migrar una base existente
+
+Las bases creadas antes de este cambio guardan el nombre y el contacto en
+texto plano, y el RUT y el motivo cifrados con pgcrypto. La migración tiene
+dos pasos y entre ellos hay que recifrar los datos:
+
+```bash
+# 1. Aplica el paso 1 (expandir). El paso 2 se detiene a propósito con
+#    "Hay pacientes sin migrar..." mientras queden datos sin recifrar.
+npx prisma migrate deploy
+
+# 2. Recifra los pacientes. Necesita la llave anterior en
+#    PACIENTE_ENCRYPTION_KEY y las cuatro llaves nuevas.
+npm run cifrado:migrar
+
+# 3. Marca el paso 2 como revertido y vuelve a aplicarlo.
+npx prisma migrate resolve --rolled-back 20261001160100_cifrado_pacientes_contraer
+npx prisma migrate deploy
+```
+
+Con Docker, cada comando se ejecuta dentro del contenedor de la app, por
+ejemplo `docker compose run --rm app npm run cifrado:migrar`. Una base nueva
+(o la de CI) aplica ambos pasos de corrido, sin intervención.
 
 ## Notas técnicas
 

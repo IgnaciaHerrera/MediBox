@@ -1,6 +1,8 @@
 // app/prisma/seed.js
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const { cifrarPaciente } = require('../src/services/pacienteService');
+const { descifrar } = require('../src/lib/cifrado');
 
 const prisma = new PrismaClient();
 
@@ -51,8 +53,7 @@ const USUARIOS_DEMO = [
 const PASSWORD_DEMO = 'Demo1234!';
 
 // Pacientes de ejemplo para que la agenda no se vea vacía en una instalación
-// recién sembrada. El nombre se usa como clave de idempotencia (no hay un
-// RUT en texto plano contra el cual buscar, ya que vive cifrado).
+// recién sembrada. El nombre se usa como clave de idempotencia.
 const PACIENTES_DEMO = [
   { nombre: 'Ana Contreras', rut: '15234876-2', fechaNacimiento: '1987-04-12', contacto: '+56911112222', motivoConsulta: 'Control cardiológico de rutina' },
   { nombre: 'Pedro Muñoz', rut: '18456321-5', fechaNacimiento: '1993-11-02', contacto: '+56922223333', motivoConsulta: 'Dolor lumbar persistente' },
@@ -164,29 +165,28 @@ async function seedUsuariosDemo() {
   }
 }
 
+// El nombre vive cifrado, así que se descifra en memoria para comparar. No
+// se usa el índice del RUT como clave: las bases sembradas antes de validar
+// el dígito verificador tienen otros RUT de ejemplo y se duplicarían.
+async function idsPacientesPorNombre() {
+  const filas = await prisma.paciente.findMany({ select: { id: true, nombreCifrado: true } });
+  return new Map(filas.map((f) => [descifrar('paciente.nombre', f.nombreCifrado), f.id]));
+}
+
 async function seedPacientes() {
-  const key = process.env.PACIENTE_ENCRYPTION_KEY;
-  for (const { nombre, rut, fechaNacimiento, contacto, motivoConsulta } of PACIENTES_DEMO) {
-    const existente = await prisma.$queryRaw`SELECT id FROM pacientes WHERE nombre = ${nombre} LIMIT 1`;
-    if (existente.length === 0) {
-      await prisma.$executeRaw`
-        INSERT INTO pacientes (nombre, rut_cifrado, fecha_nacimiento, contacto, motivo_consulta_cifrado, created_at)
-        VALUES (
-          ${nombre},
-          pgp_sym_encrypt(${rut}, ${key}),
-          ${fechaNacimiento}::date,
-          ${contacto},
-          pgp_sym_encrypt(${motivoConsulta}, ${key}),
-          now()
-        )
-      `;
+  const existentes = await idsPacientesPorNombre();
+  for (const paciente of PACIENTES_DEMO) {
+    if (!existentes.has(paciente.nombre)) {
+      await prisma.paciente.create({
+        data: { ...cifrarPaciente(paciente), fechaNacimiento: new Date(paciente.fechaNacimiento) },
+      });
     }
   }
 }
 
 async function seedCitas() {
+  const pacientes = await idsPacientesPorNombre();
   for (const c of citasDemo()) {
-    const [paciente] = await prisma.$queryRaw`SELECT id FROM pacientes WHERE nombre = ${c.pacienteNombre} LIMIT 1`;
     const medico = await prisma.medico.findFirstOrThrow({ where: { nombre: c.medicoNombre } });
     const box = await prisma.box.findFirstOrThrow({ where: { nombre: c.box, pasillo: { nombre: c.pasillo } } });
     const fecha = fechaRelativaISO(c.diasDesdeHoy);
@@ -197,7 +197,7 @@ async function seedCitas() {
     if (!existente) {
       await prisma.cita.create({
         data: {
-          pacienteId: paciente.id,
+          pacienteId: pacientes.get(c.pacienteNombre),
           medicoId: medico.id,
           boxId: box.id,
           fecha: new Date(fecha),

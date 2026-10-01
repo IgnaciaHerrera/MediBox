@@ -105,12 +105,16 @@ model Instrumento {
   @@map("instrumentos")
 }
 
+// Los datos personales se cifran en la aplicación con AES-256-GCM
+// (src/lib/cifrado.js); la base de datos solo ve blobs cifrados.
 model Paciente {
   id                    Int      @id @default(autoincrement())
-  nombre                String
+  nombreCifrado         Bytes    @map("nombre_cifrado")
   rutCifrado            Bytes    @map("rut_cifrado")
+  // HMAC-SHA256 del RUT normalizado: búsqueda exacta y unicidad sin descifrar.
+  rutIndice             Bytes    @unique @map("rut_indice")
   fechaNacimiento       DateTime @map("fecha_nacimiento") @db.Date
-  contacto              String
+  contactoCifrado       Bytes    @map("contacto_cifrado")
   motivoConsultaCifrado Bytes    @map("motivo_consulta_cifrado")
   createdAt             DateTime @default(now()) @map("created_at")
 

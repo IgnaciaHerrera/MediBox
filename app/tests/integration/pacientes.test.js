@@ -34,24 +34,56 @@ describe('Paciente encryption and access control', () => {
     await prisma.$disconnect();
   });
 
-  it('stores rut and motivo_consulta encrypted at rest (raw column is not plaintext)', async () => {
+  it('stores nombre, rut, contacto and motivo_consulta encrypted at rest, with no plaintext column left', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
-    const createRes = await agent.post('/api/pacientes').send({
+    const datos = {
       nombre: 'Juan Pérez',
       rut: '12345678-5',
       fechaNacimiento: '1990-05-20',
       contacto: '+56911112222',
       motivoConsulta: 'Control cardiológico',
-    });
+    };
+    const createRes = await agent.post('/api/pacientes').send(datos);
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
 
-    const rawRows = await prisma.$queryRaw`SELECT rut_cifrado, motivo_consulta_cifrado FROM pacientes WHERE id = ${createRes.body.id}`;
-    const rawBuffer = rawRows[0].rut_cifrado;
-    expect(Buffer.isBuffer(rawBuffer)).toBe(true);
-    expect(rawBuffer.toString('utf8')).not.toContain('12345678-5');
+    const [fila] = await prisma.$queryRaw`
+      SELECT nombre_cifrado, rut_cifrado, contacto_cifrado, motivo_consulta_cifrado
+      FROM pacientes WHERE id = ${createRes.body.id}
+    `;
+    const columnas = [
+      [fila.nombre_cifrado, datos.nombre],
+      [fila.rut_cifrado, datos.rut],
+      [fila.contacto_cifrado, datos.contacto],
+      [fila.motivo_consulta_cifrado, datos.motivoConsulta],
+    ];
+    columnas.forEach(([blob, enClaro]) => {
+      expect(Buffer.isBuffer(blob)).toBe(true);
+      expect(blob[0]).toBe(1); // versión del formato AES-256-GCM
+      expect(blob.toString('utf8')).not.toContain(enClaro);
+    });
+
+    const columnasTabla = await prisma.$queryRaw`
+      SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'pacientes'
+    `;
+    const textoPlano = columnasTabla.filter((c) => c.data_type === 'text').map((c) => c.column_name);
+    expect(textoPlano).toEqual([]);
+  });
+
+  it('rejects a second patient with the same RUT even when written differently', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+    const datos = { nombre: 'Duplicado Uno', fechaNacimiento: '1975-03-03', contacto: '+56977778888', motivoConsulta: 'Control' };
+
+    const primero = await agent.post('/api/pacientes').send({ ...datos, rut: '16161616-8' });
+    expect(primero.status).toBe(201);
+    pacienteIds.push(primero.body.id);
+
+    const segundo = await agent.post('/api/pacientes').send({ ...datos, nombre: 'Duplicado Dos', rut: '16.161.616-8' });
+    expect(segundo.status).toBe(409);
+    expect(segundo.body.error).toMatch(/Ya existe un paciente/);
   });
 
   it('GET /api/pacientes?q filters by name without exposing rut in the list', async () => {

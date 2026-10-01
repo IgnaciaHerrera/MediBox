@@ -2,115 +2,164 @@ const { Prisma } = require('@prisma/client');
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
 const { AppError } = require('../lib/AppError');
+const { cifrar, descifrar, indiceCiego } = require('../lib/cifrado');
+const { normalizarRut } = require('../lib/rut');
 
-const KEY = () => process.env.PACIENTE_ENCRYPTION_KEY;
+// Toda lectura de datos de paciente pasa por este servicio (con su propia
+// auditoría), y es el único lugar donde se cifra y descifra.
+//
+// El resumen (listados, combobox de agenda) no incluye RUT ni motivo: quien
+// solo navega la lista no necesita descifrar datos de identidad ni clínicos.
+const SELECT_RESUMEN = { id: true, nombreCifrado: true, contactoCifrado: true, fechaNacimiento: true, createdAt: true };
+const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true, motivoConsultaCifrado: true };
+
+/**
+ * Índice ciego del RUT: HMAC-SHA256 de su forma canónica.
+ *
+ * @param {string} rut - RUT en cualquier formato.
+ * @returns {Buffer} valor de la columna rut_indice.
+ *
+ * Consumidores: cifrarPaciente().
+ */
+function indiceRut(rut) {
+  return indiceCiego('paciente.rut', normalizarRut(rut));
+}
+
+/**
+ * Convierte los datos en claro de un paciente en las columnas cifradas.
+ *
+ * @param {{nombre: string, rut: string, contacto: string, motivoConsulta: string}} datos
+ * @returns {{nombreCifrado: Buffer, rutCifrado: Buffer, rutIndice: Buffer,
+ *   contactoCifrado: Buffer, motivoConsultaCifrado: Buffer}}
+ *
+ * Consumidores: crearPaciente(), actualizarPaciente(), prisma/seed.js,
+ *   prisma/migrar-cifrado.js.
+ */
+function cifrarPaciente({ nombre, rut, contacto, motivoConsulta }) {
+  return {
+    nombreCifrado: cifrar('paciente.nombre', nombre),
+    rutCifrado: cifrar('paciente.rut', normalizarRut(rut)),
+    rutIndice: indiceRut(rut),
+    contactoCifrado: cifrar('paciente.contacto', contacto),
+    motivoConsultaCifrado: cifrar('paciente.motivoConsulta', motivoConsulta),
+  };
+}
+
+function resumen(fila) {
+  return {
+    id: fila.id,
+    nombre: descifrar('paciente.nombre', fila.nombreCifrado),
+    contacto: descifrar('paciente.contacto', fila.contactoCifrado),
+    fechaNacimiento: fila.fechaNacimiento,
+    createdAt: fila.createdAt,
+  };
+}
+
+function ficha(fila) {
+  return {
+    ...resumen(fila),
+    rut: descifrar('paciente.rut', fila.rutCifrado),
+    motivoConsulta: descifrar('paciente.motivoConsulta', fila.motivoConsultaCifrado),
+  };
+}
+
+// La única restricción única de la tabla es rut_indice, y P2025 solo puede
+// venir del update de un id inexistente.
+function traducirErrorPrisma(err) {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') throw new AppError('Ya existe un paciente registrado con ese RUT', 409);
+    if (err.code === 'P2025') throw new AppError('Paciente no encontrado', 404);
+  }
+  throw err;
+}
+
+function sinTildes(texto) {
+  return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+}
+
+// ponytail: descifra los nombres en memoria para buscar, porque AES-GCM no
+// admite LIKE en la base. Con miles de pacientes son milisegundos; si el
+// padrón llega a cientos de miles, el upgrade es un índice ciego por tokens
+// del nombre normalizado. Solo se descifra el contacto de las coincidencias.
+async function buscarPorNombre(texto) {
+  const aguja = sinTildes(texto);
+  const filas = await prisma.paciente.findMany({ select: SELECT_RESUMEN, orderBy: { createdAt: 'desc' } });
+  return filas.filter((fila) => sinTildes(descifrar('paciente.nombre', fila.nombreCifrado)).includes(aguja)).map(resumen);
+}
 
 async function crearPaciente(datos, usuarioId) {
-  const { nombre, rut, fechaNacimiento, contacto, motivoConsulta } = datos;
-
-  return prisma.$transaction(async (tx) => {
-    const rows = await tx.$queryRaw`
-      INSERT INTO pacientes (nombre, rut_cifrado, fecha_nacimiento, contacto, motivo_consulta_cifrado, created_at)
-      VALUES (
-        ${nombre},
-        pgp_sym_encrypt(${rut}, ${KEY()}),
-        ${fechaNacimiento}::date,
-        ${contacto},
-        pgp_sym_encrypt(${motivoConsulta}, ${KEY()}),
-        now()
-      )
-      RETURNING id, nombre, fecha_nacimiento AS "fechaNacimiento", contacto, created_at AS "createdAt"
-    `;
-
-    const paciente = rows[0];
-    await registrar({ usuarioId, accion: 'CREATE', entidad: 'Paciente', entidadId: paciente.id }, tx);
-    return paciente;
-  });
+  return prisma
+    .$transaction(async (tx) => {
+      const fila = await tx.paciente.create({
+        data: { ...cifrarPaciente(datos), fechaNacimiento: new Date(datos.fechaNacimiento) },
+        select: SELECT_RESUMEN,
+      });
+      await registrar({ usuarioId, accion: 'CREATE', entidad: 'Paciente', entidadId: fila.id }, tx);
+      return resumen(fila);
+    })
+    .catch(traducirErrorPrisma);
 }
 
 async function obtenerPacientePorId(id, usuarioId) {
-  const rows = await prisma.$queryRaw`
-    SELECT
-      id,
-      nombre,
-      pgp_sym_decrypt(rut_cifrado, ${KEY()}) AS rut,
-      fecha_nacimiento AS "fechaNacimiento",
-      contacto,
-      pgp_sym_decrypt(motivo_consulta_cifrado, ${KEY()}) AS "motivoConsulta",
-      created_at AS "createdAt"
-    FROM pacientes WHERE id = ${id}
-  `;
-
-  const paciente = rows[0];
-  if (!paciente) throw new AppError('Paciente no encontrado', 404);
+  const fila = await prisma.paciente.findUnique({ where: { id }, select: SELECT_FICHA });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
 
   await registrar({ usuarioId, accion: 'READ', entidad: 'Paciente', entidadId: id });
-  return paciente;
+  return ficha(fila);
 }
 
 async function actualizarPaciente(id, datos, usuarioId) {
-  const { nombre, rut, fechaNacimiento, contacto, motivoConsulta } = datos;
-
-  return prisma.$transaction(async (tx) => {
-    const rows = await tx.$queryRaw`
-      UPDATE pacientes SET
-        nombre = ${nombre},
-        rut_cifrado = pgp_sym_encrypt(${rut}, ${KEY()}),
-        fecha_nacimiento = ${fechaNacimiento}::date,
-        contacto = ${contacto},
-        motivo_consulta_cifrado = pgp_sym_encrypt(${motivoConsulta}, ${KEY()})
-      WHERE id = ${id}
-      RETURNING id, nombre, fecha_nacimiento AS "fechaNacimiento", contacto, created_at AS "createdAt"
-    `;
-
-    const paciente = rows[0];
-    if (!paciente) throw new AppError('Paciente no encontrado', 404);
-
-    await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id }, tx);
-    return paciente;
-  });
+  return prisma
+    .$transaction(async (tx) => {
+      const fila = await tx.paciente.update({
+        where: { id },
+        data: { ...cifrarPaciente(datos), fechaNacimiento: new Date(datos.fechaNacimiento) },
+        select: SELECT_RESUMEN,
+      });
+      await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id }, tx);
+      return resumen(fila);
+    })
+    .catch(traducirErrorPrisma);
 }
 
 async function listarPacientes({ page = 1, pageSize = 20, q } = {}, usuarioId) {
-  const offset = (page - 1) * pageSize;
-  const filtro = q ? Prisma.sql`WHERE nombre ILIKE ${`%${q}%`}` : Prisma.empty;
+  const busqueda = (q || '').trim();
+  let items;
+  let total;
 
-  const items = await prisma.$queryRaw`
-    SELECT id, nombre, fecha_nacimiento AS "fechaNacimiento", contacto, created_at AS "createdAt"
-    FROM pacientes
-    ${filtro}
-    ORDER BY created_at DESC
-    OFFSET ${offset} LIMIT ${pageSize}
-  `;
-  const totalRows = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM pacientes ${filtro}`;
+  if (busqueda) {
+    const coincidencias = await buscarPorNombre(busqueda);
+    total = coincidencias.length;
+    items = coincidencias.slice((page - 1) * pageSize, page * pageSize);
+  } else {
+    const [filas, cantidad] = await Promise.all([
+      prisma.paciente.findMany({
+        select: SELECT_RESUMEN,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.paciente.count(),
+    ]);
+    items = filas.map(resumen);
+    total = cantidad;
+  }
 
   await registrar({ usuarioId, accion: 'LIST', entidad: 'Paciente', entidadId: 0 });
-  return { items, total: totalRows[0].count, page, pageSize };
+  return { items, total, page, pageSize };
 }
 
 async function listarTodosParaExport(usuarioId) {
-  const items = await prisma.$queryRaw`
-    SELECT
-      id,
-      nombre,
-      pgp_sym_decrypt(rut_cifrado, ${KEY()}) AS rut,
-      fecha_nacimiento AS "fechaNacimiento",
-      contacto,
-      pgp_sym_decrypt(motivo_consulta_cifrado, ${KEY()}) AS "motivoConsulta",
-      created_at AS "createdAt"
-    FROM pacientes
-    ORDER BY created_at DESC
-  `;
+  const filas = await prisma.paciente.findMany({ select: SELECT_FICHA, orderBy: { createdAt: 'desc' } });
 
   await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Paciente', entidadId: 0 });
-  return items;
+  return filas.map(ficha);
 }
 
 // Sin auditar: es un conteo agregado, no expone la identidad de ningún
 // paciente en particular (a diferencia de listarPacientes/obtenerPacientePorId).
 async function contar() {
-  const filas = await prisma.$queryRaw`SELECT COUNT(*)::int AS count FROM pacientes`;
-  return filas[0].count;
+  return prisma.paciente.count();
 }
 
 module.exports = {
@@ -120,4 +169,5 @@ module.exports = {
   listarPacientes,
   listarTodosParaExport,
   contar,
+  cifrarPaciente,
 };

@@ -5,7 +5,9 @@ const prisma = new PrismaClient();
 
 describe('seed script', () => {
   beforeAll(() => {
-    execSync('node prisma/seed.js', { stdio: 'inherit' });
+    // El entorno del sandbox de Jest (con las llaves que carga setup-env.js
+    // desde .env) no se hereda solo: execSync usa el del proceso real.
+    execSync('node prisma/seed.js', { stdio: 'inherit', env: process.env });
   });
 
   afterAll(async () => {

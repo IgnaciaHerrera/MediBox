@@ -84,6 +84,17 @@ async function crear(req, res, next) {
     const paciente = await pacienteService.crearPaciente(value, req.usuario.id);
     return res.redirect(`/pacientes/${paciente.id}`);
   } catch (err) {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).render('pacientes/formulario', {
+        titulo: 'Registrar paciente',
+        usuario: req.usuario,
+        csrfToken: res.locals.csrfToken,
+        accion: '/pacientes/nuevo',
+        valores: req.body,
+        error: err.message,
+        esEdicion: false,
+      });
+    }
     return next(err);
   }
 }

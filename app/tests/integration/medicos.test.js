@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
+const { cifrarPaciente } = require('../../src/services/pacienteService');
 const { loginAgent } = require('../helpers/csrf');
 
 describe('POST /api/medicos', () => {
@@ -79,12 +80,12 @@ describe('POST /api/medicos', () => {
       update: {},
       create: { nombre: 'Box Medicos Test', pasilloId: pasillo.id },
     });
-    const KEY = process.env.PACIENTE_ENCRYPTION_KEY;
-    const [paciente] = await prisma.$queryRaw`
-      INSERT INTO pacientes (nombre, rut_cifrado, fecha_nacimiento, contacto, motivo_consulta_cifrado, created_at)
-      VALUES ('Paciente Medicos Test', pgp_sym_encrypt('22222222-2', ${KEY}), '1990-01-01'::date, '+56900000001', pgp_sym_encrypt('Test', ${KEY}), now())
-      RETURNING id
-    `;
+    const paciente = await prisma.paciente.create({
+      data: {
+        ...cifrarPaciente({ nombre: 'Paciente Medicos Test', rut: '14141414-3', contacto: '+56900000001', motivoConsulta: 'Test' }),
+        fechaNacimiento: new Date('1990-01-01'),
+      },
+    });
 
     const citaRes = await agent.post('/api/citas').send({
       pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: '2027-06-01', horaInicio: '09:00', horaFin: '10:00',
