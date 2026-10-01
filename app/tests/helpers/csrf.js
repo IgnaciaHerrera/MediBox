@@ -23,12 +23,15 @@ async function loginAgent(app, credentials) {
   // Sent as a header (not a `_csrf` body field) so it never reaches the login
   // controller's Joi schema, which rejects unknown body keys.
   const loginRes = await agent.post('/auth/login').set('X-CSRF-Token', token).send(credentials);
+  // Un login exitoso regenera la sesión y con ella el token CSRF, que llega
+  // en la respuesta; uno fallido conserva la sesión anónima y su token.
+  const tokenSesion = loginRes.status === 200 ? loginRes.headers['x-csrf-token'] : token;
 
   ['post', 'patch', 'put', 'delete'].forEach((method) => {
     const original = agent[method].bind(agent);
-    agent[method] = (...args) => original(...args).set('X-CSRF-Token', token);
+    agent[method] = (...args) => original(...args).set('X-CSRF-Token', tokenSesion);
   });
-  agent.csrfToken = token;
+  agent.csrfToken = tokenSesion;
 
   return { agent, loginRes };
 }

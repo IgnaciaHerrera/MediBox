@@ -37,6 +37,24 @@ describe('POST /auth/login', () => {
     expect(loginRes.headers['set-cookie']).toBeDefined();
   });
 
+  it('issues a new session id on login, so a cookie planted before login is useless (session fixation)', async () => {
+    const anonima = await request(app).get('/health');
+    const cookieAnonima = anonima.headers['set-cookie'][0].split(';')[0];
+
+    const loginRes = await request(app)
+      .post('/auth/login')
+      .set('Cookie', cookieAnonima)
+      .set('X-CSRF-Token', anonima.headers['x-csrf-token'])
+      .send({ email: 'test-login@medibox.local', password: 'Password123!' });
+    expect(loginRes.status).toBe(200);
+    const cookieAutenticada = loginRes.headers['set-cookie'][0].split(';')[0];
+    expect(cookieAutenticada).not.toBe(cookieAnonima);
+    expect(loginRes.headers['x-csrf-token']).not.toBe(anonima.headers['x-csrf-token']);
+
+    expect((await request(app).get('/api/notificaciones').set('Cookie', cookieAnonima)).status).toBe(401);
+    expect((await request(app).get('/api/notificaciones').set('Cookie', cookieAutenticada)).status).toBe(200);
+  });
+
   it('a protected route rejects requests without a session', async () => {
     const { requireAuth } = require('../../src/middleware/requireAuth');
     const express = require('express');

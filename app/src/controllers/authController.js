@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const { autenticar } = require('../services/authService');
 const { AppError } = require('../lib/AppError');
+const { issueCsrfToken } = require('../middleware/csrf');
 
 const loginSchema = Joi.object({
   // tlds: { allow: false } porque el proyecto usa dominios internos ".local"
@@ -18,6 +19,15 @@ async function login(req, res, next) {
     const usuario = await autenticar(value.email, value.password);
     if (!usuario) throw new AppError('Credenciales inválidas', 401);
 
+    // Identificador de sesión nuevo al autenticarse: si alguien logró
+    // plantarle a la víctima su propia cookie antes del login (fijación de
+    // sesión), ese identificador se descarta y no hereda la cuenta. La sesión
+    // nueva necesita también su propio token CSRF; se emite de inmediato para
+    // que los clientes de la API lo reciban en esta misma respuesta.
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+    issueCsrfToken(req, res, () => {});
     req.session.usuarioId = usuario.id;
     // `req.accepts('html')` solo (sin Accept header) sería truthy también para
     // clientes JSON (p. ej. supertest sin cabecera Accept explícita), lo que

@@ -69,14 +69,16 @@ describe('Views', () => {
 
       // 4. Log out as a browser form submission and confirm the redirect
       //    target, then confirm the session is actually gone. `/auth/logout`
-      //    is now CSRF-protected too, so the form must carry the token
-      //    (the session's csrfToken is unchanged by login, since login does
-      //    not regenerate the session).
+      //    is CSRF-protected, and login regenerates the session (against
+      //    session fixation), so the form carries the new session's token —
+      //    the one rendered in the dashboard, not the pre-login one.
+      const tokenSesion = dashboardRes.text.match(/name="_csrf" value="([^"]+)"/)[1];
+      expect(tokenSesion).not.toBe(csrfToken);
       const logoutRes = await agent
         .post('/auth/logout')
         .type('form')
         .set('Accept', 'text/html,application/xhtml+xml')
-        .send({ _csrf: csrfToken });
+        .send({ _csrf: tokenSesion });
       expect(logoutRes.status).toBe(302);
       expect(logoutRes.headers.location).toBe('/auth/login-form');
 
