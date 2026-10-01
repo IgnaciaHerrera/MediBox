@@ -76,6 +76,11 @@ propia llave:
 Perder una llave significa perder los datos que protege: deben respaldarse
 fuera del servidor y separadas de los respaldos de la base.
 
+El servidor revisa la configuración al arrancar (`app/src/lib/entorno.js`) y
+se niega a iniciar si falta una llave, si no mide 32 bytes, si dos variables
+comparten la misma llave, si `SESSION_SECRET` es corto o conserva el valor de
+ejemplo, o si en producción la base usa la contraseña de `.env.example`.
+
 ### Migrar una base existente
 
 Las bases creadas antes de este cambio guardan el nombre y el contacto en
