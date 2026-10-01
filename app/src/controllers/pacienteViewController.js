@@ -1,10 +1,16 @@
 const Joi = require('joi');
 const pacienteService = require('../services/pacienteService');
 const { AppError } = require('../lib/AppError');
+const { normalizarRut, rutValido } = require('../lib/rut');
 
 const pacienteSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
-  rut: Joi.string().min(7).max(12).required(),
+  rut: Joi.string()
+    .max(12)
+    .required()
+    .custom((valor, helpers) =>
+      rutValido(valor) ? normalizarRut(valor) : helpers.message('El RUT no es válido: revisa el dígito verificador'),
+    ),
   fechaNacimiento: Joi.date().iso().required(),
   contacto: Joi.string().min(5).max(100).required(),
   motivoConsulta: Joi.string().min(2).max(300).required(),

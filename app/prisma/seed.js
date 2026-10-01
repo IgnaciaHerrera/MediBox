@@ -54,9 +54,9 @@ const PASSWORD_DEMO = 'Demo1234!';
 // recién sembrada. El nombre se usa como clave de idempotencia (no hay un
 // RUT en texto plano contra el cual buscar, ya que vive cifrado).
 const PACIENTES_DEMO = [
-  { nombre: 'Ana Contreras', rut: '15234876-3', fechaNacimiento: '1987-04-12', contacto: '+56911112222', motivoConsulta: 'Control cardiológico de rutina' },
-  { nombre: 'Pedro Muñoz', rut: '18456321-0', fechaNacimiento: '1993-11-02', contacto: '+56922223333', motivoConsulta: 'Dolor lumbar persistente' },
-  { nombre: 'Javiera Rojas', rut: '20123456-7', fechaNacimiento: '2001-07-19', contacto: '+56933334444', motivoConsulta: 'Consulta pediátrica de control' },
+  { nombre: 'Ana Contreras', rut: '15234876-2', fechaNacimiento: '1987-04-12', contacto: '+56911112222', motivoConsulta: 'Control cardiológico de rutina' },
+  { nombre: 'Pedro Muñoz', rut: '18456321-5', fechaNacimiento: '1993-11-02', contacto: '+56922223333', motivoConsulta: 'Dolor lumbar persistente' },
+  { nombre: 'Javiera Rojas', rut: '20123456-5', fechaNacimiento: '2001-07-19', contacto: '+56933334444', motivoConsulta: 'Consulta pediátrica de control' },
 ];
 
 // Las fechas se calculan relativas al momento en que se corre el seed (no

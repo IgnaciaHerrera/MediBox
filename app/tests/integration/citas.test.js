@@ -74,7 +74,7 @@ describe('Agenda: conflict prevention and soft delete', () => {
   it('creates a paciente and a cita for it', async () => {
     const agent = await login();
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Agenda', rut: '11222333-4', fechaNacimiento: '1995-01-01', contacto: '+56900001111', motivoConsulta: 'Dolor de rodilla',
+      nombre: 'Paciente Agenda', rut: '11222333-9', fechaNacimiento: '1995-01-01', contacto: '+56900001111', motivoConsulta: 'Dolor de rodilla',
     });
     pacienteIds.push(pacienteRes.body.id);
 
@@ -118,7 +118,7 @@ describe('Agenda: conflict prevention and soft delete', () => {
   it('rejects a second cita that overlaps the same box and time with 409', async () => {
     const agent = await login();
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Conflicto', rut: '55666777-8', fechaNacimiento: '1992-03-03', contacto: '+56900002222', motivoConsulta: 'Control',
+      nombre: 'Paciente Conflicto', rut: '55666777-2', fechaNacimiento: '1992-03-03', contacto: '+56900002222', motivoConsulta: 'Control',
     });
     pacienteIds.push(pacienteRes.body.id);
 
@@ -131,7 +131,7 @@ describe('Agenda: conflict prevention and soft delete', () => {
   it('soft-deletes a cita instead of removing the row', async () => {
     const agent = await login();
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Anular', rut: '99888777-6', fechaNacimiento: '1988-07-07', contacto: '+56900003333', motivoConsulta: 'Revisión',
+      nombre: 'Paciente Anular', rut: '99888777-1', fechaNacimiento: '1988-07-07', contacto: '+56900003333', motivoConsulta: 'Revisión',
     });
     pacienteIds.push(pacienteRes.body.id);
 
@@ -153,11 +153,11 @@ describe('Agenda: conflict prevention and soft delete', () => {
   it('allows only one of two concurrent overlapping requests to succeed', async () => {
     const agent = await login();
     const pacienteARes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Concurrencia A', rut: '10101010-1', fechaNacimiento: '1990-01-01', contacto: '+56900004444', motivoConsulta: 'Consulta A',
+      nombre: 'Paciente Concurrencia A', rut: '10101010-4', fechaNacimiento: '1990-01-01', contacto: '+56900004444', motivoConsulta: 'Consulta A',
     });
     pacienteIds.push(pacienteARes.body.id);
     const pacienteBRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Concurrencia B', rut: '20202020-2', fechaNacimiento: '1991-02-02', contacto: '+56900005555', motivoConsulta: 'Consulta B',
+      nombre: 'Paciente Concurrencia B', rut: '20202020-8', fechaNacimiento: '1991-02-02', contacto: '+56900005555', motivoConsulta: 'Consulta B',
     });
     pacienteIds.push(pacienteBRes.body.id);
 
@@ -191,7 +191,7 @@ describe('Agenda: conflict prevention and soft delete', () => {
   it('rolls back the audit row together with the cita insert when the transaction aborts (no orphaned AuditLog row)', async () => {
     const agent = await login();
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Rollback Auditoria', rut: '30303030-3', fechaNacimiento: '1993-03-03', contacto: '+56900006666', motivoConsulta: 'Consulta rollback',
+      nombre: 'Paciente Rollback Auditoria', rut: '30303030-1', fechaNacimiento: '1993-03-03', contacto: '+56900006666', motivoConsulta: 'Consulta rollback',
     });
     pacienteIds.push(pacienteRes.body.id);
 
@@ -237,7 +237,7 @@ describe('Agenda: conflict prevention and soft delete', () => {
 
     const agent = await login();
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Notificacion', rut: '40404040-4', fechaNacimiento: '1994-04-04', contacto: '+56900007777', motivoConsulta: 'Consulta con notificación',
+      nombre: 'Paciente Notificacion', rut: '40404040-5', fechaNacimiento: '1994-04-04', contacto: '+56900007777', motivoConsulta: 'Consulta con notificación',
     });
     pacienteIds.push(pacienteRes.body.id);
 
