@@ -24,13 +24,21 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://medibox:test-password@localhost:5432/medibox_test
-      SESSION_SECRET: ci-test-secret
-      PACIENTE_ENCRYPTION_KEY: ci-test-key
       NODE_ENV: test
     defaults:
       run:
         working-directory: app
     steps:
+      # Secretos efímeros: se generan en cada ejecución y nunca quedan
+      # escritos en el repositorio, ni siquiera los de prueba.
+      - name: Generar secretos de la ejecución
+        run: |
+          for variable in SESSION_SECRET PACIENTE_ENCRYPTION_KEY PACIENTE_IDENTIDAD_KEY \
+            PACIENTE_CONTACTO_KEY PACIENTE_CLINICO_KEY PACIENTE_RUT_HMAC_KEY; do
+            valor="$(openssl rand -base64 32)"
+            echo "::add-mask::$valor"
+            echo "$variable=$valor" >> "$GITHUB_ENV"
+          done
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
