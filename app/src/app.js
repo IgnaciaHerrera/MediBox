@@ -46,6 +46,8 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
+app.get('/', (req, res) => res.redirect('/auth/login-form'));
+
 // Protección CSRF de doble envío para toda mutación de la aplicación (API y
 // vistas por igual), sin importar el orden en que se monten los routers
 // individuales debajo ni si alguno olvida aplicarlo por su cuenta — este es
