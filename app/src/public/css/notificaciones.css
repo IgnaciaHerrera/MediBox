@@ -1,0 +1,74 @@
+/* ---------- Notificaciones ---------- */
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--line);
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-icono {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-icono svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.notif-icono--nueva {
+  background: rgba(31, 107, 92, 0.12);
+  color: var(--teal-ink);
+}
+
+.notif-icono--anulada {
+  background: rgba(168, 67, 42, 0.12);
+  color: var(--brick);
+}
+
+.notif-icono--general {
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.notif-cuerpo {
+  flex: 1;
+  padding-top: 0.3rem;
+}
+
+.notif-mensaje {
+  margin: 0 0 0.25rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.notif-item--leida .notif-mensaje {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.notif-item--leida {
+  opacity: 0.72;
+}
+
+.notif-hora {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.notif-item .form-marcar-leida {
+  padding-top: 0.3rem;
+}
+

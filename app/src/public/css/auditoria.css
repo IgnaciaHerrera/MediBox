@@ -1,0 +1,78 @@
+/* ---------- Auditoría ---------- */
+
+.badge-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.badge-accion svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
+.badge-accion--crear {
+  color: var(--teal-ink);
+  background: rgba(31, 107, 92, 0.12);
+  border-color: var(--teal);
+}
+
+.badge-accion--editar {
+  color: #6b4a1d;
+  background: rgba(185, 130, 47, 0.14);
+  border-color: var(--ochre);
+}
+
+.badge-accion--eliminar {
+  color: #6e2c1a;
+  background: rgba(168, 67, 42, 0.12);
+  border-color: var(--brick);
+}
+
+.badge-accion--leer {
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+
+.badge-accion--exportar {
+  color: var(--paper);
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
+.fila-auditoria {
+  cursor: pointer;
+}
+
+.fila-auditoria:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.fila-detalle td {
+  padding: 0 0 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.detalle-auditoria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.detalle-auditoria strong {
+  color: var(--ink);
+}
+

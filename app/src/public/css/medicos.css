@@ -1,0 +1,347 @@
+/* ---------- Médicos: cuadrícula y especialidades coloreadas ---------- */
+
+.medicos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.medico-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.medico-nombre {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.medico-meta {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.medico-meta--discreto {
+  font-style: italic;
+}
+
+.medico-en-box {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b4a1d;
+  background: rgba(185, 130, 47, 0.16);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.card-form-ayuda {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.card-form-ayuda a {
+  color: var(--teal-ink);
+}
+
+.medico-card--nuevo {
+  align-self: start;
+}
+
+.especialidad-chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.especialidad-chip--0 {
+  color: var(--teal-ink);
+  background: rgba(31, 107, 92, 0.12);
+  border-color: var(--teal);
+}
+
+.especialidad-chip--1 {
+  color: #6b4a1d;
+  background: rgba(185, 130, 47, 0.14);
+  border-color: var(--ochre);
+}
+
+.especialidad-chip--2 {
+  color: #6e2c1a;
+  background: rgba(168, 67, 42, 0.12);
+  border-color: var(--brick);
+}
+
+.especialidad-chip--3 {
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+
+.especialidades-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.especialidad-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.badge-agendada {
+  color: var(--ochre);
+  border-color: var(--ochre);
+  background: rgba(185, 130, 47, 0.08);
+}
+
+.badge-atendido {
+  color: var(--teal-ink);
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.08);
+}
+
+.badge-no_atendido,
+.badge-anulada {
+  color: var(--brick);
+  border-color: var(--brick);
+  background: rgba(168, 67, 42, 0.08);
+}
+
+.empty-state {
+  padding: 3rem 0;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.empty-state p {
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  max-width: 34rem;
+}
+
+.contenedor-angosto {
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.btn--auto {
+  width: auto;
+  margin-top: 0;
+}
+
+/* Mismo alto que los inputs de .filtros, para que botones y campos
+   de una misma fila queden alineados. */
+.btn--control {
+  height: 2.5rem;
+  padding: 0 1.1rem;
+  font-size: 0.9rem;
+}
+
+.btn--icono {
+  gap: 0.45rem;
+}
+
+.btn--icono svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-limpiar {
+  gap: 0.45rem;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 500;
+  transition: color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.btn-limpiar:hover {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.btn-limpiar svg {
+  width: 15px;
+  height: 15px;
+}
+
+.volver {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 0.88rem;
+}
+
+.volver:hover {
+  color: var(--teal-ink);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.25rem;
+}
+
+.form-grid .field-full {
+  grid-column: 1 / -1;
+}
+
+.field select {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 2rem;
+  margin: 1.75rem 0 2rem;
+}
+
+.detalle-grid--sin-margen {
+  margin: 0;
+}
+
+.page-head-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.panel-card--con-espacio {
+  margin-bottom: 1.75rem;
+}
+
+.sin-margen-superior {
+  margin-top: 0;
+}
+
+.field--busqueda {
+  min-width: 18rem;
+}
+
+.seccion-siguiente {
+  margin-top: 2rem;
+}
+
+.espaciado-inferior {
+  margin-bottom: 2.5rem;
+}
+
+.celda-derecha {
+  text-align: right;
+}
+
+.form-agregar-instrumento {
+  max-width: 20rem;
+  margin-top: 1.5rem;
+}
+
+/* Contenido presente para lectores de pantalla, invisible en pantalla —
+   patron estandar (no display:none/visibility:hidden, que lo sacarian
+   tambien del arbol de accesibilidad). */
+.chip-filtros--espaciado {
+  margin-bottom: 1.5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.detalle-item .etiqueta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.25rem;
+}
+
+.detalle-item .valor {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
+.detalle-item--ancho {
+  grid-column: 1 / -1;
+}
+
+.motivo-texto {
+  margin: 0;
+  line-height: 1.5;
+  overflow: hidden;
+  transition: max-height var(--dur-base) var(--ease-out);
+}
+
+.motivo-texto--truncado {
+  max-height: 4.5em;
+}
+
+.motivo-texto--expandido {
+  max-height: 40em;
+}
+
+.acciones-cita {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.acciones-cita form {
+  display: inline;
+}
+
+.aviso {
+  background: rgba(185, 130, 47, 0.1);
+  border: 1px solid var(--ochre);
+  color: #7a5720;
+  padding: 0.85rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+

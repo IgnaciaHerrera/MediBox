@@ -1,0 +1,37 @@
+/* ---------- Usuarios: etiqueta de rol ---------- */
+
+.rol-chip {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+}
+
+.rol-chip--admin {
+  color: #6e2c1a;
+  background: rgba(168, 67, 42, 0.14);
+  border-color: var(--brick);
+}
+
+.rol-chip--gestor {
+  color: #6b4a1d;
+  background: rgba(185, 130, 47, 0.16);
+  border-color: var(--ochre);
+}
+
+.rol-chip--medico,
+.rol-chip--operador {
+  color: var(--teal-ink);
+  background: rgba(31, 107, 92, 0.12);
+  border-color: var(--teal);
+}
+
+.rol-chip--consulta {
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+

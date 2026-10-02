@@ -1,0 +1,265 @@
+/* ---------- Espacios: mapa de boxes ---------- */
+
+.boxes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.crear-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.25rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+
+.box-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper-raised);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.box-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-encabezado {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.card-titulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.box-card-nombre {
+  display: block;
+  width: 100%;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.15rem 0;
+}
+
+.box-card-nombre:hover {
+  color: var(--teal-ink);
+}
+
+.card-input-nombre {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--teal);
+  padding: 0.1rem 0 0.15rem;
+}
+
+.card-input-nombre:focus {
+  outline: none;
+}
+
+.card-iconos {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  background: rgba(27, 33, 31, 0.07);
+  color: var(--ink);
+  outline: none;
+}
+
+.icon-btn--peligro:hover,
+.icon-btn--peligro:focus-visible {
+  background: rgba(168, 67, 42, 0.1);
+  color: var(--brick);
+}
+
+.icon-btn--confirmar {
+  color: var(--teal-ink);
+}
+
+.icon-btn--confirmar:hover,
+.icon-btn--confirmar:focus-visible {
+  background: rgba(31, 107, 92, 0.12);
+  color: var(--teal-ink);
+}
+
+.box-card-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.box-card-estado {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.box-card-estado--libre {
+  color: var(--teal-ink);
+  background: rgba(31, 107, 92, 0.12);
+}
+
+.box-card-estado--ocupado {
+  color: #6b4a1d;
+  background: rgba(185, 130, 47, 0.16);
+}
+
+.box-card-instrumentos {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.box-card-cuerpo:hover .box-card-instrumentos {
+  color: var(--ink);
+}
+
+.card-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-select {
+  font-family: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  width: 100%;
+}
+
+.card-select:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.15);
+}
+
+.box-card--nuevo {
+  align-self: start;
+}
+
+.card-agregar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.15rem 0;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card-agregar:hover,
+.card-agregar:focus-visible {
+  color: var(--teal-ink);
+}
+
+.card-agregar-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px dashed var(--line-strong);
+  color: var(--ink-soft);
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.card-agregar-icono svg {
+  width: 13px;
+  height: 13px;
+}
+
+.card-agregar:hover .card-agregar-icono,
+.card-agregar:focus-visible .card-agregar-icono {
+  border-style: solid;
+  border-color: var(--teal);
+  color: var(--teal-ink);
+  transform: rotate(90deg);
+}
+
+/* ---------- Espacios: instrumental (agregar/quitar sin recargar) ---------- */
+
+@keyframes fila-entrar {
+  from {
+    background: rgba(31, 107, 92, 0.18);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.fila-entrando {
+  animation: fila-entrar 900ms var(--ease-out);
+}
+
+@keyframes fila-salir {
+  to {
+    opacity: 0;
+  }
+}
+
+.fila-saliendo {
+  animation: fila-salir 200ms var(--ease-out) forwards;
+}
+

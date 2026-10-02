@@ -1,0 +1,161 @@
+/* ---------- Páginas internas genéricas (agenda, pacientes, espacios...) ---------- */
+
+.page-main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-head h1 {
+  font-size: 1.6rem;
+}
+
+.page-head--perfil {
+  align-items: center;
+}
+
+.page-head--perfil h1 {
+  margin-bottom: 0.15rem;
+}
+
+.paciente-subtitulo {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.paginacion-info {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.paginacion-nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.filtros--sin-borde {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.filtros .field {
+  margin-bottom: 0;
+  min-width: 10rem;
+}
+
+.filtros select,
+.filtros input {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.55rem 0;
+}
+
+.btn-link--inline {
+  display: inline;
+  padding: 0;
+  margin-left: 0.5rem;
+}
+
+table.tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.tabla th {
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 0 0.75rem 0.6rem 0;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+table.tabla td {
+  padding: 0.85rem 0.75rem 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+table.tabla tbody tr:hover {
+  background: var(--paper-raised);
+}
+
+table.tabla a.fila-link {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+table.tabla a.fila-link:hover {
+  color: var(--teal-ink);
+}
+
+.fila-persona {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--teal-deep);
+  color: var(--paper);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.avatar--grande {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1rem;
+}
+

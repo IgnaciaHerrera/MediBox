@@ -1,0 +1,96 @@
+/* MediBox — sistema visual
+   Institucional y clínico: papel cálido, tinta casi-negra, teal profundo
+   como color de acción. Serif para autoridad de marca, sans técnica para
+   la interfaz, mono reservada para horarios y fechas. */
+
+:root {
+  --paper: #f3f2ed;
+  --paper-raised: #fbfaf7;
+  --ink: #1b211f;
+  --ink-soft: #545c58;
+  --teal: #1f6b5c;
+  --teal-deep: #163f37;
+  --teal-ink: #0e2622;
+  --ochre: #b9822f;
+  --brick: #a8432a;
+  --line: #dad7cc;
+  --line-strong: #c3bfb1;
+
+  --font-display: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --shadow-sm: 0 1px 2px rgba(27, 33, 31, 0.06), 0 1px 1px rgba(27, 33, 31, 0.04);
+  --shadow-md: 0 8px 20px rgba(27, 33, 31, 0.08), 0 2px 6px rgba(27, 33, 31, 0.05);
+  --dur-fast: 150ms;
+  --dur-base: 320ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Refuerza [hidden] en cualquier elemento del patrón "vista ↔ formulario en
+   línea" (renombrar pasillo, editar/crear box, etc.), sin importar qué
+   `display` propio le dé su componente — evita repetir un `[hidden]{display:
+   none}` por cada clase nueva que use el patrón. */
+[data-toggle-vista][hidden],
+[data-toggle-formulario][hidden] {
+  display: none !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--ink);
+}
+
+p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+a {
+  color: var(--teal);
+}
+
+button,
+input {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
