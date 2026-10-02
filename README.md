@@ -18,7 +18,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
-La app queda disponible en `http://localhost:3000`. Endpoint de salud: `GET /health`.
+La app queda disponible en `http://localhost:3000`, que redirige al
+formulario de login (`/auth/login-form`). Endpoint de salud: `GET /health`.
 
 ## Desarrollo
 
