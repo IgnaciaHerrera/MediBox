@@ -1,8 +1,10 @@
 const Joi = require('joi');
 const pacienteService = require('../services/pacienteService');
+const citaService = require('../services/citaService');
 const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { toast } = require('../lib/toast');
+const { hoyISO } = require('../lib/fecha');
 
 const pacienteSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
@@ -39,15 +41,47 @@ async function index(req, res, next) {
   }
 }
 
+const CITAS_POR_PAGINA = 10;
+
+// Separa las citas del paciente en próximas (agendadas que aún no terminan,
+// de la más cercana a la más lejana) e historial (el resto, de la más
+// reciente a la más antigua). El historial se pagina; las próximas se
+// muestran completas.
+function separarCitas(citas, paginaPedida) {
+  const hoy = hoyISO();
+  const ahora = new Date().toTimeString().slice(0, 5);
+  const proximas = [];
+  const historial = [];
+  citas.forEach((cita) => {
+    const fecha = cita.fecha.toISOString().slice(0, 10);
+    const pendiente = !cita.anulada && cita.estado === 'agendada' && (fecha > hoy || (fecha === hoy && cita.horaFin > ahora));
+    (pendiente ? proximas : historial).push(cita);
+  });
+  const totalPaginas = Math.max(1, Math.ceil(historial.length / CITAS_POR_PAGINA));
+  const page = Math.min(Math.max(1, Number(paginaPedida) || 1), totalPaginas);
+  return {
+    proximas: proximas.reverse(),
+    historial: historial.slice((page - 1) * CITAS_POR_PAGINA, page * CITAS_POR_PAGINA),
+    totalHistorial: historial.length,
+    page,
+    totalPaginas,
+  };
+}
+
 async function detalle(req, res, next) {
   try {
     const id = Number(req.params.id);
     const paciente = await pacienteService.obtenerPacientePorId(id, req.usuario.id);
+    // Las citas solo se muestran a quien puede ver la agenda.
+    const verCitas = req.usuario.permisos.includes('agenda.read');
+    const citas = verCitas ? separarCitas(await citaService.listarPorPaciente(id), req.query.page) : null;
     res.render('pacientes/detalle', {
       titulo: paciente.nombre,
       usuario: req.usuario,
       csrfToken: res.locals.csrfToken,
       paciente,
+      citas,
+      puedeAgendar: req.usuario.permisos.includes('agenda.write'),
       puedeEditar: req.usuario.permisos.includes('paciente.write'),
     });
   } catch (err) {

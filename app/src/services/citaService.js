@@ -144,6 +144,17 @@ async function listarCitas({ boxId, medicoId, pasilloId, fecha, page = 1, pageSi
   return { items, total, page, pageSize };
 }
 
+// Todas las citas de un paciente (incluidas las anuladas), de la más reciente
+// a la más antigua, para su ficha. Igual que obtenerCitaPorId, no incluye
+// datos del paciente: la ficha ya los obtiene por pacienteService.
+async function listarPorPaciente(pacienteId) {
+  return prisma.cita.findMany({
+    where: { pacienteId },
+    orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
+    include: { medico: true, box: { include: { pasillo: true } } },
+  });
+}
+
 // No incluye datos de Paciente a propósito: esta restricción global del
 // proyecto exige que toda lectura de datos de paciente pase por
 // pacienteService (con su propia auditoría), nunca por un include aquí.
@@ -193,6 +204,7 @@ module.exports = {
   actualizarEstadoCita,
   anularCita,
   listarCitas,
+  listarPorPaciente,
   obtenerCitaPorId,
   listarTodasParaExport,
 };

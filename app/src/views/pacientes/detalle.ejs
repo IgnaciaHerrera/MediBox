@@ -91,6 +91,80 @@
         </div>
       </section>
     </div>
+
+    <% if (citas) { %>
+      <%
+        const totalCitas = citas.proximas.length + citas.totalHistorial;
+        const gruposCitas = [
+          { titulo: 'Próximas', items: citas.proximas, vacio: 'No tiene citas agendadas por delante.' },
+          { titulo: 'Historial', items: citas.historial, vacio: 'Todavía no tiene citas pasadas.', paginado: true },
+        ];
+      %>
+      <section class="panel-card panel-lista paciente-citas" id="citas" aria-labelledby="paciente-citas-titulo">
+        <div class="panel-lista-head">
+          <h2 id="paciente-citas-titulo">Citas <span class="paciente-citas-total"><%= totalCitas %></span></h2>
+          <% if (puedeAgendar) { %>
+            <a href="/agenda/nueva" class="btn btn-neutro btn--auto btn--control btn--icono">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Agendar cita
+            </a>
+          <% } %>
+        </div>
+
+        <% if (totalCitas === 0) { %>
+          <p class="panel-lista-vacio">Este paciente todavía no tiene citas.</p>
+        <% } else { %>
+          <% gruposCitas.forEach(function(grupo) { %>
+            <div class="paciente-citas-grupo">
+              <h3 class="paciente-citas-subtitulo"><%= grupo.titulo %></h3>
+              <% if (grupo.items.length === 0) { %>
+                <p class="paciente-citas-vacio"><%= grupo.vacio %></p>
+              <% } else { %>
+                <div class="tabla-scroll">
+                  <table class="tabla">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Box</th>
+                        <th>Médico</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% grupo.items.forEach(function(cita) { %>
+                        <% const estado = cita.anulada ? 'anulada' : cita.estado; %>
+                        <tr>
+                          <td class="tiempo"><%= fechaDMA(cita.fecha.toISOString().slice(0, 10)) %></td>
+                          <td><span class="cita-hora tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span></td>
+                          <td><%= cita.box.pasillo.nombre %> · <%= cita.box.nombre %></td>
+                          <td>
+                            <span class="fila-persona">
+                              <span class="avatar" aria-hidden="true"><%= iniciales(cita.medico.nombre) %></span>
+                              <a class="fila-link fila-link--fila" href="/agenda/<%= cita.id %>"><%= cita.medico.nombre %></a>
+                            </span>
+                          </td>
+                          <td><span class="badge badge-<%= estado %>"><%= estado.replace('_', ' ') %></span></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+                <% if (grupo.paginado && citas.totalPaginas > 1) { %>
+                  <div class="paginacion panel-lista-pie">
+                    <span class="paginacion-info"><%= citas.totalHistorial %> cita<%= citas.totalHistorial === 1 ? '' : 's' %> en el historial — página <%= citas.page %> de <%= citas.totalPaginas %></span>
+                    <div class="paginacion-nav">
+                      <% if (citas.page > 1) { %><a href="/pacientes/<%= paciente.id %>?page=<%= citas.page - 1 %>#citas" class="btn btn-neutro btn--auto btn--control">← Anterior</a><% } %>
+                      <% if (citas.page < citas.totalPaginas) { %><a href="/pacientes/<%= paciente.id %>?page=<%= citas.page + 1 %>#citas" class="btn btn-neutro btn--auto btn--control">Siguiente →</a><% } %>
+                    </div>
+                  </div>
+                <% } %>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } %>
+      </section>
+    <% } %>
   </main>
   <script src="/js/pacientes-detalle.js"></script>
 </body>
