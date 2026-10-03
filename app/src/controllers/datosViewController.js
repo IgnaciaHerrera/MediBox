@@ -82,10 +82,15 @@ async function index(req, res, next) {
 async function exportarPacientes(req, res, next) {
   try {
     const pacientes = await pacienteService.listarTodosParaExport(req.usuario.id);
-    const csv = toCsv(
-      ['id', 'nombre', 'rut', 'fechaNacimiento', 'contacto', 'motivoConsulta', 'createdAt'],
-      pacientes,
-    );
+    // Fechas en ISO, igual que en los CSV de citas y auditoría: con
+    // Date.toString() dependían de la zona horaria del servidor y la fecha de
+    // nacimiento podía salir un día antes.
+    const filas = pacientes.map((p) => ({
+      ...p,
+      fechaNacimiento: p.fechaNacimiento.toISOString().slice(0, 10),
+      createdAt: p.createdAt.toISOString(),
+    }));
+    const csv = toCsv(['id', 'nombre', 'rut', 'fechaNacimiento', 'contacto', 'motivoConsulta', 'createdAt'], filas);
     enviarCsv(res, 'pacientes.csv', csv);
   } catch (err) {
     next(err);

@@ -134,6 +134,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.text).toContain('17171717-5');
     expect(res.text).toContain('Chequeo para exportación');
+    expect(res.text).toContain('1990-05-05');
 
     const auditoria = await prisma.auditLog.findFirst({
       where: { usuarioId: usuarioAdmin.id, accion: 'EXPORT', entidad: 'Paciente' },
