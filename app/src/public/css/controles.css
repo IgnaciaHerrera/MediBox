@@ -164,6 +164,18 @@
   box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.16);
 }
 
+/* Campo marcado como inválido por el JS del formulario (p. ej. RUT con dígito
+   verificador incorrecto): borde y anillo rojos en vez de verdes. */
+:is(.page-main, dialog.modal) .field input.field-invalido,
+:is(.page-main, dialog.modal) .field input.field-invalido:hover {
+  border-color: var(--brick);
+}
+
+:is(.page-main, dialog.modal) .field input.field-invalido:focus {
+  border-color: var(--brick);
+  box-shadow: 0 0 0 3px rgba(168, 67, 42, 0.16);
+}
+
 /* Flecha propia y más fina para los selectores. */
 :is(.page-main, dialog.modal) .field select,
 .page-main .filtros select {
@@ -224,6 +236,68 @@
   box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
 }
 
+/* Panel de lista: un cuadro con encabezado (título, buscador, controles) y
+   debajo la tabla, el estado vacío y la paginación, sin nada flotando. */
+.page-main .panel-lista {
+  padding: 0;
+}
+
+.panel-lista-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.page-main .panel-lista-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.panel-lista-head .buscador-form {
+  margin-left: auto;
+}
+
+.panel-lista-head .buscador-wrap .buscador {
+  height: 2.35rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.panel-lista .tabla-scroll {
+  padding: 0.25rem 1.25rem 0.75rem;
+}
+
+.page-main .panel-lista table.tabla th {
+  padding-top: 0.9rem;
+}
+
+.panel-lista-vacio {
+  margin: 0;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.panel-lista-vacio .btn {
+  margin-top: 1rem;
+}
+
+.page-main .panel-lista-pie {
+  margin: 0;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .panel-lista-head .buscador-form,
+  .panel-lista-head .buscador-wrap {
+    width: 100%;
+  }
+}
+
 .page-main .form-card {
   padding: 1.75rem;
   border: 1px solid rgba(195, 191, 177, 0.55);
@@ -265,6 +339,10 @@
 
 .form-seccion .form-grid {
   row-gap: 1rem;
+}
+
+.form-seccion > * + * {
+  margin-top: 1rem;
 }
 
 .contenedor-angosto--medio {
@@ -540,3 +618,70 @@ dialog.modal .modal-acciones {
   box-shadow: 0 0 0 3px rgba(168, 67, 42, 0.3);
 }
 
+/* Botón pequeño en línea (Mostrar RUT, Ver más). */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper-raised);
+  color: var(--teal-ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.btn-mini:hover {
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.06);
+}
+
+.btn-mini:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.25);
+}
+
+.btn-mini[hidden] {
+  display: none;
+}
+
+/* Dato de tabla con ícono a la izquierda (teléfono, box, etc.). */
+.dato-con-icono {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+}
+
+.dato-con-icono svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--teal);
+}
+
+/* Columna final con flecha que indica que la fila abre una ficha. */
+.page-main table.tabla .col-abrir {
+  width: 2rem;
+  padding-right: 0;
+  text-align: right;
+  color: var(--line-strong);
+}
+
+.page-main table.tabla td.col-abrir svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.page-main table.tabla tbody tr:hover td.col-abrir {
+  color: var(--teal);
+}
+
+.page-main table.tabla tbody tr:hover td.col-abrir svg {
+  transform: translateX(2px);
+}

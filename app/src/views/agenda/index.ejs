@@ -126,8 +126,8 @@
         <% } %>
       </form>
 
-      <div class="panel-card agenda-panel">
-        <div class="agenda-panel-head">
+      <div class="panel-card panel-lista agenda-panel">
+        <div class="panel-lista-head">
           <div class="agenda-panel-titulo">
             <h2><%= vista === 'calendario' && !modoMia ? 'Calendario del día' : 'Citas del día' %></h2>
             <span class="agenda-contador"><%= citas.length %></span>
@@ -168,7 +168,7 @@
 
       <% if (vista === 'lista' || modoMia) { %>
         <% if (citas.length === 0) { %>
-          <p class="agenda-vacio">No hay citas agendadas para este filtro.</p>
+          <p class="panel-lista-vacio">No hay citas agendadas para este filtro.</p>
         <% } else { %>
           <div class="tabla-scroll">
             <table class="tabla">
@@ -206,7 +206,7 @@
         <% } %>
       <% } else { %>
         <% if (columnasTimeline.length === 0) { %>
-          <p class="agenda-vacio">Todavía no hay boxes registrados para mostrar en el calendario.</p>
+          <p class="panel-lista-vacio">Todavía no hay boxes registrados para mostrar en el calendario.</p>
         <% } else { %>
           <p class="access-empty sin-resultados" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
           <div class="timeline-scroll">

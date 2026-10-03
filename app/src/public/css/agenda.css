@@ -73,12 +73,6 @@
   min-width: 15rem;
 }
 
-.agenda-panel-head .buscador-wrap .buscador {
-  height: 2.35rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-}
-
 .field .buscador-wrap {
   display: flex;
 }
@@ -311,7 +305,7 @@
     width: 100%;
   }
 
-  .agenda-panel-head .buscador-wrap .buscador {
+  .panel-lista-head .buscador-wrap .buscador {
     min-width: 0;
   }
 
@@ -321,21 +315,8 @@
   }
 }
 
-/* Panel de citas: el título, los filtros activos, el buscador y el cambio de
-   vista viven en el encabezado del mismo cuadro que la tabla o el calendario. */
-.page-main .agenda-panel {
-  padding: 0;
-}
-
-.agenda-panel-head {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem 1rem;
-  flex-wrap: wrap;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--line);
-}
-
+/* Panel de citas (sobre .panel-lista): título con contador, filtros activos,
+   buscador y cambio de vista en el encabezado. */
 .agenda-panel-titulo {
   display: flex;
   align-items: center;
@@ -362,27 +343,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-.agenda-panel-head .chip-filtros {
+.agenda-panel .chip-filtros {
   flex: 1;
 }
 
-.agenda-panel-head .agenda-toolbar-right {
+.agenda-panel .agenda-toolbar-right {
   margin-left: auto;
-}
-
-.agenda-panel .tabla-scroll {
-  padding: 0.25rem 1.25rem 0.75rem;
-}
-
-.page-main .agenda-panel table.tabla th {
-  padding-top: 0.9rem;
-}
-
-.agenda-vacio {
-  margin: 0;
-  padding: 3rem 1.5rem;
-  text-align: center;
-  color: var(--ink-soft);
 }
 
 .agenda-panel > .sin-resultados {

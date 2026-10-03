@@ -159,3 +159,14 @@ table.tabla a.fila-link:hover {
   font-size: 1rem;
 }
 
+/* ---------- Pacientes ---------- */
+
+.rut-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.page-main .page-head--perfil .page-head-acciones {
+  gap: 0.75rem;
+}

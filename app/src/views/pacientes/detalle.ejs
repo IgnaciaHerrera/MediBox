@@ -45,32 +45,55 @@
           <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= fechaDMA(new Date(paciente.createdAt).toISOString().slice(0, 10)) %></p>
         </div>
       </div>
-      <% if (puedeEditar) { %>
-        <a href="/pacientes/<%= paciente.id %>/editar" class="btn btn-secondary btn--auto">Editar</a>
-      <% } %>
+      <div class="page-head-acciones">
+        <% if (puedeEditar) { %>
+          <a href="/pacientes/<%= paciente.id %>/editar" class="btn btn-neutro btn--auto btn--control btn--icono">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+            Editar
+          </a>
+        <% } %>
+      </div>
     </div>
 
-    <div class="panel-card">
-      <div class="detalle-grid detalle-grid--sin-margen">
-        <div class="detalle-item">
-          <span class="etiqueta">RUT</span>
-          <span class="valor tiempo rut-valor" data-rut="<%= paciente.rut %>" data-rut-oculto="<%= rutEnmascarado %>"><%= rutEnmascarado %></span>
-          <button type="button" class="btn-link btn-link--inline" id="btn-mostrar-rut">Mostrar</button>
+    <div class="cita-grid">
+      <section class="panel-card cita-seccion" aria-labelledby="paciente-datos-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2.3 3-2.3s2.4.8 3 2.3M14.5 10h4M14.5 13.5h3"/></svg>
+          </span>
+          <h2 id="paciente-datos-titulo">Datos personales</h2>
+        </div>
+        <div class="detalle-grid detalle-grid--sin-margen detalle-grid--una">
+          <div class="detalle-item">
+            <span class="etiqueta">RUT</span>
+            <div class="rut-fila">
+              <span class="valor tiempo rut-valor" data-rut="<%= paciente.rut %>" data-rut-oculto="<%= rutEnmascarado %>"><%= rutEnmascarado %></span>
+              <button type="button" class="btn-mini" id="btn-mostrar-rut">Mostrar</button>
+            </div>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Fecha de nacimiento</span>
+            <span class="valor tiempo"><%= fechaDMA(new Date(paciente.fechaNacimiento).toISOString().slice(0, 10)) %></span>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Contacto</span>
+            <span class="valor"><%= paciente.contacto %></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-card cita-seccion" aria-labelledby="paciente-motivo-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/></svg>
+          </span>
+          <h2 id="paciente-motivo-titulo">Motivo de consulta</h2>
         </div>
         <div class="detalle-item">
-          <span class="etiqueta">Fecha de nacimiento</span>
-          <span class="valor tiempo"><%= fechaDMA(new Date(paciente.fechaNacimiento).toISOString().slice(0, 10)) %></span>
-        </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Contacto</span>
-          <span class="valor"><%= paciente.contacto %></span>
-        </div>
-        <div class="detalle-item detalle-item--ancho">
-          <span class="etiqueta">Motivo de consulta</span>
           <p class="valor motivo-texto" id="motivo-texto"><%= paciente.motivoConsulta %></p>
-          <button type="button" class="btn-link" id="btn-motivo-expandir" hidden>Ver más</button>
+          <button type="button" class="btn-mini" id="btn-motivo-expandir" hidden>Ver más</button>
         </div>
-      </div>
+      </section>
     </div>
   </main>
   <script src="/js/pacientes-detalle.js"></script>

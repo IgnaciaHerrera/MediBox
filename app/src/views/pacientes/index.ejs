@@ -20,68 +20,86 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Pacientes</h1>
+      <div>
+        <h1>Pacientes</h1>
+        <p class="page-sub">Busca, consulta y registra la ficha de cada paciente.</p>
+      </div>
       <% if (puedeRegistrar) { %>
-        <a href="/pacientes/nuevo" class="btn btn-primary btn--auto btn--control">Registrar paciente</a>
+        <a href="/pacientes/nuevo" class="btn btn-primary btn--auto btn--control btn--icono">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Registrar paciente
+        </a>
       <% } %>
     </div>
 
-    <form method="GET" action="/pacientes" class="filtros">
-      <div class="field field--busqueda">
-        <label for="q">Buscar por nombre o RUT</label>
-        <div class="buscador-wrap">
-          <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="search" id="q" name="q" class="buscador" value="<%= q %>" placeholder="Nombre o RUT…" />
-          <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" <%= q ? '' : 'hidden' %>>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
-        </div>
+    <div class="panel-card panel-lista">
+      <div class="panel-lista-head">
+        <h2>Pacientes registrados</h2>
+        <form method="GET" action="/pacientes" class="buscador-form" role="search">
+          <label for="q" class="sr-only">Buscar por nombre o RUT</label>
+          <div class="buscador-wrap">
+            <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" id="q" name="q" class="buscador" value="<%= q %>" placeholder="Nombre o RUT…" />
+            <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" <%= q ? '' : 'hidden' %>>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
 
-    <div id="pacientes-resultados" aria-live="polite">
-    <% if (pacientes.length === 0) { %>
-      <div class="empty-state">
-        <p><%= q ? 'No se encontraron pacientes con ese nombre o RUT.' : 'Todavía no hay pacientes registrados.' %></p>
-        <% if (!q && puedeRegistrar) { %>
-          <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar el primer paciente</a>
-        <% } %>
-      </div>
-    <% } else { %>
-      <div class="panel-card panel-card--tabla">
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Paciente</th>
-              <th>Contacto</th>
-              <th>Fecha de nacimiento</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% pacientes.forEach(function(p) { %>
+      <div id="pacientes-resultados" aria-live="polite">
+      <% if (pacientes.length === 0) { %>
+        <div class="panel-lista-vacio">
+          <p><%= q ? 'No se encontraron pacientes con ese nombre o RUT.' : 'Todavía no hay pacientes registrados.' %></p>
+          <% if (!q && puedeRegistrar) { %>
+            <a href="/pacientes/nuevo" class="btn btn-primary btn--auto">Registrar el primer paciente</a>
+          <% } %>
+        </div>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
               <tr>
-                <td>
-                  <a class="fila-link fila-persona" href="/pacientes/<%= p.id %>">
-                    <span class="avatar"><%= iniciales(p.nombre) %></span>
-                    <%= p.nombre %>
-                  </a>
-                </td>
-                <td><%= p.contacto %></td>
-                <td class="tiempo"><%= fechaDMA(new Date(p.fechaNacimiento).toISOString().slice(0, 10)) %></td>
+                <th>Paciente</th>
+                <th>Contacto</th>
+                <th>Fecha de nacimiento</th>
+                <th class="col-abrir"><span class="sr-only">Abrir ficha</span></th>
               </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="paginacion">
-        <span class="paginacion-info"><%= total %> paciente<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
-        <div class="paginacion-nav">
-          <% if (page > 1) { %><a href="/pacientes?page=<%= page - 1 %>&q=<%= encodeURIComponent(q) %>" class="btn-link">← Anterior</a><% } %>
-          <% if (page < totalPaginas) { %><a href="/pacientes?page=<%= page + 1 %>&q=<%= encodeURIComponent(q) %>" class="btn-link">Siguiente →</a><% } %>
+            </thead>
+            <tbody>
+              <% pacientes.forEach(function(p) { %>
+                <tr>
+                  <td>
+                    <a class="fila-link fila-link--fila fila-persona" href="/pacientes/<%= p.id %>">
+                      <span class="avatar"><%= iniciales(p.nombre) %></span>
+                      <%= p.nombre %>
+                    </a>
+                  </td>
+                  <td>
+                    <span class="dato-con-icono">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>
+                      <%= p.contacto %>
+                    </span>
+                  </td>
+                  <td class="tiempo"><%= fechaDMA(new Date(p.fechaNacimiento).toISOString().slice(0, 10)) %></td>
+                  <td class="col-abrir" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
         </div>
+
+        <div class="paginacion panel-lista-pie">
+          <span class="paginacion-info"><%= total %> paciente<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
+          <div class="paginacion-nav">
+            <% if (page > 1) { %><a href="/pacientes?page=<%= page - 1 %>&q=<%= encodeURIComponent(q) %>" class="btn btn-neutro btn--auto btn--control">← Anterior</a><% } %>
+            <% if (page < totalPaginas) { %><a href="/pacientes?page=<%= page + 1 %>&q=<%= encodeURIComponent(q) %>" class="btn btn-neutro btn--auto btn--control">Siguiente →</a><% } %>
+          </div>
+        </div>
+      <% } %>
       </div>
-    <% } %>
     </div>
   </main>
   <script src="/js/pacientes.js"></script>
