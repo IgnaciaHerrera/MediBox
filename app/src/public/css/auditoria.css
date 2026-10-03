@@ -11,7 +11,16 @@
   border: 1px solid transparent;
 }
 
+.badge-accion {
+  line-height: 1;
+}
+
+.badge-accion > span {
+  display: inline-flex;
+}
+
 .badge-accion svg {
+  display: block;
   width: 0.85rem;
   height: 0.85rem;
   flex-shrink: 0;
@@ -19,32 +28,32 @@
 
 .badge-accion--crear {
   color: var(--teal-ink);
-  background: rgba(31, 107, 92, 0.12);
-  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.1);
+  border-color: rgba(31, 107, 92, 0.3);
 }
 
 .badge-accion--editar {
-  color: #6b4a1d;
-  background: rgba(185, 130, 47, 0.14);
-  border-color: var(--ochre);
+  color: #8a5f1f;
+  background: rgba(185, 130, 47, 0.1);
+  border-color: rgba(185, 130, 47, 0.35);
 }
 
 .badge-accion--eliminar {
-  color: #6e2c1a;
-  background: rgba(168, 67, 42, 0.12);
-  border-color: var(--brick);
+  color: var(--brick);
+  background: rgba(168, 67, 42, 0.08);
+  border-color: rgba(168, 67, 42, 0.3);
 }
 
 .badge-accion--leer {
   color: var(--ink-soft);
   background: var(--paper);
-  border-color: var(--line-strong);
+  border-color: var(--line);
 }
 
 .badge-accion--exportar {
-  color: var(--paper);
-  background: var(--ink-soft);
-  border-color: var(--ink-soft);
+  color: #3d4a6b;
+  background: rgba(61, 74, 107, 0.08);
+  border-color: rgba(61, 74, 107, 0.3);
 }
 
 .fila-auditoria {
@@ -56,23 +65,117 @@
   outline-offset: -2px;
 }
 
-.fila-detalle td {
-  padding: 0 0 1rem;
-  border-bottom: 1px solid var(--line);
+/* Flecha que indica que la fila se despliega; gira al abrirla. */
+.page-main .tabla-auditoria .col-abrir {
+  width: 2rem;
+  padding-right: 0;
+  text-align: right;
+  color: var(--line-strong);
 }
 
+.page-main .tabla-auditoria td.col-abrir svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  transition: transform var(--dur-base) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.page-main .tabla-auditoria .fila-auditoria:hover td.col-abrir {
+  color: var(--teal);
+}
+
+.page-main .tabla-auditoria .fila-auditoria[aria-expanded="true"] td.col-abrir {
+  color: var(--teal);
+}
+
+.page-main .tabla-auditoria .fila-auditoria[aria-expanded="true"] td.col-abrir svg {
+  transform: rotate(90deg);
+}
+
+/* Fila abierta y su detalle unidos por una línea verde a la izquierda. */
+.page-main .tabla-auditoria .fila-auditoria td:first-child,
+.page-main .tabla-auditoria .fila-detalle td {
+  transition: box-shadow var(--dur-fast) var(--ease-out), padding var(--dur-fast) var(--ease-out);
+}
+
+.page-main .tabla-auditoria .fila-auditoria[aria-expanded="true"] td {
+  border-bottom-color: transparent;
+}
+
+.page-main .tabla-auditoria .fila-auditoria[aria-expanded="true"] td:first-child {
+  padding-left: 0.85rem;
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.page-main .tabla-auditoria .fila-detalle td {
+  padding: 0 0 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+
+/* Detalle sin caja: solo la línea verde de la izquierda lo une a su fila.
+   Los datos se reparten a lo ancho y la acción queda a la derecha. */
 .detalle-auditoria {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 8.5rem;
+  align-items: center;
+  gap: 0.6rem 1.5rem;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--line);
+  animation: dash-in var(--dur-base) var(--ease-out);
+}
+
+.detalle-auditoria-dato {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 2rem;
-  background: var(--paper);
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
-  font-size: 0.85rem;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.detalle-auditoria-etiqueta {
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-soft);
 }
 
-.detalle-auditoria strong {
+.detalle-auditoria-valor {
+  font-size: 0.84rem;
+  font-weight: 500;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
+.detalle-auditoria-enlace {
+  grid-column: 4;
+  justify-self: end;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba(31, 107, 92, 0.3);
+  border-radius: 999px;
+  background: var(--paper-raised);
+  color: var(--teal-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.detalle-auditoria-enlace:hover,
+.detalle-auditoria-enlace:focus-visible {
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.08);
+}
+
+/* En pantallas angostas los datos van uno bajo otro y la acción al final. */
+@media (max-width: 760px) {
+  .detalle-auditoria {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detalle-auditoria-enlace {
+    grid-column: auto;
+    justify-self: start;
+  }
+}

@@ -19,6 +19,8 @@
   };
   function categoriaDe(accion) { return CATEGORIA_ACCION[accion] || 'leer'; }
 
+  const filtrosActivos = ['desde', 'hasta', 'accion', 'entidad', 'usuarioId'].filter((k) => filtros[k]).length;
+
   function urlEntidad(entidad, id) {
     if (!id) return null;
     if (entidad === 'Cita') return '/agenda/' + id;
@@ -40,7 +42,10 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Auditoría</h1>
+      <div>
+        <h1>Auditoría</h1>
+        <p class="page-sub">Registro de quién hizo qué y cuándo en el sistema.</p>
+      </div>
     </div>
 
     <form class="filtros" method="GET" action="/auditoria">
@@ -79,68 +84,95 @@
           <% }) %>
         </select>
       </div>
+      <% if (filtrosActivos > 0) { %>
+        <a class="btn btn--control btn-limpiar" href="/auditoria">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          Limpiar filtros
+          <span class="btn-limpiar-contador" aria-label="<%= filtrosActivos %> <%= filtrosActivos === 1 ? 'filtro activo' : 'filtros activos' %>"><%= filtrosActivos %></span>
+        </a>
+      <% } %>
     </form>
 
-    <% if (filtros.accion || filtros.entidad || usuarioSeleccionado || filtros.desde || filtros.hasta) { %>
-      <div class="chip-filtros chip-filtros--espaciado">
-        <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= fechaDMA(filtros.desde) %> <span class="x">×</span></a><% } %>
-        <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= fechaDMA(filtros.hasta) %> <span class="x">×</span></a><% } %>
-        <% if (filtros.accion) { %><a class="chip-filtro" href="<%= urlFiltros({ accion: '' }) %>"><%= filtros.accion %> <span class="x">×</span></a><% } %>
-        <% if (filtros.entidad) { %><a class="chip-filtro" href="<%= urlFiltros({ entidad: '' }) %>"><%= filtros.entidad %> <span class="x">×</span></a><% } %>
-        <% if (usuarioSeleccionado) { %><a class="chip-filtro" href="<%= urlFiltros({ usuarioId: '' }) %>"><%= usuarioSeleccionado.nombre %> <span class="x">×</span></a><% } %>
-      </div>
-    <% } %>
-
-    <% if (registros.length === 0) { %>
-      <div class="empty-state"><p>No hay registros de auditoría para este filtro.</p></div>
-    <% } else { %>
-      <div class="panel-card panel-card--tabla">
-        <table class="tabla">
-          <thead>
-            <tr>
-              <th>Fecha y hora</th>
-              <th>Usuario</th>
-              <th>Acción</th>
-              <th>Entidad</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% registros.forEach(function(r) { %>
-              <% const categoria = categoriaDe(r.accion); %>
-              <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
-              <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
-                <td class="tiempo"><%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19)) %></td>
-                <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
-                <td>
-                  <span class="badge-accion badge-accion--<%= categoria %>">
-                    <span aria-hidden="true"><%- ICONOS_ACCION[categoria] %></span>
-                    <%= r.accion %>
-                  </span>
-                </td>
-                <td><%= r.entidad %> #<%= r.entidadId %></td>
-              </tr>
-              <tr class="fila-detalle" hidden>
-                <td colspan="4">
-                  <div class="detalle-auditoria">
-                    <span><strong>Usuario:</strong> <%= r.usuario ? r.usuario.nombre + ' (' + r.usuario.email + ')' : 'Usuario eliminado' %></span>
-                    <span><strong>Marca de tiempo completa:</strong> <%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').replace('Z', ' UTC')) %></span>
-                    <% if (enlace) { %><a class="btn-link" href="<%= enlace %>">Ver <%= r.entidad.toLowerCase() %> →</a><% } %>
-                  </div>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+    <section class="panel-card panel-lista" aria-labelledby="auditoria-titulo">
+      <div class="panel-lista-head">
+        <h2 id="auditoria-titulo">Actividad</h2>
+        <span class="agenda-contador"><%= total %></span>
+        <% if (filtrosActivos > 0) { %>
+          <div class="chip-filtros">
+            <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= fechaDMA(filtros.desde) %> <span class="x">×</span></a><% } %>
+            <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= fechaDMA(filtros.hasta) %> <span class="x">×</span></a><% } %>
+            <% if (filtros.accion) { %><a class="chip-filtro" href="<%= urlFiltros({ accion: '' }) %>"><%= filtros.accion %> <span class="x">×</span></a><% } %>
+            <% if (filtros.entidad) { %><a class="chip-filtro" href="<%= urlFiltros({ entidad: '' }) %>"><%= filtros.entidad %> <span class="x">×</span></a><% } %>
+            <% if (usuarioSeleccionado) { %><a class="chip-filtro" href="<%= urlFiltros({ usuarioId: '' }) %>"><%= usuarioSeleccionado.nombre %> <span class="x">×</span></a><% } %>
+          </div>
+        <% } %>
       </div>
 
-      <div class="paginacion">
-        <span class="paginacion-info"><%= total %> registro<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
-        <div class="paginacion-nav">
-          <% if (page > 1) { %><a href="<%= urlFiltros({ page: page - 1 }) %>" class="btn-link">← Anterior</a><% } %>
-          <% if (page < totalPaginas) { %><a href="<%= urlFiltros({ page: page + 1 }) %>" class="btn-link">Siguiente →</a><% } %>
+      <% if (registros.length === 0) { %>
+        <p class="panel-lista-vacio">No hay registros de auditoría para este filtro.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla tabla-auditoria">
+            <thead>
+              <tr>
+                <th>Fecha y hora</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Entidad</th>
+                <th class="col-abrir"><span class="sr-only">Ver detalle</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% registros.forEach(function(r) { %>
+                <% const categoria = categoriaDe(r.accion); %>
+                <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
+                <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
+                  <td class="tiempo"><%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19)) %></td>
+                  <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
+                  <td>
+                    <span class="badge-accion badge-accion--<%= categoria %>">
+                      <span aria-hidden="true"><%- ICONOS_ACCION[categoria] %></span>
+                      <%= r.accion %>
+                    </span>
+                  </td>
+                  <td><%= r.entidad %> #<%= r.entidadId %></td>
+                  <td class="col-abrir" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+                  </td>
+                </tr>
+                <tr class="fila-detalle" hidden>
+                  <td colspan="5">
+                    <div class="detalle-auditoria">
+                      <div class="detalle-auditoria-dato">
+                        <span class="detalle-auditoria-etiqueta">Correo del usuario</span>
+                        <span class="detalle-auditoria-valor"><%= r.usuario ? r.usuario.email : 'Usuario eliminado' %></span>
+                      </div>
+                      <div class="detalle-auditoria-dato">
+                        <span class="detalle-auditoria-etiqueta">Marca de tiempo completa</span>
+                        <span class="detalle-auditoria-valor tiempo"><%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').replace('Z', ' UTC')) %></span>
+                      </div>
+                      <div class="detalle-auditoria-dato">
+                        <span class="detalle-auditoria-etiqueta">Registro</span>
+                        <span class="detalle-auditoria-valor"><%= r.entidad %><%= r.entidadId ? ' #' + r.entidadId : '' %></span>
+                      </div>
+                      <% if (enlace) { %><a class="detalle-auditoria-enlace" href="<%= enlace %>">Ver <%= r.entidad.toLowerCase() %> →</a><% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
         </div>
-      </div>
-    <% } %>
+
+        <div class="paginacion panel-lista-pie">
+          <span class="paginacion-info"><%= total %> registro<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
+          <div class="paginacion-nav">
+            <% if (page > 1) { %><a href="<%= urlFiltros({ page: page - 1 }) %>" class="btn btn-neutro btn--auto btn--control">← Anterior</a><% } %>
+            <% if (page < totalPaginas) { %><a href="<%= urlFiltros({ page: page + 1 }) %>" class="btn btn-neutro btn--auto btn--control">Siguiente →</a><% } %>
+          </div>
+        </div>
+      <% } %>
+    </section>
   </main>
   <script src="/js/auditoria.js"></script>
 </body>

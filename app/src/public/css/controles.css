@@ -270,6 +270,14 @@
   padding: 0.25rem 1.25rem 0.75rem;
 }
 
+/* Contenedor de referencia para lo posicionado dentro de la tabla (p. ej.
+   las etiquetas .sr-only de los encabezados): sin esto escapan del scroll
+   lateral y ensanchan toda la página en celular. */
+.tabla-scroll,
+.panel-card--tabla {
+  position: relative;
+}
+
 .page-main .panel-lista table.tabla th {
   padding-top: 0.9rem;
 }
