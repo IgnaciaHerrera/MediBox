@@ -121,7 +121,7 @@
                 </div>
 
                 <a class="box-card-cuerpo" href="/espacios/boxes/<%= box.id %>" data-toggle-vista>
-                  <span class="box-card-estado <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado ahora' : 'Libre ahora' %></span>
+                  <span class="box-card-estado <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado' : 'Libre' %></span>
                   <span class="box-card-instrumentos"><%- icono('instrumento') %><%= box._count.instrumentos %> instrumento<%= box._count.instrumentos === 1 ? '' : 's' %></span>
                 </a>
 

@@ -72,7 +72,9 @@
     <% if (usuario.permisos.includes('paciente.read')) { %>
       <a href="/pacientes" <%- navAttrs('pacientes') %>><%- icono('pacientes') %>Pacientes</a>
     <% } %>
-    <a href="/espacios" <%- navAttrs('espacios') %>><%- icono('espacios') %>Espacios</a>
+    <% if (usuario.permisos.includes('box.read')) { %>
+      <a href="/espacios" <%- navAttrs('espacios') %>><%- icono('espacios') %>Espacios</a>
+    <% } %>
     <a href="/medicos" <%- navAttrs('medicos') %>><%- icono('medicos') %>Médicos</a>
     <% if (hayAdmin) { %>
       <% if (verAuditoria) { %><a href="/auditoria" <%- navAttrs('auditoria') %>><%- icono('auditoria') %>Auditoría</a><% } %>

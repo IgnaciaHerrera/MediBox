@@ -93,10 +93,11 @@ async function crearBox(req, res, next) {
 }
 
 async function renderBoxDetalle(req, res, id, { error = null, status = 200 } = {}) {
-  const [box, instrumentos, pasillos] = await Promise.all([
+  const [box, instrumentos, pasillos, boxesOcupados] = await Promise.all([
     boxService.obtenerPorId(id),
     instrumentoService.listarPorBox(id),
     pasilloService.listar(),
+    obtenerBoxesOcupados(),
   ]);
   res.status(status).render('espacios/box', {
     titulo: box.nombre,
@@ -105,6 +106,7 @@ async function renderBoxDetalle(req, res, id, { error = null, status = 200 } = {
     box,
     instrumentos,
     pasillos,
+    ocupado: boxesOcupados.has(id),
     error,
     puedeEditarBox: req.usuario.permisos.includes('box.write'),
     puedeGestionarInstrumental: req.usuario.permisos.includes('box.detalle.write'),

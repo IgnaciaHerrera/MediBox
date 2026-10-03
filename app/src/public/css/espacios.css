@@ -550,10 +550,41 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Los dos cuadros miden lo mismo mientras el instrumental quepa en dos filas;
+   desde la tercera fila solo crece el cuadro de instrumental. Las acciones de
+   cada cuadro quedan abajo, alineadas entre sí. */
+.box-detalle-grid > .cita-seccion {
+  display: flex;
+  flex-direction: column;
+  min-height: 18.25rem;
+}
+
+.box-detalle-grid .box-datos-acciones,
+.box-detalle-grid #instrumentos-panel .form-agregar-instrumento {
+  margin-top: auto;
+}
+
+.box-detalle-grid #form-datos-box,
+.box-detalle-grid .instrumentos-tabla,
+.box-detalle-grid .instrumentos-vacio {
+  margin-bottom: 1.25rem;
+}
+
 @media (max-width: 760px) {
   .box-detalle-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .box-detalle-grid > .cita-seccion {
+    min-height: 0;
+  }
+}
+
+/* Libre / Ocupado junto al título del detalle del box. */
+.page-head .box-estado-detalle {
+  align-self: center;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.82rem;
 }
 
 .box-datos-acciones {

@@ -14,6 +14,7 @@
         <h1><%= box.pasillo.nombre %> — <%= box.nombre %></h1>
         <p class="page-sub">Revisa los datos del box y el instrumental disponible.</p>
       </div>
+      <span class="box-card-estado box-estado-detalle <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado' : 'Libre' %></span>
     </div>
 
     <% if (error) { %>
