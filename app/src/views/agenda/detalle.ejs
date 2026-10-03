@@ -136,8 +136,9 @@
           <% historial.forEach(function(h) {
             const evento = EVENTOS_HISTORIAL[h.accion] || EVENTO_NEUTRO;
             const marcaISO = new Date(h.timestamp).toISOString();
-            const marcaFecha = fechaDMA(marcaISO.slice(0, 10));
-            const marcaHora = marcaISO.slice(11, 16);
+            const marcaLocal = isoLocal(h.timestamp);
+            const marcaFecha = fechaDMA(marcaLocal.slice(0, 10));
+            const marcaHora = marcaLocal.slice(11, 16);
           %>
             <li class="historial-evento historial-evento--<%= evento.tono %>">
               <span class="historial-icono" aria-hidden="true">

@@ -38,7 +38,7 @@
         <span class="avatar avatar--grande"><%= iniciales(paciente.nombre) %></span>
         <div>
           <h1><%= paciente.nombre %></h1>
-          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= fechaDMA(new Date(paciente.createdAt).toISOString().slice(0, 10)) %></p>
+          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= fechaDMA(isoLocal(paciente.createdAt).slice(0, 10)) %></p>
         </div>
       </div>
       <div class="page-head-acciones">

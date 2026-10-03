@@ -96,7 +96,7 @@
                   <span class="notif-icono notif-icono--<%= tipo %>" aria-hidden="true"><%- ICONOS[tipo] %></span>
                   <div class="notif-cuerpo">
                     <p class="notif-mensaje"><% if (!n.leida) { %><span class="sr-only">Sin leer: </span><% } %><%= mensajeLegible(n.mensaje) %></p>
-                    <span class="notif-hora tiempo"><%= new Date(n.createdAt).toISOString().slice(11, 16) %></span>
+                    <span class="notif-hora tiempo"><%= isoLocal(n.createdAt).slice(11, 16) %></span>
                   </div>
                   <% if (!n.leida) { %>
                     <form method="POST" action="/notificaciones/<%= n.id %>/leida" class="form-marcar-leida">

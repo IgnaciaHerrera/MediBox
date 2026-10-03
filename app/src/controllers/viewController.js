@@ -3,6 +3,7 @@ const pacienteService = require('../services/pacienteService');
 const notificacionService = require('../services/notificacionService');
 const usuarioService = require('../services/usuarioService');
 const medicoService = require('../services/medicoService');
+const { hoyISO } = require('../lib/fecha');
 
 const DOMINIOS = {
   dashboard: 'Panel',
@@ -85,7 +86,7 @@ async function dashboard(req, res, next) {
   try {
     const usuario = req.usuario;
     const permisos = usuario.permisos;
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = hoyISO();
 
     const stats = [];
     let agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items: [], total: 0 };

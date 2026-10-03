@@ -3,16 +3,13 @@ const medicoService = require('../services/medicoService');
 const especialidadService = require('../services/especialidadService');
 const citaService = require('../services/citaService');
 const { AppError } = require('../lib/AppError');
+const { hoyISO } = require('../lib/fecha');
 
 const especialidadSchema = Joi.object({ nombre: Joi.string().min(2).max(100).required() }).unknown(true);
 const medicoSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
   especialidadId: Joi.number().integer().positive().required(),
 }).unknown(true);
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Una sola pasada por las citas de hoy: cuenta cuántas tiene cada médico y,
 // de paso, en qué box está atendiendo justo ahora (si corresponde) — antes

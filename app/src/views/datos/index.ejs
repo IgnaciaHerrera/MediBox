@@ -52,7 +52,7 @@
               <p class="exportar-card-meta">
                 <% if (t.ultimo) { %>
                   Última exportación: <strong><%= t.ultimo.usuario ? t.ultimo.usuario.nombre : 'usuario eliminado' %></strong>
-                  · <span class="tiempo"><%= fechaDMA(new Date(t.ultimo.timestamp).toISOString().replace('T', ' ').slice(0, 16)) %></span>
+                  · <span class="tiempo"><%= fechaDMA(isoLocal(t.ultimo.timestamp).slice(0, 16)) %></span>
                 <% } else { %>
                   Todavía no se ha exportado.
                 <% } %>

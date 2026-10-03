@@ -6,10 +6,7 @@ const pasilloService = require('../services/pasilloService');
 const pacienteService = require('../services/pacienteService');
 const auditService = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+const { hoyISO } = require('../lib/fecha');
 
 const crearCitaSchema = Joi.object({
   pacienteId: Joi.number().integer().positive().required(),

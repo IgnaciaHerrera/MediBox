@@ -9,6 +9,7 @@ const { issueCsrfToken, verifyCsrf } = require('./middleware/csrf');
 const { requireAuth } = require('./middleware/requireAuth');
 const { attachUsuario } = require('./middleware/attachUsuario');
 const { dashboard } = require('./controllers/viewController');
+const { isoLocal } = require('./lib/fecha');
 const authRoutes = require('./routes/auth');
 const agendaViewRoutes = require('./routes/agendaViews');
 const pacienteViewRoutes = require('./routes/pacienteViews');
@@ -38,6 +39,8 @@ app.set('views', path.join(__dirname, 'views'));
 // "2026-10-03 14:05") como día-mes-año ("03-10-2026 14:05"). Solo para texto
 // visible; los value de los inputs de fecha deben seguir en ISO.
 app.locals.fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
+// Marcas de tiempo (createdAt, timestamp) en hora local: "2026-10-03 14:05:09".
+app.locals.isoLocal = isoLocal;
 
 app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));

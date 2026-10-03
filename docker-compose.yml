@@ -19,6 +19,8 @@ services:
   app:
     build: ./app
     env_file: .env
+    environment:
+      TZ: America/Santiago
     depends_on:
       db:
         condition: service_healthy

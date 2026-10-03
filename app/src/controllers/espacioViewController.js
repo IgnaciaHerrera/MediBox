@@ -4,6 +4,7 @@ const boxService = require('../services/boxService');
 const instrumentoService = require('../services/instrumentoService');
 const citaService = require('../services/citaService');
 const { AppError } = require('../lib/AppError');
+const { hoyISO } = require('../lib/fecha');
 
 const pasilloSchema = Joi.object({ nombre: Joi.string().min(1).max(50).required() }).unknown(true);
 const boxSchema = Joi.object({
@@ -11,10 +12,6 @@ const boxSchema = Joi.object({
   pasilloId: Joi.number().integer().positive().required(),
 }).unknown(true);
 const instrumentoSchema = Joi.object({ nombre: Joi.string().min(2).max(100).required() }).unknown(true);
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Un box cuenta como "ocupado ahora" si tiene una cita agendada hoy cuyo
 // rango horario contiene la hora actual (mismo criterio usado en el panel).
