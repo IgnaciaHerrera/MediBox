@@ -29,6 +29,27 @@
   const boxSeleccionadoObj = !modoMia && boxIdSeleccionado ? boxes.find((b) => b.id === boxIdSeleccionado) : null;
   const medicoSeleccionadoObj = !modoMia && medicoIdSeleccionado ? medicos.find((m) => m.id === medicoIdSeleccionado) : null;
   const columnasTimeline = !modoMia ? (boxSeleccionadoObj ? [boxSeleccionadoObj] : boxes) : [];
+
+  // Filtros aplicados distintos de la vista por defecto (hoy, sin pasillo,
+  // box ni médico). En "Mi agenda" el médico es el propio, no un filtro.
+  // "Hoy" se calcula igual que en el controlador para que coincidan.
+  const hoy = new Date().toISOString().slice(0, 10);
+  const filtrosActivos = [
+    fecha !== hoy,
+    !modoMia && pasilloIdSeleccionado,
+    !modoMia && boxIdSeleccionado,
+    !modoMia && medicoIdSeleccionado,
+  ].filter(Boolean).length;
+
+  // Iniciales del médico para el avatar, sin contar títulos como "Dr." o "Dra.".
+  function iniciales(nombre) {
+    return nombre
+      .split(' ')
+      .filter((p) => p && !p.endsWith('.'))
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join('');
+  }
 %>
 </head>
 <body>
@@ -36,7 +57,12 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1><%= modoMia ? 'Mi agenda' : 'Agenda' %></h1>
+      <div>
+        <h1><%= modoMia ? 'Mi agenda' : 'Agenda' %></h1>
+        <p class="page-sub">
+          <%= modoMia ? 'Revisa tus citas médicas del día y su estado.' : 'Consulta y gestiona las citas médicas por día, box y médico.' %>
+        </p>
+      </div>
       <% if (puedeCrear) { %>
         <a href="/agenda/nueva" class="btn btn-primary btn--auto btn--control btn--icono">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
@@ -88,17 +114,25 @@
             </select>
           </div>
         <% } %>
-        <a
-          class="btn btn--control btn-limpiar"
-          href="<%= modoMia ? '/agenda/mia' : '/agenda' + (vista === 'calendario' ? '?vista=calendario' : '') %>"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          Limpiar filtros
-        </a>
+        <% if (filtrosActivos > 0) { %>
+          <a
+            class="btn btn--control btn-limpiar"
+            href="<%= modoMia ? '/agenda/mia' : '/agenda' + (vista === 'calendario' ? '?vista=calendario' : '') %>"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Limpiar filtros
+            <span class="btn-limpiar-contador" aria-label="<%= filtrosActivos %> <%= filtrosActivos === 1 ? 'filtro activo' : 'filtros activos' %>"><%= filtrosActivos %></span>
+          </a>
+        <% } %>
       </form>
 
-      <% if (!modoMia) { %>
-        <div class="agenda-toolbar">
+      <div class="panel-card agenda-panel">
+        <div class="agenda-panel-head">
+          <div class="agenda-panel-titulo">
+            <h2><%= vista === 'calendario' && !modoMia ? 'Calendario del día' : 'Citas del día' %></h2>
+            <span class="agenda-contador"><%= citas.length %></span>
+          </div>
+        <% if (!modoMia) { %>
           <div class="chip-filtros">
             <% if (pasilloSeleccionadoObj) { %>
               <a class="chip-filtro" href="<%= urlFiltros({ sinPasillo: true, sinBox: true }) %>"><%= pasilloSeleccionadoObj.nombre %> <span class="x">×</span></a>
@@ -119,20 +153,24 @@
               </button>
             </div>
             <div class="vista-toggle">
-              <a href="<%= urlFiltros({ vistaNueva: 'lista' }) %>" class="vista-btn <%= vista === 'lista' ? 'activo' : '' %>">Lista</a>
-              <a href="<%= urlFiltros({ vistaNueva: 'calendario' }) %>" class="vista-btn <%= vista === 'calendario' ? 'activo' : '' %>">Calendario</a>
+              <a href="<%= urlFiltros({ vistaNueva: 'lista' }) %>" class="vista-btn <%= vista === 'lista' ? 'activo' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".8" fill="currentColor"/><circle cx="3.5" cy="12" r=".8" fill="currentColor"/><circle cx="3.5" cy="18" r=".8" fill="currentColor"/></svg>
+                Lista
+              </a>
+              <a href="<%= urlFiltros({ vistaNueva: 'calendario' }) %>" class="vista-btn <%= vista === 'calendario' ? 'activo' : '' %>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+                Calendario
+              </a>
             </div>
           </div>
+        <% } %>
         </div>
-      <% } %>
 
       <% if (vista === 'lista' || modoMia) { %>
         <% if (citas.length === 0) { %>
-          <div class="empty-state">
-            <p>No hay citas agendadas para este filtro.</p>
-          </div>
+          <p class="agenda-vacio">No hay citas agendadas para este filtro.</p>
         <% } else { %>
-          <div class="panel-card panel-card--tabla">
+          <div class="tabla-scroll">
             <table class="tabla">
               <thead>
                 <tr>
@@ -145,9 +183,19 @@
               <tbody>
                 <% citas.forEach(function(cita) { %>
                   <tr id="cita-<%= cita.id %>" data-busqueda="<%= cita.medico.nombre %> <%= cita.box.nombre %> <%= cita.box.pasillo.nombre %>">
-                    <td class="tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></td>
-                    <td><%= cita.box.pasillo.nombre %> · <%= cita.box.nombre %></td>
-                    <td><a class="fila-link" href="/agenda/<%= cita.id %>"><%= cita.medico.nombre %></a></td>
+                    <td><span class="cita-hora tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span></td>
+                    <td>
+                      <span class="cita-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1.5"/><circle cx="14.5" cy="12" r=".6" fill="currentColor" stroke="none"/></svg>
+                        <%= cita.box.pasillo.nombre %> · <%= cita.box.nombre %>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="fila-persona">
+                        <span class="avatar" aria-hidden="true"><%= iniciales(cita.medico.nombre) %></span>
+                        <a class="fila-link fila-link--fila" href="/agenda/<%= cita.id %>"><%= cita.medico.nombre %></a>
+                      </span>
+                    </td>
                     <td><span class="badge badge-<%= cita.estado %>"><%= cita.estado.replace('_', ' ') %></span></td>
                   </tr>
                 <% }) %>
@@ -158,7 +206,7 @@
         <% } %>
       <% } else { %>
         <% if (columnasTimeline.length === 0) { %>
-          <div class="empty-state"><p>Todavía no hay boxes registrados para mostrar en el calendario.</p></div>
+          <p class="agenda-vacio">Todavía no hay boxes registrados para mostrar en el calendario.</p>
         <% } else { %>
           <p class="access-empty sin-resultados" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
           <div class="timeline-scroll">
@@ -173,7 +221,7 @@
                   <div class="timeline-hora" style="grid-row: <%= f + 2 %> / span 2;"><%= String(HORA_INICIO_GRID + f / 2).padStart(2, '0') %>:00</div>
                 <% } %>
                 <% columnasTimeline.forEach(function(box, ci) { %>
-                  <div class="timeline-celda" style="grid-row: <%= f + 2 %>; grid-column: <%= ci + 2 %>;"></div>
+                  <div class="timeline-celda<%= f % 2 === 0 ? ' timeline-celda--media' : '' %>" style="grid-row: <%= f + 2 %>; grid-column: <%= ci + 2 %>;"></div>
                 <% }) %>
               <% } %>
 
@@ -197,6 +245,7 @@
           </div>
         <% } %>
       <% } %>
+      </div>
     <% } %>
   </main>
   <script src="/js/agenda.js"></script>

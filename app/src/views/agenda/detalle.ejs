@@ -8,6 +8,26 @@
     UPDATE_ESTADO: 'Estado actualizado',
     ANULAR: 'Cita anulada',
   };
+
+  // Ícono y tono de cada evento del historial; una acción desconocida usa el neutro.
+  const EVENTOS_HISTORIAL = {
+    CREATE: { tono: 'crear', icono: '<path d="M12 5v14M5 12h14"/>' },
+    UPDATE_ESTADO: { tono: 'estado', icono: '<path d="m5 12.5 4.5 4.5L19 7.5"/>' },
+    ANULAR: { tono: 'anular', icono: '<path d="M18 6 6 18M6 6l12 12"/>' },
+  };
+  const EVENTO_NEUTRO = { tono: 'neutro', icono: '<circle cx="12" cy="12" r="3"/>' };
+
+  const fechaISO = cita.fecha.toISOString().slice(0, 10);
+  const fechaTexto = (function () {
+    const texto = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  })();
+  const estadoClase = cita.anulada ? 'anulada' : cita.estado;
+  const estadoTexto = cita.anulada ? 'anulada' : cita.estado.replace('_', ' ');
+  // Muestra fechas ISO ("2026-10-03" o "2026-10-03 14:05") como día-mes-año
+  // ("03-10-2026 14:05"). Solo para texto visible: los value de los inputs
+  // de fecha deben seguir en ISO.
+  const fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
 %>
 </head>
 <body>
@@ -17,80 +37,134 @@
     <a class="volver" href="/agenda">← Volver a la agenda</a>
 
     <div class="page-head">
-      <h1><%= cita.medico.nombre %> · <%= cita.box.nombre %></h1>
-      <div class="page-head-acciones">
-        <span class="badge badge-<%= cita.anulada ? 'anulada' : cita.estado %>"><%= cita.anulada ? 'anulada' : cita.estado.replace('_', ' ') %></span>
-        <button type="button" class="btn-link" onclick="window.print()">Imprimir</button>
+      <div>
+        <h1><%= cita.medico.nombre %> · <%= cita.box.nombre %></h1>
+        <p class="page-sub cita-cuando">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          <%= fechaTexto %>
+          <span class="cita-cuando-sep" aria-hidden="true">·</span>
+          <span class="tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span>
+        </p>
       </div>
+      <span class="badge badge-<%= estadoClase %>"><%= estadoTexto %></span>
     </div>
 
     <% if (!paciente) { %>
       <p class="aviso">Tu rol no tiene acceso a la identidad del paciente de esta cita.</p>
     <% } %>
 
-    <div class="panel-card panel-card--con-espacio">
-      <div class="detalle-grid detalle-grid--sin-margen">
-        <div class="detalle-item">
-          <span class="etiqueta">Paciente</span>
-          <span class="valor"><%= paciente ? paciente.nombre : 'Reservado' %></span>
+    <div class="cita-grid">
+      <section class="panel-card cita-seccion" aria-labelledby="cita-paciente-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></svg>
+          </span>
+          <h2 id="cita-paciente-titulo">Paciente</h2>
         </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Motivo de consulta</span>
-          <span class="valor"><%= paciente ? paciente.motivoConsulta : '—' %></span>
+        <div class="detalle-grid detalle-grid--sin-margen detalle-grid--una">
+          <div class="detalle-item">
+            <span class="etiqueta">Nombre</span>
+            <span class="valor"><%= paciente ? paciente.nombre : 'Reservado' %></span>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Motivo de consulta</span>
+            <span class="valor"><%= paciente ? paciente.motivoConsulta : '—' %></span>
+          </div>
         </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Especialidad</span>
-          <span class="valor"><%= cita.medico.especialidad.nombre %></span>
+      </section>
+
+      <section class="panel-card cita-seccion" aria-labelledby="cita-datos-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+          </span>
+          <h2 id="cita-datos-titulo">Cita</h2>
         </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Espacio</span>
-          <span class="valor"><%= cita.box.pasillo.nombre %> — <%= cita.box.nombre %></span>
+        <div class="detalle-grid detalle-grid--sin-margen">
+          <div class="detalle-item">
+            <span class="etiqueta">Especialidad</span>
+            <span class="valor"><%= cita.medico.especialidad.nombre %></span>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Espacio</span>
+            <span class="valor"><%= cita.box.pasillo.nombre %> — <%= cita.box.nombre %></span>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Fecha</span>
+            <span class="valor tiempo"><%= fechaDMA(fechaISO) %></span>
+          </div>
+          <div class="detalle-item">
+            <span class="etiqueta">Horario</span>
+            <span class="valor tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span>
+          </div>
         </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Fecha</span>
-          <span class="valor tiempo"><%= cita.fecha.toISOString().slice(0, 10) %></span>
-        </div>
-        <div class="detalle-item">
-          <span class="etiqueta">Horario</span>
-          <span class="valor tiempo"><%= cita.horaInicio %>–<%= cita.horaFin %></span>
-        </div>
-      </div>
+      </section>
     </div>
 
     <% if (puedeGestionar && !cita.anulada) { %>
-      <div class="acciones-cita">
-        <% if (cita.estado === 'agendada') { %>
-          <form method="POST" action="/agenda/<%= cita.id %>/estado">
+      <section class="panel-card cita-acciones-panel" aria-labelledby="cita-acciones-titulo">
+        <div>
+          <h2 id="cita-acciones-titulo">Gestionar cita</h2>
+          <p class="cita-acciones-ayuda">Registra si el paciente fue atendido o anula la cita.</p>
+        </div>
+        <div class="acciones-cita">
+          <% if (cita.estado === 'agendada') { %>
+            <form method="POST" action="/agenda/<%= cita.id %>/estado">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="estado" value="atendido" />
+              <button type="submit" class="btn btn-primary btn--auto">Marcar atendido</button>
+            </form>
+            <form method="POST" action="/agenda/<%= cita.id %>/estado">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="estado" value="no_atendido" />
+              <button type="submit" class="btn btn-neutro">Marcar no atendido</button>
+            </form>
+          <% } %>
+          <form class="accion-peligro" method="POST" action="/agenda/<%= cita.id %>/anular" data-confirmar="¿Anular esta cita? Esta acción no se puede deshacer.">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <input type="hidden" name="estado" value="atendido" />
-            <button type="submit" class="btn btn-primary btn--auto">Marcar atendido</button>
+            <button type="submit" class="btn btn-secondary">Anular cita</button>
           </form>
-          <form method="POST" action="/agenda/<%= cita.id %>/estado">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <input type="hidden" name="estado" value="no_atendido" />
-            <button type="submit" class="btn btn-secondary">Marcar no atendido</button>
-          </form>
-        <% } %>
-        <form method="POST" action="/agenda/<%= cita.id %>/anular" data-confirmar="¿Anular esta cita? Esta acción no se puede deshacer.">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button type="submit" class="btn btn-secondary">Anular cita</button>
-        </form>
-      </div>
+        </div>
+      </section>
     <% } %>
 
     <% if (historial && historial.length > 0) { %>
-      <div class="historial-timeline">
-        <h2 class="access-heading sin-margen-superior">Historial</h2>
-        <% historial.forEach(function(h) { %>
-          <div class="historial-item">
-            <span class="historial-punto"></span>
-            <div class="historial-texto">
-              <div class="accion"><%= ETIQUETAS_ACCION[h.accion] || h.accion %></div>
-              <div class="meta"><%= h.usuario ? h.usuario.nombre : 'Usuario eliminado' %> · <%= new Date(h.timestamp).toISOString().replace('T', ' ').slice(0, 19) %></div>
-            </div>
-          </div>
-        <% }) %>
-      </div>
+      <section class="panel-card historial-timeline" aria-labelledby="cita-historial-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </span>
+          <h2 id="cita-historial-titulo">Historial</h2>
+        </div>
+        <ol class="historial-lista">
+          <% historial.forEach(function(h) {
+            const evento = EVENTOS_HISTORIAL[h.accion] || EVENTO_NEUTRO;
+            const marcaISO = new Date(h.timestamp).toISOString();
+            const marcaFecha = fechaDMA(marcaISO.slice(0, 10));
+            const marcaHora = marcaISO.slice(11, 16);
+          %>
+            <li class="historial-evento historial-evento--<%= evento.tono %>">
+              <span class="historial-icono" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><%- evento.icono %></svg>
+              </span>
+              <div class="historial-cuerpo">
+                <span class="historial-accion"><%= ETIQUETAS_ACCION[h.accion] || h.accion %></span>
+                <span class="historial-autor">por <%= h.usuario ? h.usuario.nombre : 'Usuario eliminado' %></span>
+              </div>
+              <time class="historial-marca" datetime="<%= marcaISO %>">
+                <span class="historial-marca-fecha">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+                  <%= marcaFecha %>
+                </span>
+                <span class="historial-marca-hora">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  <%= marcaHora %>
+                </span>
+              </time>
+            </li>
+          <% }) %>
+        </ol>
+      </section>
     <% } %>
   </main>
   <%- include('../partials/modal-confirmar') %>

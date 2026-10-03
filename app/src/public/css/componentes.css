@@ -107,50 +107,143 @@ dialog.modal p {
 
 /* ---------- Línea de tiempo de historial (detalle de cita) ---------- */
 
-.historial-timeline {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--line);
+.historial-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.historial-item {
-  display: flex;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
+.historial-evento {
   position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.65rem 0;
 }
 
-.historial-item::before {
+/* Línea que une cada evento con el siguiente, centrada bajo el ícono. */
+.historial-evento:not(:last-child)::before {
   content: "";
   position: absolute;
-  left: 0.28rem;
-  top: 1.1rem;
-  bottom: 0;
-  width: 1px;
+  left: calc(1rem - 1px);
+  top: calc(50% + 1rem);
+  height: calc(100% - 2rem);
+  width: 2px;
+  border-radius: 2px;
   background: var(--line);
 }
 
-.historial-item:last-child::before {
-  display: none;
-}
-
-.historial-punto {
-  flex-shrink: 0;
-  width: 0.6rem;
-  height: 0.6rem;
+.historial-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
-  background: var(--teal);
-  margin-top: 0.35rem;
+  border: 1px solid currentColor;
 }
 
-.historial-texto .accion {
+.historial-icono svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.historial-evento--crear .historial-icono {
+  color: var(--teal);
+  background: rgba(31, 107, 92, 0.08);
+  border-color: rgba(31, 107, 92, 0.3);
+}
+
+.historial-evento--estado .historial-icono {
+  color: #8a5f1f;
+  background: rgba(185, 130, 47, 0.1);
+  border-color: rgba(185, 130, 47, 0.35);
+}
+
+.historial-evento--anular .historial-icono {
+  color: var(--brick);
+  background: rgba(168, 67, 42, 0.08);
+  border-color: rgba(168, 67, 42, 0.3);
+}
+
+.historial-evento--neutro .historial-icono {
+  color: var(--ink-soft);
+  background: var(--paper);
+  border-color: var(--line-strong);
+}
+
+.historial-cuerpo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.historial-accion {
   font-weight: 600;
   color: var(--ink);
 }
 
-.historial-texto .meta {
+.historial-autor {
   font-size: 0.82rem;
   color: var(--ink-soft);
+}
+
+/* Fecha y hora en una píldora de dos partes: la fecha en neutro y la hora
+   resaltada en verde, cada una con su ícono. */
+.historial-marca {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.historial-marca-fecha,
+.historial-marca-hora {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+}
+
+.historial-marca-fecha {
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.historial-marca-hora {
+  border-left: 1px solid var(--line);
+  background: rgba(31, 107, 92, 0.08);
+  color: var(--teal-ink);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.historial-marca svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
+}
+
+@media (max-width: 560px) {
+  .historial-evento {
+    grid-template-columns: auto 1fr;
+  }
+
+  .historial-marca {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .historial-evento:not(:last-child)::before {
+    top: calc(0.65rem + 2rem);
+    height: calc(100% - 2rem);
+  }
 }
 
 @media print {

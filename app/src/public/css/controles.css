@@ -1,0 +1,542 @@
+/* ---------- Controles de las páginas internas: botones, campos, tablas ----------
+   Todo va acotado a .page-main y a los modales para que el login (que comparte
+   .btn y .field) y el header queden como están. Las reglas de botón no tocan
+   alto, ancho ni padding: esos los siguen dando .btn--control y .btn--auto. */
+
+/* Botones */
+
+:is(.page-main, dialog.modal) .btn {
+  gap: 0.45rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  letter-spacing: 0.005em;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+:is(.page-main, dialog.modal) .btn:active {
+  transform: translateY(1px);
+}
+
+:is(.page-main, dialog.modal) .btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.28);
+}
+
+:is(.page-main, dialog.modal) .btn-primary {
+  background: linear-gradient(180deg, #24786a 0%, var(--teal) 100%);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(14, 38, 34, 0.25),
+    0 6px 14px -6px rgba(31, 107, 92, 0.55);
+}
+
+:is(.page-main, dialog.modal) .btn-primary:hover {
+  background: linear-gradient(180deg, var(--teal) 0%, var(--teal-deep) 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(14, 38, 34, 0.25),
+    0 10px 20px -8px rgba(31, 107, 92, 0.6);
+}
+
+:is(.page-main, dialog.modal) .btn-primary:focus-visible {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 0 3px rgba(31, 107, 92, 0.3);
+}
+
+:is(.page-main, dialog.modal) .btn-secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.06);
+}
+
+:is(.page-main, dialog.modal) .btn-secondary:hover {
+  border-color: rgba(168, 67, 42, 0.5);
+  background: rgba(168, 67, 42, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px -4px rgba(168, 67, 42, 0.3);
+}
+
+/* Botón neutro: acción secundaria que no es destructiva (Cancelar, etc.). */
+:is(.page-main, dialog.modal) .btn-neutro {
+  border: 1px solid var(--line-strong);
+  background: var(--paper-raised);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.06);
+}
+
+:is(.page-main, dialog.modal) .btn-neutro:hover {
+  border-color: rgba(31, 107, 92, 0.45);
+  background: rgba(31, 107, 92, 0.05);
+  color: var(--teal-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px -4px rgba(22, 63, 55, 0.25);
+}
+
+/* "Limpiar filtros" solo aparece con filtros aplicados, así que se destaca en
+   verde suave con el número de filtros activos. */
+.page-main .btn-limpiar {
+  border-color: rgba(31, 107, 92, 0.35);
+  background: rgba(31, 107, 92, 0.08);
+  color: var(--teal-ink);
+  font-weight: 600;
+  animation: dash-in var(--dur-base) var(--ease-out);
+}
+
+.page-main .btn-limpiar:hover {
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.14);
+  color: var(--teal-ink);
+}
+
+.btn-limpiar-contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--teal);
+  color: var(--paper);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.page-main .volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.page-main .volver:hover {
+  border-color: var(--line);
+  background: var(--paper-raised);
+}
+
+/* Campos */
+
+:is(.page-main, dialog.modal) .field label {
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+:is(.page-main, dialog.modal) .field input:not([type="checkbox"], [type="radio"]),
+:is(.page-main, dialog.modal) .field select,
+:is(.page-main, dialog.modal) .field textarea,
+.page-main .filtros input,
+.page-main .filtros select {
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background-color: #fdfcfa;
+  box-shadow: inset 0 1px 2px rgba(27, 33, 31, 0.04);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+:is(.page-main, dialog.modal) .field input:not([type="checkbox"], [type="radio"]):hover,
+:is(.page-main, dialog.modal) .field select:hover,
+:is(.page-main, dialog.modal) .field textarea:hover,
+.page-main .filtros input:hover,
+.page-main .filtros select:hover {
+  border-color: #a9a493;
+}
+
+:is(.page-main, dialog.modal) .field input:not([type="checkbox"], [type="radio"]):focus,
+:is(.page-main, dialog.modal) .field select:focus,
+:is(.page-main, dialog.modal) .field textarea:focus,
+.page-main .filtros input:focus,
+.page-main .filtros select:focus,
+.page-main .buscador-wrap .buscador:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.16);
+}
+
+/* Flecha propia y más fina para los selectores. */
+:is(.page-main, dialog.modal) .field select,
+.page-main .filtros select {
+  appearance: none;
+  font: inherit;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23545c58' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
+/* En la barra de filtros el alto lo fija .filtros select; sin esto le llega
+   también el padding vertical de .field select y el texto queda cortado. */
+.page-main .filtros select {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .page-main .filtros .field,
+  .page-main .filtros .btn-limpiar {
+    flex: 1 1 100%;
+  }
+
+  /* En pantallas angostas la tabla se desplaza de lado en vez de apretarse. */
+  .page-main .panel-card--tabla,
+  .page-main .tabla-scroll {
+    overflow-x: auto;
+  }
+
+  .page-main .panel-card--tabla table.tabla,
+  .page-main .tabla-scroll table.tabla {
+    min-width: 34rem;
+  }
+}
+
+.page-main .buscador-wrap .buscador {
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* Barra de filtros como tarjeta */
+
+.page-main .filtros:not(.filtros--sin-borde) {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
+  background: var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 10px 24px -18px rgba(27, 33, 31, 0.25);
+}
+
+/* Tarjetas y formularios */
+
+.page-main .panel-card {
+  border-color: rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
+}
+
+.page-main .form-card {
+  padding: 1.75rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 14px;
+  background: var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
+}
+
+/* Encabezado de página como tarjeta clara (mismo lenguaje que el saludo del
+   dashboard, sin el lavado de color). */
+.page-main .page-head {
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1.4rem 1.6rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 14px;
+  background: var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
+}
+
+/* Formularios agrupados en secciones separadas por una línea fina. */
+.form-seccion {
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.form-seccion + .form-seccion {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+/* Dentro de una sección el espacio lo dan la sección y la grilla, no el
+   margen inferior de cada campo. */
+.form-seccion .field {
+  margin-bottom: 0;
+}
+
+.form-seccion .form-grid {
+  row-gap: 1rem;
+}
+
+.contenedor-angosto--medio {
+  max-width: 42rem;
+}
+
+.page-main .contenedor-angosto--medio .form-card {
+  max-width: none;
+}
+
+.form-grid--tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 560px) {
+  .form-grid,
+  .form-grid--tres {
+    grid-template-columns: 1fr;
+  }
+
+  .form-acciones {
+    flex-direction: column-reverse;
+  }
+}
+
+.page-sub {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.page-main .empty-state {
+  padding: 2.75rem 1.5rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  background: rgba(251, 250, 247, 0.6);
+}
+
+/* Tablas */
+
+.page-main table.tabla th {
+  padding-top: 0.15rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom-color: var(--line);
+}
+
+.page-main table.tabla tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+/* Fila completa clickeable: el enlace de la fila (.fila-link) se estira con
+   un ::after que cubre toda la fila, sin JavaScript. */
+.page-main table.tabla tbody tr:has(.fila-link--fila) {
+  position: relative;
+  cursor: pointer;
+}
+
+.page-main table.tabla a.fila-link--fila::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.page-main table.tabla a.fila-link--fila:focus-visible {
+  outline: none;
+}
+
+.page-main table.tabla tbody tr:has(.fila-link--fila:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.page-main table.tabla tbody tr:hover {
+  background: rgba(31, 107, 92, 0.045);
+}
+
+.page-main table.tabla tbody tr:last-child td,
+.page-main table.tabla tbody tr:has(+ tr[hidden]:last-child) td {
+  border-bottom: none;
+}
+
+/* Etiquetas de estado: píldora suave */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.badge-agendada {
+  color: #8a5f1f;
+  border-color: rgba(185, 130, 47, 0.35);
+  background: rgba(185, 130, 47, 0.1);
+}
+
+.badge-atendido {
+  border-color: rgba(31, 107, 92, 0.3);
+  background: rgba(31, 107, 92, 0.09);
+}
+
+.badge-no_atendido,
+.badge-anulada {
+  border-color: rgba(168, 67, 42, 0.3);
+  background: rgba(168, 67, 42, 0.08);
+}
+
+/* Detalle (ficha de cita, paciente, etc.) */
+
+.page-main .detalle-item .etiqueta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.page-main .detalle-item .valor {
+  font-weight: 500;
+}
+
+/* Modales */
+
+dialog.modal {
+  position: relative;
+  max-width: 28rem;
+  padding: 1.6rem 1.75rem 0;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 16px;
+  box-shadow: 0 30px 70px -24px rgba(14, 38, 34, 0.5), 0 2px 6px rgba(27, 33, 31, 0.08);
+}
+
+dialog.modal.modal--formulario {
+  max-width: 32rem;
+}
+
+dialog.modal::backdrop {
+  background: rgba(14, 38, 34, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+dialog.modal h3 {
+  margin-bottom: 0.35rem;
+  font-size: 1.2rem;
+}
+
+/* Botón X: un <form method="dialog"> que el navegador usa para cerrar. */
+.modal-cerrar-form {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  margin: 0;
+}
+
+.modal-cerrar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.modal-cerrar:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.modal-cerrar:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.28);
+}
+
+.modal-cerrar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 92, 0.1);
+  color: var(--teal);
+  box-shadow: 0 0 0 6px rgba(31, 107, 92, 0.05);
+}
+
+.modal-icono svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.modal-icono--peligro {
+  background: rgba(168, 67, 42, 0.1);
+  color: var(--brick);
+  box-shadow: 0 0 0 6px rgba(168, 67, 42, 0.05);
+}
+
+/* Confirmación: ícono a la izquierda y el mensaje al lado. */
+.modal-cuerpo {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-right: 1.75rem;
+}
+
+dialog.modal .modal-cuerpo p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* Formularios en modal: cabecera con ícono, título y subtítulo. */
+.modal-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0 -1.75rem 1.25rem;
+  padding: 0 3.5rem 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+dialog.modal .modal-subtitulo {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+dialog.modal .field p {
+  margin-bottom: 0;
+}
+
+dialog.modal .modal-acciones {
+  margin-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* Botón de acción destructiva (confirmar anular/eliminar). */
+:is(.page-main, dialog.modal) .btn-peligro {
+  background: linear-gradient(180deg, #b44c32 0%, var(--brick) 100%);
+  color: var(--paper);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(110, 44, 26, 0.3),
+    0 6px 14px -6px rgba(168, 67, 42, 0.55);
+}
+
+:is(.page-main, dialog.modal) .btn-peligro:hover {
+  background: linear-gradient(180deg, var(--brick) 0%, #8e3721 100%);
+  transform: translateY(-1px);
+}
+
+:is(.page-main, dialog.modal) .btn-peligro:focus-visible {
+  box-shadow: 0 0 0 3px rgba(168, 67, 42, 0.3);
+}
+

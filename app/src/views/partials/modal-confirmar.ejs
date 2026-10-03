@@ -1,8 +1,20 @@
-<dialog id="modal-confirmar" class="modal" aria-labelledby="modal-confirmar-titulo" aria-describedby="modal-confirmar-mensaje">
-  <h3 id="modal-confirmar-titulo">Confirmar acción</h3>
-  <p id="modal-confirmar-mensaje"></p>
+<dialog id="modal-confirmar" class="modal modal--confirmar" aria-labelledby="modal-confirmar-titulo" aria-describedby="modal-confirmar-mensaje">
+  <form method="dialog" class="modal-cerrar-form">
+    <button type="submit" class="modal-cerrar" aria-label="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </form>
+  <div class="modal-cuerpo">
+    <span class="modal-icono modal-icono--peligro" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v4"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>
+    </span>
+    <div>
+      <h3 id="modal-confirmar-titulo">Confirmar acción</h3>
+      <p id="modal-confirmar-mensaje"></p>
+    </div>
+  </div>
   <div class="modal-acciones">
-    <button type="button" class="btn btn-secondary btn--auto btn--control" data-modal-cancelar>Cancelar</button>
-    <button type="button" class="btn btn-primary btn--auto btn--control" data-modal-confirmar>Confirmar</button>
+    <button type="button" class="btn btn-neutro btn--auto btn--control" data-modal-cancelar>Cancelar</button>
+    <button type="button" class="btn btn-peligro btn--auto btn--control" data-modal-confirmar>Confirmar</button>
   </div>
 </dialog>

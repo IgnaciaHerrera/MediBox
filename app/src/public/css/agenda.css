@@ -73,8 +73,9 @@
   min-width: 15rem;
 }
 
-.agenda-toolbar .buscador-wrap .buscador {
-  border-radius: 999px;
+.agenda-panel-head .buscador-wrap .buscador {
+  height: 2.35rem;
+  border-radius: 10px;
   font-size: 0.85rem;
 }
 
@@ -127,35 +128,79 @@
 
 .vista-toggle {
   display: inline-flex;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  overflow: hidden;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(218, 215, 204, 0.45);
 }
 
 .vista-btn {
-  display: inline-block;
-  border: none;
-  background: var(--paper-raised);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: 7px;
   color: var(--ink-soft);
-  padding: 0.5rem 1.1rem;
   font-size: 0.82rem;
   font-weight: 500;
   text-decoration: none;
-  cursor: pointer;
-  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.vista-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.vista-btn:hover {
+  color: var(--ink);
 }
 
 .vista-btn.activo {
-  background: var(--teal);
-  color: var(--paper);
+  background: var(--paper-raised);
+  color: var(--teal-ink);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.1), 0 2px 6px -2px rgba(27, 33, 31, 0.12);
+}
+
+.vista-btn.activo svg {
+  color: var(--teal);
+}
+
+/* Tabla de citas */
+
+.cita-hora {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(31, 107, 92, 0.08);
+  color: var(--teal-ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cita-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink-soft);
+}
+
+.cita-box svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--teal);
 }
 
 .timeline-scroll {
   overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
   background: var(--paper-raised);
   padding: 0.5rem 0.9rem 0.9rem 0.5rem;
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
 }
 
 .timeline-grid {
@@ -170,12 +215,15 @@
 }
 
 .timeline-col-header {
-  padding: 0.5rem 0.4rem;
-  font-size: 0.78rem;
+  margin: 0 2px 0.35rem;
+  padding: 0.55rem 0.4rem;
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  color: var(--ink);
   text-align: center;
-  border-bottom: 1px solid var(--line-strong);
 }
 
 .timeline-hora {
@@ -189,7 +237,12 @@
 
 .timeline-celda {
   border-bottom: 1px solid var(--line);
-  border-right: 1px solid var(--line);
+  border-right: 1px solid rgba(218, 215, 204, 0.6);
+}
+
+/* La línea de la media hora es más tenue que la de la hora en punto. */
+.timeline-celda--media {
+  border-bottom: 1px dashed rgba(218, 215, 204, 0.7);
 }
 
 .timeline-bloque {
@@ -197,10 +250,11 @@
   flex-direction: column;
   justify-content: center;
   gap: 0.1rem;
-  margin: 1px 2px;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  margin: 2px 3px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
   border-left: 3px solid;
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.08);
   font-size: 0.68rem;
   line-height: 1.15;
   overflow: hidden;
@@ -213,7 +267,7 @@
 }
 
 .timeline-bloque:hover {
-  transform: scale(1.02);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
   position: relative;
   z-index: 2;
@@ -250,3 +304,222 @@
   text-overflow: ellipsis;
 }
 
+@media (max-width: 640px) {
+  .agenda-toolbar-right,
+  .agenda-toolbar-right .buscador-wrap,
+  .vista-toggle {
+    width: 100%;
+  }
+
+  .agenda-panel-head .buscador-wrap .buscador {
+    min-width: 0;
+  }
+
+  .vista-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Panel de citas: el título, los filtros activos, el buscador y el cambio de
+   vista viven en el encabezado del mismo cuadro que la tabla o el calendario. */
+.page-main .agenda-panel {
+  padding: 0;
+}
+
+.agenda-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.agenda-panel-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.page-main .agenda-panel-titulo h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.agenda-contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 92, 0.1);
+  color: var(--teal-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-panel-head .chip-filtros {
+  flex: 1;
+}
+
+.agenda-panel-head .agenda-toolbar-right {
+  margin-left: auto;
+}
+
+.agenda-panel .tabla-scroll {
+  padding: 0.25rem 1.25rem 0.75rem;
+}
+
+.page-main .agenda-panel table.tabla th {
+  padding-top: 0.9rem;
+}
+
+.agenda-vacio {
+  margin: 0;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.agenda-panel > .sin-resultados {
+  padding: 1rem 1.25rem 0;
+}
+
+.agenda-panel .timeline-scroll {
+  padding: 0.75rem 1.25rem 1.25rem 0.75rem;
+  border: none;
+  border-radius: 0 0 12px 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Detalle de cita ---------- */
+
+.cita-cuando {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cita-cuando svg {
+  width: 16px;
+  height: 16px;
+  color: var(--teal);
+}
+
+.cita-cuando .tiempo {
+  color: var(--teal-ink);
+  font-weight: 500;
+}
+
+.cita-cuando-sep {
+  color: var(--line-strong);
+}
+
+.cita-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 760px) {
+  .cita-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.page-main .cita-seccion {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.cita-seccion-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 -1.5rem 1.25rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.page-main .cita-seccion-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cita-seccion-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 92, 0.09);
+  color: var(--teal);
+}
+
+.cita-seccion-icono svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.detalle-grid--una {
+  grid-template-columns: 1fr;
+}
+
+.page-main .cita-acciones-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.page-main .cita-acciones-panel h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+}
+
+.cita-acciones-ayuda {
+  font-size: 0.88rem;
+}
+
+.cita-acciones-panel .acciones-cita {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* La acción destructiva queda apartada de las de estado por una línea. */
+.cita-acciones-panel .accion-peligro:not(:first-child) {
+  margin-left: 0.5rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--line);
+}
+
+.page-main .historial-timeline {
+  padding: 0 1.5rem 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .cita-acciones-panel .acciones-cita,
+  .cita-acciones-panel .acciones-cita form,
+  .cita-acciones-panel .acciones-cita .btn {
+    width: 100%;
+  }
+
+  .cita-acciones-panel .acciones-cita {
+    flex-direction: column;
+  }
+
+  .cita-acciones-panel .accion-peligro:not(:first-child) {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+  }
+}

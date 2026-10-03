@@ -11,11 +11,14 @@
   <%- include('../partials/topbar', { usuario, csrfToken, activo: 'agenda' }) %>
 
   <main class="page-main">
-    <div class="contenedor-angosto">
+    <div class="contenedor-angosto contenedor-angosto--medio">
       <a class="volver" href="/agenda">← Volver a la agenda</a>
 
       <div class="page-head">
-        <h1>Nueva cita</h1>
+        <div>
+          <h1>Nueva cita</h1>
+          <p class="page-sub">Agenda una cita eligiendo paciente, médico, box y horario.</p>
+        </div>
       </div>
 
       <% if (error) { %>
@@ -31,69 +34,78 @@
       <form class="form-card" method="POST" action="/agenda/nueva">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
-        <div class="field combobox" data-combobox>
-          <label for="pacienteBuscador">Paciente</label>
-          <input
-            type="text"
-            id="pacienteBuscador"
-            autocomplete="off"
-            placeholder="Escribe un nombre para buscar…"
-            value="<%= pacienteSeleccionado ? pacienteSeleccionado.etiqueta : '' %>"
-            required
-            role="combobox"
-            aria-expanded="false"
-            aria-controls="pacienteBuscador-lista"
-            aria-autocomplete="list"
-          />
-          <input type="hidden" name="pacienteId" value="<%= valores.pacienteId || '' %>" />
-          <div class="combobox-lista" id="pacienteBuscador-lista" role="listbox" hidden></div>
-          <script type="application/json"><%- JSON.stringify(pacientesOpciones) %></script>
-        </div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label for="medicoId">Médico</label>
-            <select id="medicoId" name="medicoId" required>
-              <option value="">Selecciona</option>
-              <% medicos.forEach(function(m) { %>
-                <option value="<%= m.id %>" <%= String(valores.medicoId) === String(m.id) ? 'selected' : '' %>><%= m.nombre %> (<%= m.especialidad.nombre %>)</option>
-              <% }) %>
-            </select>
+        <fieldset class="form-seccion">
+          <div class="field combobox" data-combobox>
+            <label for="pacienteBuscador">Paciente</label>
+            <input
+              type="text"
+              id="pacienteBuscador"
+              autocomplete="off"
+              placeholder="Escribe un nombre para buscar…"
+              value="<%= pacienteSeleccionado ? pacienteSeleccionado.etiqueta : '' %>"
+              required
+              role="combobox"
+              aria-expanded="false"
+              aria-controls="pacienteBuscador-lista"
+              aria-autocomplete="list"
+            />
+            <input type="hidden" name="pacienteId" value="<%= valores.pacienteId || '' %>" />
+            <div class="combobox-lista" id="pacienteBuscador-lista" role="listbox" hidden></div>
+            <script type="application/json"><%- JSON.stringify(pacientesOpciones) %></script>
           </div>
+        </fieldset>
 
-          <div class="field">
-            <label for="boxId">Box</label>
-            <select id="boxId" name="boxId" required>
-              <option value="">Selecciona</option>
-              <% boxes.forEach(function(b) { %>
-                <option value="<%= b.id %>" <%= String(valores.boxId) === String(b.id) ? 'selected' : '' %>><%= b.pasillo.nombre %> — <%= b.nombre %></option>
-              <% }) %>
-            </select>
+        <fieldset class="form-seccion">
+          <div class="form-grid">
+            <div class="field">
+              <label for="medicoId">Médico</label>
+              <select id="medicoId" name="medicoId" required>
+                <option value="">Selecciona</option>
+                <% medicos.forEach(function(m) { %>
+                  <option value="<%= m.id %>" <%= String(valores.medicoId) === String(m.id) ? 'selected' : '' %>><%= m.nombre %> (<%= m.especialidad.nombre %>)</option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="boxId">Box</label>
+              <select id="boxId" name="boxId" required>
+                <option value="">Selecciona</option>
+                <% boxes.forEach(function(b) { %>
+                  <option value="<%= b.id %>" <%= String(valores.boxId) === String(b.id) ? 'selected' : '' %>><%= b.pasillo.nombre %> — <%= b.nombre %></option>
+                <% }) %>
+              </select>
+            </div>
           </div>
+        </fieldset>
 
-          <div class="field">
-            <label for="fecha">Fecha</label>
-            <input type="date" id="fecha" name="fecha" value="<%= valores.fecha || '' %>" required />
+        <fieldset class="form-seccion">
+          <div class="form-grid form-grid--tres">
+            <div class="field">
+              <label for="fecha">Fecha</label>
+              <input type="date" id="fecha" name="fecha" value="<%= valores.fecha || '' %>" required />
+            </div>
+
+            <div class="field">
+              <label for="horaInicio">Hora de inicio</label>
+              <input type="time" id="horaInicio" name="horaInicio" value="<%= valores.horaInicio || '' %>" required />
+            </div>
+
+            <div class="field">
+              <label for="horaFin">Hora de término</label>
+              <input type="time" id="horaFin" name="horaFin" value="<%= valores.horaFin || '' %>" required />
+            </div>
           </div>
-
-          <div class="field"></div>
-
-          <div class="field">
-            <label for="horaInicio">Hora de inicio</label>
-            <input type="time" id="horaInicio" name="horaInicio" value="<%= valores.horaInicio || '' %>" required />
-          </div>
-
-          <div class="field">
-            <label for="horaFin">Hora de término</label>
-            <input type="time" id="horaFin" name="horaFin" value="<%= valores.horaFin || '' %>" required />
-          </div>
-        </div>
+        </fieldset>
 
         <div id="aviso-conflicto" class="aviso-conflicto" role="alert" aria-live="polite" hidden>
           Ya hay una cita para ese médico o box en ese horario. Puedes enviarla igual, pero probablemente sea rechazada.
         </div>
 
-        <button type="submit" class="btn btn-primary">Agendar cita</button>
+        <div class="form-acciones">
+          <a href="/agenda" class="btn btn-neutro btn--auto">Cancelar</a>
+          <button type="submit" class="btn btn-primary btn--auto">Agendar cita</button>
+        </div>
       </form>
       <% } %>
     </div>
