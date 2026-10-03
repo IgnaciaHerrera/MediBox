@@ -59,7 +59,7 @@
         <% if (agendaHoy.items.length === 0) { %>
           <div class="dash-vacio">
             <span class="dash-vacio-icono" aria-hidden="true"><%- ICONOS.agenda %></span>
-            <p class="access-empty">No hay citas agendadas para hoy.</p>
+            <p class="access-empty"><%= agendaHoy.total > 0 ? 'Ya no quedan citas pendientes por hoy.' : 'No hay citas agendadas para hoy.' %></p>
           </div>
         <% } else { %>
           <% agendaHoy.items.forEach(function(c) { %>
@@ -74,7 +74,7 @@
             </a>
           <% }) %>
         <% } %>
-        <a class="btn-link btn-link-block" href="<%= agendaHoy.href %>">Ver agenda completa →</a>
+        <a class="btn-link btn-link-block" href="<%= agendaHoy.href %>"><%= agendaHoy.total > agendaHoy.items.length ? 'Ver las ' + agendaHoy.total + ' citas de hoy' : 'Ver agenda completa' %> →</a>
       </div>
 
       <div class="panel-card">

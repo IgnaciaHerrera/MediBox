@@ -72,6 +72,15 @@ function contarBoxesEnUso(citasHoy) {
   return new Set(enCurso.map((c) => c.boxId)).size;
 }
 
+// Para el panel del dashboard: la cita en curso y las siguientes, no todas
+// las del día. Usa la misma hora "ahora" que contarBoxesEnUso.
+const CITAS_EN_PANEL = 3;
+
+function citasProximas(citasHoy) {
+  const ahora = new Date().toTimeString().slice(0, 5);
+  return citasHoy.filter((c) => c.horaFin > ahora).slice(0, CITAS_EN_PANEL);
+}
+
 async function dashboard(req, res, next) {
   try {
     const usuario = req.usuario;
@@ -79,7 +88,7 @@ async function dashboard(req, res, next) {
     const hoy = new Date().toISOString().slice(0, 10);
 
     const stats = [];
-    let agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items: [] };
+    let agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items: [], total: 0 };
     const atajos = [];
 
     if (permisos.includes('agenda.write')) atajos.push({ etiqueta: 'Nueva cita', href: '/agenda/nueva', icono: 'agenda' });
@@ -93,20 +102,17 @@ async function dashboard(req, res, next) {
     if (usuario.rolNombre === 'medico') {
       const medico = await medicoService.obtenerPorUsuarioId(usuario.id);
       if (medico) {
-        const { items, total } = await citaService.listarCitas({ fecha: hoy, medicoId: medico.id, pageSize: 5 });
+        const { items, total } = await citaService.listarCitas({ fecha: hoy, medicoId: medico.id, pageSize: 200 });
         stats.push({ etiqueta: 'Tus citas hoy', valor: total, icono: 'agenda' });
-        agendaHoy = { titulo: 'Tu agenda de hoy', href: '/agenda/mia', items };
+        agendaHoy = { titulo: 'Tu agenda de hoy', href: '/agenda/mia', items: citasProximas(items), total };
       }
     } else if (permisos.includes('agenda.read')) {
-      const { items, total } = await citaService.listarCitas({ fecha: hoy, pageSize: 5 });
+      const { items, total } = await citaService.listarCitas({ fecha: hoy, pageSize: 200 });
       stats.push({ etiqueta: 'Citas hoy', valor: total, icono: 'agenda' });
-      agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items };
+      agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items: citasProximas(items), total };
 
-      if (permisos.includes('box.read') && total > 0) {
-        const { items: todasHoy } = await citaService.listarCitas({ fecha: hoy, pageSize: 200 });
-        stats.push({ etiqueta: 'Boxes en uso ahora', valor: contarBoxesEnUso(todasHoy), icono: 'box' });
-      } else if (permisos.includes('box.read')) {
-        stats.push({ etiqueta: 'Boxes en uso ahora', valor: 0, icono: 'box' });
+      if (permisos.includes('box.read')) {
+        stats.push({ etiqueta: 'Boxes en uso ahora', valor: contarBoxesEnUso(items), icono: 'box' });
       }
     }
 
