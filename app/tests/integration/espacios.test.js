@@ -138,14 +138,14 @@ describe('Espacios físicos', () => {
     const medico = await prisma.medico.create({ data: { nombre: 'Dr. Espacios Test', especialidadId: especialidad.id } });
     const paciente = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Espacios Test', rut: '13131313-6', contacto: '+56900000000', motivoConsulta: 'Test' }),
+        ...cifrarPaciente({ nombre: 'Paciente Espacios Test', rut: '13131313-6', contacto: '+56900000000' }),
         fechaNacimiento: new Date('1990-01-01'),
       },
     });
 
     const boxConCitasRes = await agent.post('/api/boxes').send({ nombre: 'Box Con Citas Test', pasilloId: pasillo.id });
     const citaRes = await agent.post('/api/citas').send({
-      pacienteId: paciente.id, medicoId: medico.id, boxId: boxConCitasRes.body.id, fecha: '2027-05-01', horaInicio: '09:00', horaFin: '10:00',
+      pacienteId: paciente.id, medicoId: medico.id, boxId: boxConCitasRes.body.id, fecha: '2027-05-01', horaInicio: '09:00', horaFin: '10:00', motivoConsulta: 'Control de prueba',
     });
     expect(citaRes.status).toBe(201);
     await agent.delete(`/api/citas/${citaRes.body.id}`); // se anula, pero la fila de historial sigue existiendo

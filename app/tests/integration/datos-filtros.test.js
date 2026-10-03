@@ -74,7 +74,6 @@ describe('Filtros de la exportación de datos', () => {
           nombre: 'Paciente Filtros Test',
           rut: rutConDv(31000000 + Math.floor(Math.random() * 900000)),
           contacto: '+56900000000',
-          motivoConsulta: 'Prueba de filtros de exportación',
         }),
         fechaNacimiento: new Date('1990-01-01'),
       },

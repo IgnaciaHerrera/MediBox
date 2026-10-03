@@ -8,10 +8,11 @@ const { normalizarRut } = require('../lib/rut');
 // Toda lectura de datos de paciente pasa por este servicio (con su propia
 // auditoría), y es el único lugar donde se cifra y descifra.
 //
-// El resumen (listados, combobox de agenda) no incluye RUT ni motivo: quien
-// solo navega la lista no necesita descifrar datos de identidad ni clínicos.
+// El resumen (listados, combobox de agenda) no incluye el RUT: quien solo
+// navega la lista no necesita descifrar datos de identidad. El motivo de
+// consulta vive en cada cita (citaService), no en el paciente.
 const SELECT_RESUMEN = { id: true, nombreCifrado: true, contactoCifrado: true, fechaNacimiento: true, createdAt: true };
-const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true, motivoConsultaCifrado: true };
+const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true };
 
 /**
  * Índice ciego del RUT: HMAC-SHA256 de su forma canónica.
@@ -28,9 +29,11 @@ function indiceRut(rut) {
 /**
  * Convierte los datos en claro de un paciente en las columnas cifradas.
  *
- * @param {{nombre: string, rut: string, contacto: string, motivoConsulta: string}} datos
+ * @param {{nombre: string, rut: string, contacto: string, motivoConsulta?: string}} datos
+ *   motivoConsulta solo lo pasa prisma/migrar-cifrado.js, que llena la columna
+ *   de legado del paciente; la aplicación guarda el motivo en cada cita.
  * @returns {{nombreCifrado: Buffer, rutCifrado: Buffer, rutIndice: Buffer,
- *   contactoCifrado: Buffer, motivoConsultaCifrado: Buffer}}
+ *   contactoCifrado: Buffer, motivoConsultaCifrado?: Buffer}}
  *
  * Consumidores: crearPaciente(), actualizarPaciente(), prisma/seed.js,
  *   prisma/migrar-cifrado.js.
@@ -41,7 +44,7 @@ function cifrarPaciente({ nombre, rut, contacto, motivoConsulta }) {
     rutCifrado: cifrar('paciente.rut', normalizarRut(rut)),
     rutIndice: indiceRut(rut),
     contactoCifrado: cifrar('paciente.contacto', contacto),
-    motivoConsultaCifrado: cifrar('paciente.motivoConsulta', motivoConsulta),
+    ...(motivoConsulta === undefined ? {} : { motivoConsultaCifrado: cifrar('paciente.motivoConsulta', motivoConsulta) }),
   };
 }
 
@@ -59,7 +62,6 @@ function ficha(fila) {
   return {
     ...resumen(fila),
     rut: descifrar('paciente.rut', fila.rutCifrado),
-    motivoConsulta: descifrar('paciente.motivoConsulta', fila.motivoConsultaCifrado),
   };
 }
 

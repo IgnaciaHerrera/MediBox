@@ -68,7 +68,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
 
     const { agent } = await loginAgent(app, { email: 'datos-operador-test@medibox.local', password });
     const pacienteRes = await agent.post('/api/pacientes').send({
-      nombre: 'Paciente Export Test', rut: '17171717-5', fechaNacimiento: '1990-05-05', contacto: '+56900009999', motivoConsulta: 'Chequeo para exportación',
+      nombre: 'Paciente Export Test', rut: '17171717-5', fechaNacimiento: '1990-05-05', contacto: '+56900009999',
     });
     pacienteId = pacienteRes.body.id;
   });
@@ -133,8 +133,10 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
     expect(res.text).toContain('17171717-5');
-    expect(res.text).toContain('Chequeo para exportación');
     expect(res.text).toContain('1990-05-05');
+    // El motivo de consulta vive en las citas, no en el CSV de pacientes.
+    const cabeceraPacientes = res.text.slice(0, res.text.indexOf('createdAt'));
+    expect(cabeceraPacientes).not.toMatch(/motivo/i);
 
     const auditoria = await prisma.auditLog.findFirst({
       where: { usuarioId: usuarioAdmin.id, accion: 'EXPORT', entidad: 'Paciente' },

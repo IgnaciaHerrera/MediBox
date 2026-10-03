@@ -64,7 +64,7 @@
           </div>
           <div class="detalle-item">
             <span class="etiqueta">Motivo de consulta</span>
-            <span class="valor"><%= paciente ? paciente.motivoConsulta : '—' %></span>
+            <span class="valor"><%= paciente ? (motivoConsulta || 'Sin motivo registrado') : '—' %></span>
           </div>
         </div>
       </section>

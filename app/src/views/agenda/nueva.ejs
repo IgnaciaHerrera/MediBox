@@ -98,6 +98,13 @@
           </div>
         </fieldset>
 
+        <fieldset class="form-seccion">
+          <div class="field">
+            <label for="motivoConsulta">Motivo de consulta</label>
+            <textarea id="motivoConsulta" name="motivoConsulta" rows="3" minlength="2" maxlength="300" placeholder="Ej.: Control cardiológico de rutina" required><%= valores.motivoConsulta || '' %></textarea>
+          </div>
+        </fieldset>
+
         <div id="aviso-conflicto" class="aviso-conflicto" role="alert" aria-live="polite" hidden>
           Ya hay una cita para ese médico o box en ese horario. Puedes enviarla igual, pero probablemente sea rechazada.
         </div>

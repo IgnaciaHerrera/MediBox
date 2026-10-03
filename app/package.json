@@ -13,6 +13,7 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "seed": "node prisma/seed.js",
     "cifrado:migrar": "node prisma/migrar-cifrado.js",
+    "motivo:migrar": "node prisma/migrar-motivo-citas.js",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",

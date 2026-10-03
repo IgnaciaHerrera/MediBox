@@ -28,7 +28,7 @@ describe('citaService.verificarConflicto', () => {
 });
 
 describe('citaService.crearCita — transacción Serializable y reintento', () => {
-  const datos = { pacienteId: 1, medicoId: 2, boxId: 3, fecha: '2026-10-01', horaInicio: '10:00', horaFin: '11:00' };
+  const datos = { pacienteId: 1, medicoId: 2, boxId: 3, fecha: '2026-10-01', horaInicio: '10:00', horaFin: '11:00', motivoConsulta: 'Control' };
 
   beforeEach(() => {
     prisma.$transaction.mockReset();

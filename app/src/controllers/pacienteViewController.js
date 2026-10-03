@@ -16,7 +16,6 @@ const pacienteSchema = Joi.object({
     ),
   fechaNacimiento: Joi.date().iso().required(),
   contacto: Joi.string().min(5).max(100).required(),
-  motivoConsulta: Joi.string().min(2).max(300).required(),
 }).unknown(true); // el formulario HTML envía además el campo _csrf
 
 async function index(req, res, next) {

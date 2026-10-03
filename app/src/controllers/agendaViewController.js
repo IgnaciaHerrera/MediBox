@@ -16,6 +16,7 @@ const crearCitaSchema = Joi.object({
   fecha: Joi.date().iso().required(),
   horaInicio: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
   horaFin: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
+  motivoConsulta: Joi.string().trim().min(2).max(300).required(),
 }).unknown(true); // el formulario HTML envía además el campo _csrf
 
 async function index(req, res, next) {
@@ -183,9 +184,13 @@ async function detalle(req, res, next) {
     const id = Number(req.params.id);
     const cita = await citaService.obtenerCitaPorId(id);
 
+    // El motivo es un dato clínico del paciente: se muestra solo a quien
+    // puede leer al paciente, junto con esa lectura auditada.
     let paciente = null;
+    let motivoConsulta = null;
     if (req.usuario.permisos.includes('paciente.read')) {
       paciente = await pacienteService.obtenerPacientePorId(cita.pacienteId, req.usuario.id);
+      motivoConsulta = await citaService.obtenerMotivo(id);
     }
 
     let historial = null;
@@ -199,6 +204,7 @@ async function detalle(req, res, next) {
       csrfToken: res.locals.csrfToken,
       cita,
       paciente,
+      motivoConsulta,
       historial,
       puedeGestionar: req.usuario.permisos.includes('agenda.write'),
     });

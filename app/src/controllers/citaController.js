@@ -9,6 +9,7 @@ const crearSchema = Joi.object({
   fecha: Joi.date().iso().required(),
   horaInicio: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
   horaFin: Joi.string().pattern(/^\d{2}:\d{2}$/).required(),
+  motivoConsulta: Joi.string().trim().min(2).max(300).required(),
 });
 
 const estadoSchema = Joi.object({ estado: Joi.string().valid('agendada', 'atendido', 'no_atendido').required() });

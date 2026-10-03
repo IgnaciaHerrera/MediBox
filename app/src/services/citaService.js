@@ -4,8 +4,22 @@ const { registrar } = require('./auditService');
 const { crearNotificacion } = require('./notificacionService');
 const { AppError } = require('../lib/AppError');
 const { logger } = require('../lib/logger');
+const { cifrar, descifrar } = require('../lib/cifrado');
 
 const MAX_INTENTOS_SERIALIZACION = 3;
+
+// El motivo de consulta es un dato clínico: se guarda cifrado en la cita y las
+// consultas no lo traen salvo que lo pidan (ver src/lib/prisma.js). Las citas
+// migradas sin motivo devuelven null.
+const CON_MOTIVO = { motivoConsultaCifrado: false };
+
+function descifrarMotivo(cita) {
+  const { motivoConsultaCifrado, ...resto } = cita;
+  return {
+    ...resto,
+    motivoConsulta: motivoConsultaCifrado ? descifrar('cita.motivoConsulta', motivoConsultaCifrado) : null,
+  };
+}
 
 async function verificarConflicto({ boxId, medicoId, fecha, horaInicio, horaFin }) {
   const conflicto = await prisma.cita.findFirst({
@@ -21,7 +35,7 @@ async function verificarConflicto({ boxId, medicoId, fecha, horaInicio, horaFin 
 }
 
 async function crearCita(datos, usuarioId) {
-  const { pacienteId, medicoId, boxId, fecha, horaInicio, horaFin } = datos;
+  const { pacienteId, medicoId, boxId, fecha, horaInicio, horaFin, motivoConsulta } = datos;
 
   for (let intento = 1; intento <= MAX_INTENTOS_SERIALIZACION; intento += 1) {
     try {
@@ -41,7 +55,17 @@ async function crearCita(datos, usuarioId) {
           }
 
           const nuevaCita = await tx.cita.create({
-            data: { pacienteId, medicoId, boxId, fecha: new Date(fecha), horaInicio, horaFin, estado: 'agendada', updatedById: usuarioId },
+            data: {
+              pacienteId,
+              medicoId,
+              boxId,
+              fecha: new Date(fecha),
+              horaInicio,
+              horaFin,
+              motivoConsultaCifrado: cifrar('cita.motivoConsulta', motivoConsulta),
+              estado: 'agendada',
+              updatedById: usuarioId,
+            },
           });
 
           await registrar({ usuarioId, accion: 'CREATE', entidad: 'Cita', entidadId: nuevaCita.id }, tx);
@@ -145,14 +169,24 @@ async function listarCitas({ boxId, medicoId, pasilloId, fecha, page = 1, pageSi
 }
 
 // Todas las citas de un paciente (incluidas las anuladas), de la más reciente
-// a la más antigua, para su ficha. Igual que obtenerCitaPorId, no incluye
-// datos del paciente: la ficha ya los obtiene por pacienteService.
+// a la más antigua, con su motivo, para la ficha del paciente. Quien la llama
+// ya leyó al paciente por pacienteService, que deja la lectura auditada.
 async function listarPorPaciente(pacienteId) {
-  return prisma.cita.findMany({
+  const citas = await prisma.cita.findMany({
     where: { pacienteId },
     orderBy: [{ fecha: 'desc' }, { horaInicio: 'desc' }],
     include: { medico: true, box: { include: { pasillo: true } } },
+    omit: CON_MOTIVO,
   });
+  return citas.map(descifrarMotivo);
+}
+
+// Motivo de una cita, para su detalle. Igual que listarPorPaciente, solo se
+// usa junto con la lectura auditada del paciente.
+async function obtenerMotivo(citaId) {
+  const cita = await prisma.cita.findUnique({ where: { id: citaId }, select: { motivoConsultaCifrado: true } });
+  if (!cita) throw new AppError('Cita no encontrada', 404);
+  return descifrarMotivo(cita).motivoConsulta;
 }
 
 // No incluye datos de Paciente a propósito: esta restricción global del
@@ -205,6 +239,7 @@ module.exports = {
   anularCita,
   listarCitas,
   listarPorPaciente,
+  obtenerMotivo,
   obtenerCitaPorId,
   listarTodasParaExport,
 };

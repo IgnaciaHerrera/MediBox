@@ -2,7 +2,7 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const { cifrarPaciente } = require('../src/services/pacienteService');
-const { descifrar } = require('../src/lib/cifrado');
+const { cifrar, descifrar } = require('../src/lib/cifrado');
 
 const prisma = new PrismaClient();
 
@@ -55,9 +55,9 @@ const PASSWORD_DEMO = 'Demo1234!';
 // Pacientes de ejemplo para que la agenda no se vea vacía en una instalación
 // recién sembrada. El nombre se usa como clave de idempotencia.
 const PACIENTES_DEMO = [
-  { nombre: 'Ana Contreras', rut: '15234876-2', fechaNacimiento: '1987-04-12', contacto: '+56911112222', motivoConsulta: 'Control cardiológico de rutina' },
-  { nombre: 'Pedro Muñoz', rut: '18456321-5', fechaNacimiento: '1993-11-02', contacto: '+56922223333', motivoConsulta: 'Dolor lumbar persistente' },
-  { nombre: 'Javiera Rojas', rut: '20123456-5', fechaNacimiento: '2001-07-19', contacto: '+56933334444', motivoConsulta: 'Consulta pediátrica de control' },
+  { nombre: 'Ana Contreras', rut: '15234876-2', fechaNacimiento: '1987-04-12', contacto: '+56911112222' },
+  { nombre: 'Pedro Muñoz', rut: '18456321-5', fechaNacimiento: '1993-11-02', contacto: '+56922223333' },
+  { nombre: 'Javiera Rojas', rut: '20123456-5', fechaNacimiento: '2001-07-19', contacto: '+56933334444' },
 ];
 
 // Las fechas se calculan relativas al momento en que se corre el seed (no
@@ -71,10 +71,10 @@ function fechaRelativaISO(diasDesdeHoy) {
 
 function citasDemo() {
   return [
-    { pacienteNombre: 'Ana Contreras', medicoNombre: 'Dra. Felipa Vázquez', pasillo: 'Pasillo A', box: 'Box 1', diasDesdeHoy: 0, horaInicio: '09:00', horaFin: '09:30', estado: 'agendada' },
-    { pacienteNombre: 'Pedro Muñoz', medicoNombre: 'Dr. Ignacio Fuentes', pasillo: 'Pasillo A', box: 'Box 2', diasDesdeHoy: 0, horaInicio: '11:00', horaFin: '11:30', estado: 'agendada' },
-    { pacienteNombre: 'Javiera Rojas', medicoNombre: 'Dra. Ignacia Herrera', pasillo: 'Pasillo B', box: 'Box 4', diasDesdeHoy: -1, horaInicio: '15:00', horaFin: '15:30', estado: 'atendido' },
-    { pacienteNombre: 'Ana Contreras', medicoNombre: 'Dra. Felipa Vázquez', pasillo: 'Pasillo A', box: 'Box 3', diasDesdeHoy: 2, horaInicio: '10:00', horaFin: '10:30', estado: 'agendada' },
+    { pacienteNombre: 'Ana Contreras', medicoNombre: 'Dra. Felipa Vázquez', pasillo: 'Pasillo A', box: 'Box 1', diasDesdeHoy: 0, horaInicio: '09:00', horaFin: '09:30', estado: 'agendada', motivoConsulta: 'Control cardiológico de rutina' },
+    { pacienteNombre: 'Pedro Muñoz', medicoNombre: 'Dr. Ignacio Fuentes', pasillo: 'Pasillo A', box: 'Box 2', diasDesdeHoy: 0, horaInicio: '11:00', horaFin: '11:30', estado: 'agendada', motivoConsulta: 'Dolor lumbar persistente' },
+    { pacienteNombre: 'Javiera Rojas', medicoNombre: 'Dra. Ignacia Herrera', pasillo: 'Pasillo B', box: 'Box 4', diasDesdeHoy: -1, horaInicio: '15:00', horaFin: '15:30', estado: 'atendido', motivoConsulta: 'Consulta pediátrica de control' },
+    { pacienteNombre: 'Ana Contreras', medicoNombre: 'Dra. Felipa Vázquez', pasillo: 'Pasillo A', box: 'Box 3', diasDesdeHoy: 2, horaInicio: '10:00', horaFin: '10:30', estado: 'agendada', motivoConsulta: 'Revisión de exámenes cardiológicos' },
   ];
 }
 
@@ -203,6 +203,7 @@ async function seedCitas() {
           fecha: new Date(fecha),
           horaInicio: c.horaInicio,
           horaFin: c.horaFin,
+          motivoConsultaCifrado: cifrar('cita.motivoConsulta', c.motivoConsulta),
           estado: c.estado,
         },
       });

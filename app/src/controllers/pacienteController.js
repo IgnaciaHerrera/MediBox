@@ -13,7 +13,6 @@ const crearSchema = Joi.object({
     ),
   fechaNacimiento: Joi.date().iso().required(),
   contacto: Joi.string().min(5).max(100).required(),
-  motivoConsulta: Joi.string().min(2).max(300).required(),
 });
 
 async function index(req, res, next) {

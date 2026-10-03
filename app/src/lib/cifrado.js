@@ -27,6 +27,7 @@ const LLAVE_POR_CAMPO = {
   'paciente.rut': 'PACIENTE_IDENTIDAD_KEY',
   'paciente.contacto': 'PACIENTE_CONTACTO_KEY',
   'paciente.motivoConsulta': 'PACIENTE_CLINICO_KEY',
+  'cita.motivoConsulta': 'PACIENTE_CLINICO_KEY',
 };
 
 // Llave del índice ciego (HMAC). Separada de las de cifrado: quien tenga esta

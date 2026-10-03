@@ -1,5 +1,8 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  // `omit` permite que las consultas de citas no traigan el motivo cifrado
+  // salvo cuando se pide explícitamente (src/lib/prisma.js).
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -115,7 +118,9 @@ model Paciente {
   rutIndice             Bytes    @unique @map("rut_indice")
   fechaNacimiento       DateTime @map("fecha_nacimiento") @db.Date
   contactoCifrado       Bytes    @map("contacto_cifrado")
-  motivoConsultaCifrado Bytes    @map("motivo_consulta_cifrado")
+  // Legado: el motivo ahora vive en cada cita. Se mantiene solo hasta que
+  // `npm run motivo:migrar` lo copie a las citas (ver README).
+  motivoConsultaCifrado Bytes?   @map("motivo_consulta_cifrado")
   createdAt             DateTime @default(now()) @map("created_at")
 
   citas Cita[]
@@ -133,6 +138,8 @@ model Cita {
   horaFin     String   @map("hora_fin")
   estado      String   @default("agendada")
   anulada     Boolean  @default(false)
+  // Motivo de consulta de esta cita, cifrado con PACIENTE_CLINICO_KEY.
+  motivoConsultaCifrado Bytes? @map("motivo_consulta_cifrado")
   updatedById Int?     @map("updated_by")
   updatedAt   DateTime @updatedAt @map("updated_at")
   createdAt   DateTime @default(now()) @map("created_at")

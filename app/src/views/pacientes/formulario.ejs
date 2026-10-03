@@ -51,13 +51,6 @@
           </div>
         </fieldset>
 
-        <fieldset class="form-seccion">
-          <div class="field">
-            <label for="motivoConsulta">Motivo de consulta</label>
-            <input type="text" id="motivoConsulta" name="motivoConsulta" value="<%= valores.motivoConsulta || '' %>" required />
-          </div>
-        </fieldset>
-
         <div class="form-acciones">
           <a href="<%= esEdicion ? accion.replace(/\/editar$/, '') : '/pacientes' %>" class="btn btn-neutro btn--auto">Cancelar</a>
           <button type="submit" class="btn btn-primary btn--auto"><%= esEdicion ? 'Guardar cambios' : 'Registrar paciente' %></button>

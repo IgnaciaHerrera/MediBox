@@ -85,6 +85,14 @@ dialog.modal p {
   color: var(--ink-soft);
 }
 
+/* Motivo de consulta al agendar: texto normal (el textarea global usa mono). */
+.page-main .form-card textarea#motivoConsulta {
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 /* ---------- Aviso de conflicto de horario en vivo ---------- */
 
 .aviso-conflicto {

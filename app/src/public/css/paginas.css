@@ -227,14 +227,39 @@ table.tabla a.fila-link:hover {
 /* Mismo ancho de columnas en Próximas e Historial, para que queden alineadas. */
 .paciente-citas .tabla {
   table-layout: fixed;
-  min-width: 40rem;
+  min-width: 52rem;
 }
 
-.paciente-citas .tabla th:nth-child(1) { width: 16%; }
-.paciente-citas .tabla th:nth-child(2) { width: 17%; }
-.paciente-citas .tabla th:nth-child(3) { width: 24%; }
-.paciente-citas .tabla th:nth-child(4) { width: 28%; }
-.paciente-citas .tabla th:nth-child(5) { width: 15%; }
+.paciente-citas .tabla th:nth-child(1) { width: 13%; }
+.paciente-citas .tabla th:nth-child(2) { width: 14%; }
+.paciente-citas .tabla th:nth-child(3) { width: 17%; }
+.paciente-citas .tabla th:nth-child(4) { width: 22%; }
+.paciente-citas .tabla th:nth-child(5) { width: 22%; }
+.paciente-citas .tabla th:nth-child(6) { width: 12%; }
+
+/* Motivo en una línea; el texto completo queda en el title de la celda. */
+.paciente-citas-motivo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+/* Sin permiso de agenda la ficha solo tiene el cuadro de datos personales. */
+.cita-grid--una {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.paciente-proxima-ver {
+  display: inline-flex;
+  margin-top: 1rem;
+  text-decoration: none;
+}
+
+.paciente-proxima-vacio {
+  margin: 0;
+  color: var(--ink-soft);
+}
 
 /* ---------- Página de error (sin permiso, no encontrado, error interno) ---------- */
 

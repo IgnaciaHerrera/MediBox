@@ -90,7 +90,7 @@ async function exportarPacientes(req, res, next) {
       fechaNacimiento: p.fechaNacimiento.toISOString().slice(0, 10),
       createdAt: p.createdAt.toISOString(),
     }));
-    const csv = toCsv(['id', 'nombre', 'rut', 'fechaNacimiento', 'contacto', 'motivoConsulta', 'createdAt'], filas);
+    const csv = toCsv(['id', 'nombre', 'rut', 'fechaNacimiento', 'contacto', 'createdAt'], filas);
     enviarCsv(res, 'pacientes.csv', csv);
   } catch (err) {
     next(err);

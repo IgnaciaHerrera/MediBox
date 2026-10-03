@@ -106,6 +106,21 @@ Con Docker, cada comando se ejecuta dentro del contenedor de la app, por
 ejemplo `docker compose run --rm app npm run cifrado:migrar`. Una base nueva
 (o la de CI) aplica ambos pasos de corrido, sin intervención.
 
+### Motivo de consulta por cita
+
+El motivo de consulta pasó del paciente a cada cita
+(`20261003180000_motivo_en_citas_expandir`). En una base que ya tiene citas,
+después de aplicar las migraciones hay que copiar el motivo de cada paciente
+a sus citas:
+
+```bash
+docker compose exec app npm run motivo:migrar
+```
+
+El script es idempotente y no borra nada: el motivo del paciente queda como
+legado hasta un paso posterior que elimine esa columna. Una base nueva no
+necesita correrlo.
+
 ## Respaldos cifrados
 
 `ops/respaldar-db.sh` vuelca la base con `pg_dump` y la cifra con gpg

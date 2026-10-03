@@ -70,7 +70,6 @@ describe('Citas en la ficha del paciente', () => {
           nombre: 'Paciente Citas Test',
           rut: rutConDv(32000000 + Math.floor(Math.random() * 900000)),
           contacto: '+56900000001',
-          motivoConsulta: 'Prueba de citas en la ficha',
         }),
         fechaNacimiento: new Date('1990-01-01'),
       },

@@ -82,13 +82,13 @@ describe('POST /api/medicos', () => {
     });
     const paciente = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Medicos Test', rut: '14141414-3', contacto: '+56900000001', motivoConsulta: 'Test' }),
+        ...cifrarPaciente({ nombre: 'Paciente Medicos Test', rut: '14141414-3', contacto: '+56900000001' }),
         fechaNacimiento: new Date('1990-01-01'),
       },
     });
 
     const citaRes = await agent.post('/api/citas').send({
-      pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: '2027-06-01', horaInicio: '09:00', horaFin: '10:00',
+      pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: '2027-06-01', horaInicio: '09:00', horaFin: '10:00', motivoConsulta: 'Control de prueba',
     });
     expect(citaRes.status).toBe(201);
     await agent.delete(`/api/citas/${citaRes.body.id}`);

@@ -35,7 +35,7 @@ describe('Paciente encryption and access control', () => {
     await prisma.$disconnect();
   });
 
-  it('stores nombre, rut, contacto and motivo_consulta encrypted at rest, with no plaintext column left', async () => {
+  it('stores nombre, rut and contacto encrypted at rest, with no plaintext column left', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -44,21 +44,19 @@ describe('Paciente encryption and access control', () => {
       rut: '12345678-5',
       fechaNacimiento: '1990-05-20',
       contacto: '+56911112222',
-      motivoConsulta: 'Control cardiológico',
     };
     const createRes = await agent.post('/api/pacientes').send(datos);
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
 
     const [fila] = await prisma.$queryRaw`
-      SELECT nombre_cifrado, rut_cifrado, contacto_cifrado, motivo_consulta_cifrado
+      SELECT nombre_cifrado, rut_cifrado, contacto_cifrado
       FROM pacientes WHERE id = ${createRes.body.id}
     `;
     const columnas = [
       [fila.nombre_cifrado, datos.nombre],
       [fila.rut_cifrado, datos.rut],
       [fila.contacto_cifrado, datos.contacto],
-      [fila.motivo_consulta_cifrado, datos.motivoConsulta],
     ];
     columnas.forEach(([blob, enClaro]) => {
       expect(Buffer.isBuffer(blob)).toBe(true);
@@ -76,7 +74,7 @@ describe('Paciente encryption and access control', () => {
   it('rejects a second patient with the same RUT even when written differently', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
-    const datos = { nombre: 'Duplicado Uno', fechaNacimiento: '1975-03-03', contacto: '+56977778888', motivoConsulta: 'Control' };
+    const datos = { nombre: 'Duplicado Uno', fechaNacimiento: '1975-03-03', contacto: '+56977778888' };
 
     const primero = await agent.post('/api/pacientes').send({ ...datos, rut: '16161616-8' });
     expect(primero.status).toBe(201);
@@ -96,7 +94,6 @@ describe('Paciente encryption and access control', () => {
       rut: '19222333-4',
       fechaNacimiento: '1988-02-02',
       contacto: '+56933334444',
-      motivoConsulta: 'Consulta de prueba de búsqueda',
     });
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
@@ -120,7 +117,6 @@ describe('Paciente encryption and access control', () => {
       rut: '18181818-2',
       fechaNacimiento: '1966-06-06',
       contacto: '+56944445555',
-      motivoConsulta: 'Consulta de prueba de búsqueda por RUT',
     });
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
@@ -137,7 +133,7 @@ describe('Paciente encryption and access control', () => {
     // dígito verificador; igual debe poder encontrarse por él.
     const migrado = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Migrado Test', rut: '11111111-2', contacto: '+56912121212', motivoConsulta: 'Control' }),
+        ...cifrarPaciente({ nombre: 'Paciente Migrado Test', rut: '11111111-2', contacto: '+56912121212' }),
         fechaNacimiento: new Date('1950-01-01'),
       },
     });
@@ -146,7 +142,7 @@ describe('Paciente encryption and access control', () => {
     expect(porRutAntiguo.body.items.map((p) => p.id)).toEqual([migrado.id]);
   });
 
-  it('decrypts rut and motivo_consulta for an authorized read and writes an audit row', async () => {
+  it('decrypts rut for an authorized read and writes an audit row', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -155,20 +151,18 @@ describe('Paciente encryption and access control', () => {
       rut: '98765432-5',
       fechaNacimiento: '1985-02-10',
       contacto: '+56933334444',
-      motivoConsulta: 'Chequeo dermatológico',
     });
     pacienteIds.push(createRes.body.id);
 
     const readRes = await agent.get(`/api/pacientes/${createRes.body.id}`);
     expect(readRes.status).toBe(200);
     expect(readRes.body.rut).toBe('98765432-5');
-    expect(readRes.body.motivoConsulta).toBe('Chequeo dermatológico');
 
     const auditRows = await prisma.auditLog.findMany({ where: { entidad: 'Paciente', entidadId: createRes.body.id, accion: 'READ' } });
     expect(auditRows.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('updates rut and motivo_consulta, re-encrypting them, and audits the update', async () => {
+  it('updates rut, re-encrypting it, and audits the update', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -177,7 +171,6 @@ describe('Paciente encryption and access control', () => {
       rut: '11111111-1',
       fechaNacimiento: '1970-01-01',
       contacto: '+56900000000',
-      motivoConsulta: 'Motivo original',
     });
     pacienteIds.push(createRes.body.id);
 
@@ -186,14 +179,12 @@ describe('Paciente encryption and access control', () => {
       rut: '22222222-2',
       fechaNacimiento: '1970-01-01',
       contacto: '+56911111111',
-      motivoConsulta: 'Motivo actualizado',
     });
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.nombre).toBe('Pedro Actualizado');
 
     const readRes = await agent.get(`/api/pacientes/${createRes.body.id}`);
     expect(readRes.body.rut).toBe('22222222-2');
-    expect(readRes.body.motivoConsulta).toBe('Motivo actualizado');
 
     const rawRows = await prisma.$queryRaw`SELECT rut_cifrado FROM pacientes WHERE id = ${createRes.body.id}`;
     expect(rawRows[0].rut_cifrado.toString('utf8')).not.toContain('22222222-2');
@@ -210,7 +201,6 @@ describe('Paciente encryption and access control', () => {
       rut: '11111111-1',
       fechaNacimiento: '1970-01-01',
       contacto: '+56900000000',
-      motivoConsulta: 'Motivo de prueba',
     });
     expect(res.status).toBe(404);
   });
@@ -218,7 +208,7 @@ describe('Paciente encryption and access control', () => {
   it('rejects a RUT with a wrong check digit and stores a valid one normalized', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
-    const datos = { nombre: 'Rut Formato', fechaNacimiento: '1980-08-08', contacto: '+56955556666', motivoConsulta: 'Control' };
+    const datos = { nombre: 'Rut Formato', fechaNacimiento: '1980-08-08', contacto: '+56955556666' };
 
     const invalido = await agent.post('/api/pacientes').send({ ...datos, rut: '7.654.321-0' });
     expect(invalido.status).toBe(400);
