@@ -1,8 +1,8 @@
-const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
+const { cifrarPaciente } = require('../../src/services/pacienteService');
 
 // Filtros opcionales de la exportación (rango de fechas, estado de la cita y
 // acción de auditoría). Los datos propios usan fechas de 2031 para no
@@ -15,6 +15,19 @@ describe('Filtros de la exportación de datos', () => {
   let pasillo;
   let box;
   let paciente;
+
+  // RUT válido (con su dígito verificador) para no chocar con los del seed.
+  function rutConDv(numero) {
+    let suma = 0;
+    let factor = 2;
+    for (const d of String(numero).split('').reverse()) {
+      suma += Number(d) * factor;
+      factor = factor === 7 ? 2 : factor + 1;
+    }
+    const resto = 11 - (suma % 11);
+    const dv = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+    return `${numero}-${dv}`;
+  }
 
   function filasDe(csv) {
     return csv.trim().split('\r\n').slice(1).map((linea) => linea.split(','));
@@ -53,16 +66,17 @@ describe('Filtros de la exportación de datos', () => {
       create: { nombre: 'Pasillo Filtros Test' },
     });
     box = await prisma.box.create({ data: { nombre: 'Box Filtros Test', pasilloId: pasillo.id } });
-    // La exportación de citas solo usa pacienteId, así que los campos cifrados
-    // pueden ser bytes cualquiera.
+    // Datos cifrados de verdad: otros archivos de test que corren en paralelo
+    // (por ejemplo la búsqueda por nombre) descifran todos los pacientes.
     paciente = await prisma.paciente.create({
       data: {
-        nombreCifrado: crypto.randomBytes(32),
-        rutCifrado: crypto.randomBytes(32),
-        rutIndice: crypto.randomBytes(32),
+        ...cifrarPaciente({
+          nombre: 'Paciente Filtros Test',
+          rut: rutConDv(31000000 + Math.floor(Math.random() * 900000)),
+          contacto: '+56900000000',
+          motivoConsulta: 'Prueba de filtros de exportación',
+        }),
         fechaNacimiento: new Date('1990-01-01'),
-        contactoCifrado: crypto.randomBytes(32),
-        motivoConsultaCifrado: crypto.randomBytes(32),
       },
     });
 
