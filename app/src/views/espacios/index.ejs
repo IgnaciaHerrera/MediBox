@@ -9,8 +9,14 @@
     check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.3l3.3 3.2L13 4.5"/></svg>',
     equis: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
     mas: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+    puerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><circle cx="15" cy="12" r=".8" fill="currentColor" stroke="none"/></svg>',
+    pasillo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V6l9-3 9 3v15"/><path d="M9 21v-6h6v6"/></svg>',
+    instrumento: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="12" r="2"/></svg>',
   };
   function icono(nombre) { return ICONOS[nombre] || ''; }
+
+  const totalBoxes = pasillos.reduce((suma, p) => suma + p.boxes.length, 0);
+  const boxesEnUso = pasillos.reduce((suma, p) => suma + p.boxes.filter((b) => boxesOcupados.has(b.id)).length, 0);
 %>
 </head>
 <body>
@@ -18,7 +24,17 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Espacios</h1>
+      <div>
+        <h1>Espacios</h1>
+        <p class="page-sub">Organiza los pasillos y boxes, y revisa cuáles están libres ahora.</p>
+      </div>
+      <% if (totalBoxes > 0) { %>
+        <div class="espacios-resumen" role="group" aria-label="Filtrar boxes por estado">
+          <button type="button" class="espacios-resumen-item" data-filtro-boxes="todos" aria-pressed="true"><strong><%= totalBoxes %></strong> <%= totalBoxes === 1 ? 'box' : 'boxes' %></button>
+          <button type="button" class="espacios-resumen-item espacios-resumen-item--libre" data-filtro-boxes="libre" aria-pressed="false"><strong><%= totalBoxes - boxesEnUso %></strong> <%= totalBoxes - boxesEnUso === 1 ? 'libre' : 'libres' %></button>
+          <button type="button" class="espacios-resumen-item espacios-resumen-item--ocupado" data-filtro-boxes="ocupado" aria-pressed="false"><strong><%= boxesEnUso %></strong> <%= boxesEnUso === 1 ? 'ocupado' : 'ocupados' %></button>
+        </div>
+      <% } %>
     </div>
 
     <% if (error) { %>
@@ -31,7 +47,9 @@
       </div>
     <% } else { %>
       <% pasillos.forEach(function(pasillo) { %>
-        <div class="access-heading pasillo-encabezado seccion-siguiente" data-toggle-editar>
+        <section class="panel-card pasillo-panel" aria-label="<%= pasillo.nombre %>">
+        <div class="pasillo-head" data-toggle-editar>
+          <span class="pasillo-icono" aria-hidden="true"><%- icono('pasillo') %></span>
           <div class="pasillo-nombre">
             <span class="pasillo-nombre-texto" data-toggle-vista><%= pasillo.nombre %></span>
             <form method="POST" action="/espacios/pasillos/<%= pasillo.id %>" id="form-renombrar-pasillo-<%= pasillo.id %>" class="form-renombrar-pasillo" data-toggle-formulario hidden>
@@ -46,6 +64,7 @@
                 aria-label="Nombre del pasillo"
               />
             </form>
+            <span class="pasillo-conteo" data-toggle-vista><%= pasillo.boxes.length %> <%= pasillo.boxes.length === 1 ? 'box' : 'boxes' %></span>
           </div>
           <% if (puedeEscribir) { %>
             <div class="pasillo-acciones">
@@ -60,13 +79,16 @@
           <% } %>
         </div>
         <% if (pasillo.boxes.length === 0 && !puedeEscribir) { %>
-          <p class="access-empty">Sin boxes en este pasillo.</p>
+          <p class="panel-lista-vacio">Sin boxes en este pasillo.</p>
         <% } else { %>
           <div class="boxes-grid">
-            <% pasillo.boxes.forEach(function(box) { %>
+            <%# Orden de creación (id): el servidor no ordena los boxes dentro del
+                pasillo, así que uno nuevo podía aparecer al comienzo de la fila. %>
+            <% pasillo.boxes.slice().sort((a, b) => a.id - b.id).forEach(function(box) { %>
               <% const ocupado = boxesOcupados.has(box.id); %>
-              <div class="box-card" data-toggle-editar>
+              <div class="box-card <%= ocupado ? 'box-card--ocupado' : 'box-card--libre' %>" data-toggle-editar>
                 <div class="card-encabezado">
+                  <span class="box-card-icono" aria-hidden="true"><%- icono('puerta') %></span>
                   <div class="card-titulo">
                     <a class="box-card-nombre" href="/espacios/boxes/<%= box.id %>" data-toggle-vista><%= box.nombre %></a>
                     <% if (puedeEscribir) { %>
@@ -100,7 +122,7 @@
 
                 <a class="box-card-cuerpo" href="/espacios/boxes/<%= box.id %>" data-toggle-vista>
                   <span class="box-card-estado <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado ahora' : 'Libre ahora' %></span>
-                  <span class="box-card-instrumentos"><%= box._count.instrumentos %> instrumento<%= box._count.instrumentos === 1 ? '' : 's' %></span>
+                  <span class="box-card-instrumentos"><%- icono('instrumento') %><%= box._count.instrumentos %> instrumento<%= box._count.instrumentos === 1 ? '' : 's' %></span>
                 </a>
 
                 <% if (puedeEscribir) { %>
@@ -151,11 +173,13 @@
             <% } %>
           </div>
         <% } %>
+          <p class="panel-lista-vacio" data-sin-coincidencias hidden></p>
+        </section>
       <% }) %>
     <% } %>
 
     <% if (puedeEscribir) { %>
-      <div class="access-heading pasillo-encabezado seccion-siguiente" data-toggle-editar>
+      <div class="pasillo-head pasillo-head--nuevo" data-toggle-editar>
         <div class="pasillo-nombre">
           <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
             <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
@@ -184,5 +208,6 @@
   <%- include('../partials/modal-confirmar') %>
   <script src="/js/confirmar.js"></script>
   <script src="/js/inline-editable.js"></script>
+  <script src="/js/espacios.js"></script>
 </body>
 </html>

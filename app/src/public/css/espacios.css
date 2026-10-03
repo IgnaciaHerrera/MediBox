@@ -2,7 +2,7 @@
 
 .boxes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
   gap: 1rem;
   margin: 1rem 0 2rem;
 }
@@ -19,17 +19,19 @@
 .box-card {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.9rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+  gap: 0.85rem;
+  padding: 1rem 1rem 0.95rem;
+  border-radius: 12px;
+  border: 1px solid rgba(195, 191, 177, 0.55);
   background: var(--paper-raised);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--dur-fast) var(--ease-out);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 10px 22px -16px rgba(27, 33, 31, 0.25);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .box-card:hover {
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: rgba(31, 107, 92, 0.35);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 16px 30px -16px rgba(27, 33, 31, 0.32);
 }
 
 .card-encabezado {
@@ -175,12 +177,14 @@
 .card-select {
   font-family: inherit;
   font-size: 0.85rem;
-  padding: 0.4rem 0.55rem;
+  padding: 0.4rem 2rem 0.4rem 0.6rem;
   border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--paper);
+  border-radius: 8px;
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23545c58' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 0.55rem center / 0.9rem;
   color: var(--ink);
   width: 100%;
+  appearance: none;
+  cursor: pointer;
 }
 
 .card-select:focus {
@@ -236,6 +240,414 @@
   border-color: var(--teal);
   color: var(--teal-ink);
   transform: rotate(90deg);
+}
+
+/* ---------- Espacios: resumen, pasillos en cuadros y tarjetas ---------- */
+
+.espacios-resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.espacios-resumen-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.espacios-resumen-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+}
+
+.espacios-resumen-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.25);
+}
+
+/* Filtro activo: borde marcado y anillo del color del estado. */
+.espacios-resumen-item[aria-pressed="true"] {
+  border-color: var(--ink-soft);
+  box-shadow: 0 0 0 2px rgba(84, 92, 88, 0.15);
+}
+
+.espacios-resumen-item--libre[aria-pressed="true"] {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px rgba(31, 107, 92, 0.18);
+}
+
+.espacios-resumen-item--ocupado[aria-pressed="true"] {
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px rgba(185, 130, 47, 0.2);
+}
+
+.espacios-resumen-item strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.espacios-resumen-item--libre {
+  border-color: rgba(31, 107, 92, 0.25);
+  background: rgba(31, 107, 92, 0.07);
+  color: var(--teal-ink);
+}
+
+.espacios-resumen-item--libre strong {
+  color: var(--teal-ink);
+}
+
+.espacios-resumen-item--ocupado {
+  border-color: rgba(185, 130, 47, 0.3);
+  background: rgba(185, 130, 47, 0.08);
+  color: #8a5f1f;
+}
+
+.espacios-resumen-item--ocupado strong {
+  color: #8a5f1f;
+}
+
+/* Cada pasillo es un cuadro con encabezado y la grilla de boxes adentro. */
+.page-main .pasillo-panel {
+  margin-bottom: 1.25rem;
+  padding: 0;
+}
+
+.pasillo-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.6rem;
+  padding: 0.8rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.pasillo-head .pasillo-nombre {
+  flex: 1;
+  min-width: 0;
+  gap: 0.6rem;
+}
+
+.pasillo-nombre-texto {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pasillo-conteo {
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.pasillo-icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 92, 0.09);
+  color: var(--teal);
+}
+
+.pasillo-icono svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.pasillo-panel .boxes-grid {
+  margin: 0;
+  padding: 1.25rem;
+}
+
+.box-card[hidden],
+.boxes-grid[hidden],
+.pasillo-head--nuevo[hidden],
+.panel-lista-vacio[hidden] {
+  display: none;
+}
+
+.pasillo-panel .panel-lista-vacio {
+  padding: 2rem 1.5rem;
+}
+
+/* Agregar pasillo: cuadro punteado al final. */
+.pasillo-head--nuevo {
+  margin-top: 0.25rem;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 12px;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.pasillo-head--nuevo:hover,
+.pasillo-head--nuevo:focus-within {
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.03);
+}
+
+.pasillo-head--nuevo .fila-agregar {
+  font-size: 0.92rem;
+}
+
+/* Tarjeta de box: ícono de puerta con el color del estado. */
+.box-card {
+  position: relative;
+}
+
+.box-card .card-encabezado {
+  align-items: center;
+  gap: 0.65rem;
+  padding-right: 3.25rem;
+}
+
+.box-card .card-iconos {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+}
+
+.box-card.box-card--nuevo .card-encabezado {
+  padding-right: 0;
+}
+
+/* En "Agregar box" los botones de crear/cancelar solo aparecen al escribir;
+   se dejan en la esquina igual que en las demás tarjetas. */
+.box-card--nuevo:has(.card-input-nombre:not([hidden])) .card-encabezado {
+  padding-right: 3.25rem;
+}
+
+.box-card-icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+}
+
+.box-card-icono svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.box-card--libre .box-card-icono {
+  background: rgba(31, 107, 92, 0.1);
+  color: var(--teal);
+}
+
+.box-card--ocupado .box-card-icono {
+  background: rgba(185, 130, 47, 0.14);
+  color: #8a5f1f;
+}
+
+.box-card .box-card-cuerpo {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.box-card-instrumentos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.box-card-instrumentos svg {
+  width: 14px;
+  height: 14px;
+  color: var(--teal);
+}
+
+/* Editar y eliminar siempre visibles pero suaves; toman fuerza al pasar el
+   mouse por la tarjeta o al llegar con el teclado. */
+.box-card .card-iconos [data-toggle-vista] {
+  opacity: 0.45;
+  transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.box-card:hover .card-iconos [data-toggle-vista],
+.box-card:focus-within .card-iconos [data-toggle-vista] {
+  opacity: 1;
+}
+
+/* Agregar box: tarjeta punteada. */
+.box-card.box-card--nuevo {
+  align-self: stretch;
+  justify-content: center;
+  min-height: 7.5rem;
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.box-card.box-card--nuevo:hover,
+.box-card.box-card--nuevo:focus-within {
+  transform: none;
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.03);
+  box-shadow: none;
+}
+
+.box-card--nuevo .card-agregar {
+  justify-content: center;
+}
+
+/* Ficha del box: datos e instrumental lado a lado. */
+.box-detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.box-detalle-grid--una {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 760px) {
+  .box-detalle-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.box-datos-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+#form-datos-box .field {
+  margin-bottom: 0;
+}
+
+.instrumentos-vacio {
+  margin: 0;
+  padding: 1.5rem 0 0.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* La tabla de instrumentos (que el JS sigue llenando con <tr>) se muestra
+   como etiquetas en línea que se acomodan a lo ancho. */
+.instrumentos-tabla,
+.instrumentos-tabla tbody {
+  display: block;
+}
+
+.instrumentos-tabla[hidden] {
+  display: none;
+}
+
+.instrumentos-tabla tbody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.page-main .instrumentos-tabla tbody tr {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.page-main .instrumentos-tabla tbody tr:hover {
+  border-color: var(--line-strong);
+  background: var(--paper);
+}
+
+.page-main .instrumentos-tabla td {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+}
+
+.instrumento-nombre {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.instrumentos-tabla form {
+  display: inline-flex;
+}
+
+/* "Quitar" como una pequeña X; el texto sigue presente para lectores de
+   pantalla, solo se reemplaza visualmente. */
+#instrumentos-panel .btn-link {
+  position: relative;
+  width: 1.45rem;
+  height: 1.45rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 0;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+#instrumentos-panel .btn-link::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--ink-soft);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M17 7 7 17M7 7l10 10'/%3E%3C/svg%3E") center / 0.8rem no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M17 7 7 17M7 7l10 10'/%3E%3C/svg%3E") center / 0.8rem no-repeat;
+}
+
+#instrumentos-panel .btn-link:hover,
+#instrumentos-panel .btn-link:focus-visible {
+  outline: none;
+  background: rgba(168, 67, 42, 0.12);
+}
+
+#instrumentos-panel .btn-link:hover::before,
+#instrumentos-panel .btn-link:focus-visible::before {
+  background: var(--brick);
+}
+
+#instrumentos-panel .form-agregar-instrumento {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  max-width: none;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+#instrumentos-panel .form-agregar-instrumento .field {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 /* ---------- Espacios: instrumental (agregar/quitar sin recargar) ---------- */

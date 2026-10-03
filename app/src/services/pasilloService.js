@@ -3,7 +3,9 @@ const { AppError } = require('../lib/AppError');
 
 async function listar() {
   return prisma.pasillo.findMany({
-    include: { boxes: { include: { _count: { select: { instrumentos: true } } } } },
+    // Boxes en orden de creación: sin orderBy, Postgres los devolvía en orden
+    // arbitrario y un box recién creado o editado podía saltar al comienzo.
+    include: { boxes: { orderBy: { id: 'asc' }, include: { _count: { select: { instrumentos: true } } } } },
     orderBy: { nombre: 'asc' },
   });
 }
