@@ -513,6 +513,31 @@
   justify-content: center;
 }
 
+/* Toda la tarjeta punteada abre el formulario, no solo el texto: el botón
+   se estira sobre ella con un ::after. Al abrir el formulario el botón se
+   oculta y con él la superficie clickeable. */
+.box-card--nuevo .card-agregar::after,
+.pasillo-head--nuevo .fila-agregar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.pasillo-head--nuevo {
+  position: relative;
+}
+
+.box-card--nuevo,
+.pasillo-head--nuevo {
+  cursor: pointer;
+}
+
+.box-card--nuevo:has(.card-input-nombre:not([hidden])),
+.pasillo-head--nuevo:has(.fila-agregar[hidden]) {
+  cursor: auto;
+}
+
 /* Ficha del box: datos e instrumental lado a lado. */
 .box-detalle-grid {
   display: grid;
