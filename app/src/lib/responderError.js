@@ -39,4 +39,11 @@ function responderError(req, res, status, mensaje) {
   });
 }
 
-module.exports = { responderError };
+// Sin sesión (o con una sesión vencida): quien navega en el navegador vuelve
+// al login; la API y los scripts reciben el 401 de siempre.
+function responderNoAutenticado(req, res) {
+  if (pideHtml(req)) return res.redirect('/auth/login-form');
+  return res.status(401).json({ error: 'No autenticado' });
+}
+
+module.exports = { responderError, responderNoAutenticado };

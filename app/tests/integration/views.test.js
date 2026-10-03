@@ -19,6 +19,15 @@ describe('Views', () => {
     expect(res.status).toBe(401);
   });
 
+  it('sends a browser without a session back to the login form instead of a JSON 401', async () => {
+    const res = await request(app).get('/dashboard').set('Accept', 'text/html');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/auth/login-form');
+
+    const api = await request(app).get('/api/notificaciones').set('Accept', 'text/html');
+    expect(api.status).toBe(401);
+  });
+
   describe('full browser flow (login form -> dashboard -> logout)', () => {
     let rol;
 

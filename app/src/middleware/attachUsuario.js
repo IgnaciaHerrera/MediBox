@@ -1,12 +1,13 @@
 const { prisma } = require('../lib/prisma');
 const { obtenerPermisosPorRol } = require('../services/rbacService');
 const { contarNoLeidas } = require('../services/notificacionService');
+const { responderNoAutenticado } = require('../lib/responderError');
 
 async function attachUsuario(req, res, next) {
   try {
     const usuario = await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, include: { rol: true } });
     if (!usuario) {
-      return res.status(401).json({ error: 'No autenticado' });
+      return responderNoAutenticado(req, res);
     }
     const permisos = await obtenerPermisosPorRol(usuario.rolId);
     req.usuario = {
