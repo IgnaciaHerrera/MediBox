@@ -160,6 +160,291 @@
   margin-top: 0;
 }
 
+/* ---------- Médicos: panel lateral de especialidades y cuadro de médicos ---------- */
+
+.medicos-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+/* Especialidades arriba de los médicos: el título con su línea, como en
+   los demás cuadros, y debajo los filtros, que se acomodan en varias líneas
+   si son muchos. */
+.page-main .especialidades-panel {
+  padding: 0 1.25rem 1rem;
+}
+
+.especialidades-panel .cita-seccion-head {
+  margin: 0 -1.25rem 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.especialidades-panel .especialidades-lista {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.especialidades-panel .especialidad-item {
+  gap: 0;
+  min-height: 2.35rem;
+  padding-right: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-raised);
+}
+
+.especialidades-panel .especialidad-item:has(.especialidad-filtro.activo) {
+  border-color: rgba(31, 107, 92, 0.35);
+  background: rgba(31, 107, 92, 0.1);
+}
+
+.especialidades-panel .especialidad-item--todas {
+  padding-right: 0;
+}
+
+.especialidad-filtro {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.especialidad-filtro:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.especialidad-filtro.activo {
+  color: var(--teal-ink);
+  font-weight: 600;
+}
+
+.especialidades-panel .especialidad-filtro:hover {
+  background: transparent;
+}
+
+.especialidad-filtro-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.especialidad-filtro-conteo {
+  flex: none;
+  min-width: 1.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+.especialidad-filtro.activo .especialidad-filtro-conteo {
+  background: rgba(31, 107, 92, 0.16);
+  color: var(--teal-ink);
+}
+
+/* Punto de color de la especialidad: toma el color de su clase de chip. */
+.especialidad-punto {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.especialidades-panel .card-iconos .icon-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.especialidades-panel .card-iconos [data-toggle-vista] {
+  opacity: 0.45;
+  transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.especialidades-panel .especialidad-item:hover .card-iconos [data-toggle-vista],
+.especialidades-panel .especialidad-item:focus-within .card-iconos [data-toggle-vista] {
+  opacity: 1;
+}
+
+.especialidades-panel form[data-toggle-formulario] {
+  padding-left: 0.6rem;
+}
+
+.especialidades-panel .pasillo-nombre-input {
+  width: 10rem;
+  min-width: 0;
+}
+
+/* "Agregar especialidad" como una etiqueta punteada al final de la fila. */
+.especialidades-panel .especialidad-item:has(.fila-agregar) {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+}
+
+.especialidades-panel .fila-agregar {
+  padding: 0.45rem 0.6rem;
+  white-space: nowrap;
+}
+
+.medicos-panel .panel-lista-head h2 {
+  margin: 0;
+}
+
+.medicos-panel .medicos-grid {
+  margin: 0;
+  padding: 1.25rem;
+}
+
+/* Tarjeta de médico */
+.medicos-panel .medico-card {
+  position: relative;
+  gap: 0.45rem;
+  padding: 1.1rem 1.1rem 1rem;
+  border-color: rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 10px 22px -16px rgba(27, 33, 31, 0.25);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.medicos-panel .medico-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(31, 107, 92, 0.35);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 16px 30px -16px rgba(27, 33, 31, 0.32);
+}
+
+.medicos-panel .medico-card .card-encabezado {
+  margin-bottom: 0.2rem;
+}
+
+.medicos-panel .medico-card .card-iconos {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+}
+
+.medicos-panel .medico-card .card-iconos [data-toggle-vista] {
+  opacity: 0.45;
+  transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.medicos-panel .medico-card:hover .card-iconos [data-toggle-vista],
+.medicos-panel .medico-card:focus-within .card-iconos [data-toggle-vista] {
+  opacity: 1;
+}
+
+.medicos-panel .medico-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.medicos-panel .medico-meta svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--teal);
+}
+
+.medico-meta[hidden],
+.medico-en-box[hidden],
+.especialidad-chip[hidden],
+.medico-nombre[hidden] {
+  display: none;
+}
+
+/* Agregar médico: tarjeta punteada. */
+.medicos-panel .medico-card.medico-card--nuevo {
+  align-self: stretch;
+  justify-content: center;
+  min-height: 9rem;
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.medicos-panel .medico-card.medico-card--nuevo:hover,
+.medicos-panel .medico-card.medico-card--nuevo:focus-within {
+  transform: none;
+  border-color: var(--teal);
+  background: rgba(31, 107, 92, 0.03);
+  box-shadow: none;
+}
+
+.medicos-panel .medico-card--nuevo .card-encabezado {
+  width: 100%;
+}
+
+.medicos-panel .medico-card--nuevo .card-agregar {
+  justify-content: center;
+}
+
+.medicos-panel .medico-card--nuevo .card-iconos {
+  position: static;
+}
+
+/* Toda la tarjeta o etiqueta punteada abre el formulario, no solo el texto:
+   el botón se estira sobre ella con un ::after. Al abrir el formulario el
+   botón se oculta y con él la superficie clickeable. */
+.medicos-panel .medico-card--nuevo .card-agregar::after,
+.especialidades-panel .especialidad-item:has(.fila-agregar) .fila-agregar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.especialidades-panel .especialidad-item:has(.fila-agregar) {
+  position: relative;
+  cursor: pointer;
+}
+
+.medicos-panel .medico-card--nuevo {
+  cursor: pointer;
+}
+
+.medicos-panel .medico-card--nuevo:has(.card-input-nombre:not([hidden])),
+.especialidades-panel .especialidad-item:has(.fila-agregar[hidden]) {
+  cursor: auto;
+}
+
+/* En pantallas angostas los filtros se deslizan de lado. */
+@media (max-width: 640px) {
+  .especialidades-panel .especialidades-lista {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.3rem;
+  }
+
+  .especialidades-panel .especialidad-item {
+    flex: none;
+  }
+}
+
 /* Mismo alto que los inputs de .filtros, para que botones y campos
    de una misma fila queden alineados. */
 .btn--control {

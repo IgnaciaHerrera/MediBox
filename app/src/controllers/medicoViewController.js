@@ -42,12 +42,21 @@ async function renderIndex(req, res, { error = null, status = 200 } = {}) {
 
   const medicos = especialidadId ? medicosTodos.filter((m) => m.especialidadId === especialidadId) : medicosTodos;
 
+  // Cuántos médicos tiene cada especialidad, para el panel lateral (se cuenta
+  // sobre todos los médicos, no sobre los filtrados).
+  const medicosPorEspecialidad = new Map();
+  medicosTodos.forEach((m) => {
+    medicosPorEspecialidad.set(m.especialidadId, (medicosPorEspecialidad.get(m.especialidadId) || 0) + 1);
+  });
+
   res.status(status).render('medicos/index', {
     titulo: 'Médicos',
     usuario: req.usuario,
     csrfToken: res.locals.csrfToken,
     medicos,
     especialidades,
+    medicosPorEspecialidad,
+    totalMedicos: medicosTodos.length,
     citasHoyPorMedico: infoCitasHoy.conteo,
     boxActualPorMedico: infoCitasHoy.boxActual,
     especialidadIdSeleccionada: especialidadId,

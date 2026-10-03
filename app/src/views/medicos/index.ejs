@@ -15,8 +15,14 @@
     check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.3l3.3 3.2L13 4.5"/></svg>',
     equis: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
     mas: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>',
+    calendario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
+    correo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+    estetoscopio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v3a4 4 0 0 0 8 0v-2"/><circle cx="18" cy="12" r="2"/></svg>',
+    etiqueta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="8" cy="8" r="1.5"/></svg>',
   };
   function icono(nombre) { return ICONOS[nombre] || ''; }
+
+  const especialidadSeleccionada = especialidades.find((e) => e.id === especialidadIdSeleccionada);
 %>
 </head>
 <body>
@@ -24,41 +30,101 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Médicos</h1>
+      <div>
+        <h1>Médicos</h1>
+        <p class="page-sub">Consulta el equipo médico por especialidad y revisa su actividad del día.</p>
+      </div>
     </div>
 
     <% if (error) { %>
       <p class="field-error" role="alert"><%= error %></p>
     <% } %>
 
-    <form class="filtros" method="GET" action="/medicos">
-      <div class="field field--busqueda">
-        <label for="medicos-buscador">Buscar por nombre</label>
-        <div class="buscador-wrap">
-          <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input type="search" id="medicos-buscador" class="buscador" placeholder="Escribe un nombre…" />
-          <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+    <div class="medicos-layout">
+      <aside class="panel-card especialidades-panel" aria-labelledby="especialidades-titulo">
+        <div class="cita-seccion-head">
+          <span class="cita-seccion-icono" aria-hidden="true"><%- icono('etiqueta') %></span>
+          <h2 id="especialidades-titulo">Especialidades</h2>
         </div>
-      </div>
-      <div class="field">
-        <label for="filtroEspecialidad">Especialidad</label>
-        <select id="filtroEspecialidad" name="especialidadId">
-          <option value="">Todas</option>
-          <% especialidades.forEach(function(e) { %>
-            <option value="<%= e.id %>" <%= especialidadIdSeleccionada === e.id ? 'selected' : '' %>><%= e.nombre %></option>
-          <% }) %>
-        </select>
-      </div>
-    </form>
+        <div class="especialidades-lista">
+          <div class="especialidad-item especialidad-item--todas">
+            <a class="especialidad-filtro<%= especialidadIdSeleccionada ? '' : ' activo' %>" href="/medicos" <%= especialidadIdSeleccionada ? '' : 'aria-current=page' %>>
+              <span class="especialidad-filtro-nombre">Todas</span>
+              <span class="especialidad-filtro-conteo"><%= totalMedicos %></span>
+            </a>
+          </div>
+      <% especialidades.forEach(function(e) { %>
+        <div class="especialidad-item" data-toggle-editar>
+          <a
+            class="especialidad-filtro<%= especialidadIdSeleccionada === e.id ? ' activo' : '' %>"
+            href="/medicos?especialidadId=<%= e.id %>"
+            <%= especialidadIdSeleccionada === e.id ? 'aria-current=page' : '' %>
+            data-toggle-vista
+          >
+            <span class="especialidad-punto especialidad-chip--<%= e.id % 4 %>" aria-hidden="true"></span>
+            <span class="especialidad-filtro-nombre"><%= e.nombre %></span>
+            <span class="especialidad-filtro-conteo"><%= medicosPorEspecialidad.get(e.id) || 0 %></span>
+          </a>
+          <form method="POST" action="/medicos/especialidades/<%= e.id %>" id="form-renombrar-especialidad-<%= e.id %>" data-toggle-formulario hidden>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="text" name="nombre" value="<%= e.nombre %>" required maxlength="100" class="pasillo-nombre-input" aria-label="Nombre de la especialidad" />
+          </form>
+          <% if (esAdmin) { %>
+            <div class="card-iconos">
+              <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar especialidad" aria-label="Editar especialidad"><%- icono('lapiz') %></button>
+              <form method="POST" action="/medicos/especialidades/<%= e.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar la especialidad «<%= e.nombre %>»? No debe tener médicos asignados.">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar especialidad" aria-label="Eliminar especialidad"><%- icono('basura') %></button>
+              </form>
+              <button type="submit" form="form-renombrar-especialidad-<%= e.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
+              <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
 
-    <p class="access-empty sin-resultados" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
+      <% if (esAdmin) { %>
+        <div class="especialidad-item" data-toggle-editar>
+          <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
+            <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
+            <span>Agregar especialidad</span>
+          </button>
+          <form method="POST" action="/medicos/especialidades" id="form-crear-especialidad" data-toggle-formulario hidden>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <input type="text" name="nombre" required maxlength="100" placeholder="Nombre de la especialidad" class="pasillo-nombre-input" aria-label="Nombre de la nueva especialidad" />
+          </form>
+          <div class="card-iconos">
+            <button type="submit" form="form-crear-especialidad" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear especialidad" aria-label="Crear especialidad"><%- icono('check') %></button>
+            <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
+          </div>
+        </div>
+      <% } %>
+        </div>
+      </aside>
 
-    <% if (medicos.length === 0 && !esAdmin) { %>
-      <div class="empty-state"><p>No hay médicos <%= especialidadIdSeleccionada ? 'con esa especialidad.' : 'registrados.' %></p></div>
-    <% } else { %>
-      <div class="medicos-grid">
+      <section class="panel-card panel-lista medicos-panel" aria-labelledby="medicos-titulo">
+        <div class="panel-lista-head">
+          <span class="cita-seccion-icono" aria-hidden="true"><%- icono('estetoscopio') %></span>
+          <h2 id="medicos-titulo"><%= especialidadSeleccionada ? especialidadSeleccionada.nombre : 'Todos los médicos' %></h2>
+          <span class="agenda-contador"><%= medicos.length %></span>
+          <div class="buscador-form">
+            <label for="medicos-buscador" class="sr-only">Buscar por nombre</label>
+            <div class="buscador-wrap">
+              <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="search" id="medicos-buscador" class="buscador" placeholder="Buscar por nombre…" />
+              <button type="button" class="buscador-limpiar" data-buscador-limpiar aria-label="Borrar búsqueda" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p class="panel-lista-vacio" data-sin-resultados hidden>Sin resultados para esa búsqueda.</p>
+
+        <% if (medicos.length === 0 && !esAdmin) { %>
+          <p class="panel-lista-vacio">No hay médicos <%= especialidadIdSeleccionada ? 'con esa especialidad.' : 'registrados.' %></p>
+        <% } else { %>
+          <div class="medicos-grid">
         <% medicos.forEach(function(m) { %>
           <% const citasHoy = citasHoyPorMedico.get(m.id) || 0; %>
           <div class="medico-card" data-toggle-editar data-busqueda="<%= m.nombre %>">
@@ -98,9 +164,9 @@
             <% if (infoBox) { %>
               <span class="medico-en-box" data-toggle-vista>En <%= infoBox.box %> · <%= infoBox.pasillo %> ahora</span>
             <% } %>
-            <span class="medico-meta" data-toggle-vista><%= citasHoy %> cita<%= citasHoy === 1 ? '' : 's' %> hoy</span>
+            <span class="medico-meta" data-toggle-vista><%- icono('calendario') %><%= citasHoy %> cita<%= citasHoy === 1 ? '' : 's' %> hoy</span>
             <% if (m.usuario) { %>
-              <span class="medico-meta" data-toggle-vista><%= m.usuario.email %></span>
+              <span class="medico-meta" data-toggle-vista><%- icono('correo') %><%= m.usuario.email %></span>
             <% } else { %>
               <span class="medico-meta medico-meta--discreto" data-toggle-vista>Sin cuenta de acceso</span>
             <% } %>
@@ -161,48 +227,9 @@
             </form>
           </div>
         <% } %>
-      </div>
-    <% } %>
-
-    <h2 class="access-heading seccion-siguiente">Especialidades</h2>
-    <div class="especialidades-lista">
-      <% especialidades.forEach(function(e) { %>
-        <div class="especialidad-item" data-toggle-editar>
-          <span class="especialidad-chip especialidad-chip--<%= e.id % 4 %>" data-toggle-vista><%= e.nombre %></span>
-          <form method="POST" action="/medicos/especialidades/<%= e.id %>" id="form-renombrar-especialidad-<%= e.id %>" data-toggle-formulario hidden>
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <input type="text" name="nombre" value="<%= e.nombre %>" required maxlength="100" class="pasillo-nombre-input" aria-label="Nombre de la especialidad" />
-          </form>
-          <% if (esAdmin) { %>
-            <div class="card-iconos">
-              <button type="button" class="icon-btn" data-toggle-vista data-toggle-activar title="Editar especialidad" aria-label="Editar especialidad"><%- icono('lapiz') %></button>
-              <form method="POST" action="/medicos/especialidades/<%= e.id %>/eliminar" data-toggle-vista data-confirmar="¿Eliminar la especialidad «<%= e.nombre %>»? No debe tener médicos asignados.">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                <button type="submit" class="icon-btn icon-btn--peligro" title="Eliminar especialidad" aria-label="Eliminar especialidad"><%- icono('basura') %></button>
-              </form>
-              <button type="submit" form="form-renombrar-especialidad-<%= e.id %>" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Guardar cambios" aria-label="Guardar cambios"><%- icono('check') %></button>
-              <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar edición"><%- icono('equis') %></button>
-            </div>
-          <% } %>
-        </div>
-      <% }) %>
-
-      <% if (esAdmin) { %>
-        <div class="especialidad-item" data-toggle-editar>
-          <button type="button" class="fila-agregar" data-toggle-vista data-toggle-activar>
-            <span class="fila-agregar-icono" aria-hidden="true"><%- icono('mas') %></span>
-            <span>Agregar especialidad</span>
-          </button>
-          <form method="POST" action="/medicos/especialidades" id="form-crear-especialidad" data-toggle-formulario hidden>
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <input type="text" name="nombre" required maxlength="100" placeholder="Nombre de la especialidad" class="pasillo-nombre-input" aria-label="Nombre de la nueva especialidad" />
-          </form>
-          <div class="card-iconos">
-            <button type="submit" form="form-crear-especialidad" class="icon-btn icon-btn--confirmar" data-toggle-formulario hidden title="Crear especialidad" aria-label="Crear especialidad"><%- icono('check') %></button>
-            <button type="button" class="icon-btn" data-toggle-formulario data-toggle-cancelar hidden title="Cancelar" aria-label="Cancelar creación"><%- icono('equis') %></button>
           </div>
-        </div>
-      <% } %>
+        <% } %>
+      </section>
     </div>
   </main>
   <%- include('../partials/modal-confirmar') %>
