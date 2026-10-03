@@ -10,6 +10,8 @@
     usuario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="2.8"/><circle cx="17.5" cy="9.5" r="2.1"/><path d="M3.5 19c1-3.2 3-5 5.5-5s4.5 1.8 5.5 5"/><path d="M14.8 14.4c2 .3 3.4 1.9 4.2 4.2"/></svg>',
     notificacion: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Z"/><path d="M9.5 17a2.5 2.5 0 0 0 5 0"/></svg>',
     datos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M12 3v11m0 0-3.5-3.5M12 14l3.5-3.5"/></svg>',
+    escudo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
+    flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>',
   };
 %>
 </head>
@@ -36,18 +38,29 @@
     <% } %>
 
     <% if (atajos.length > 0) { %>
+      <h2 class="dash-seccion-titulo">Accesos rápidos</h2>
       <div class="dash-quickactions">
         <% atajos.forEach(function(a) { %>
-          <a class="quick-action" href="<%= a.href %>"><span aria-hidden="true"><%- ICONOS[a.icono] %></span><%= a.etiqueta %></a>
+          <a class="quick-action" href="<%= a.href %>">
+            <span class="quick-action-icono" aria-hidden="true"><%- ICONOS[a.icono] %></span>
+            <span class="quick-action-texto"><%= a.etiqueta %></span>
+            <span class="quick-action-flecha" aria-hidden="true"><%- ICONOS.flecha %></span>
+          </a>
         <% }) %>
       </div>
     <% } %>
 
     <div class="dash-columns">
       <div class="panel-card">
-        <h2><%= agendaHoy.titulo %></h2>
+        <div class="panel-card-head">
+          <span class="panel-card-icono" aria-hidden="true"><%- ICONOS.agenda %></span>
+          <h2><%= agendaHoy.titulo %></h2>
+        </div>
         <% if (agendaHoy.items.length === 0) { %>
-          <p class="access-empty">No hay citas agendadas para hoy.</p>
+          <div class="dash-vacio">
+            <span class="dash-vacio-icono" aria-hidden="true"><%- ICONOS.agenda %></span>
+            <p class="access-empty">No hay citas agendadas para hoy.</p>
+          </div>
         <% } else { %>
           <% agendaHoy.items.forEach(function(c) { %>
             <a class="agenda-preview-item" href="/agenda/<%= c.id %>">
@@ -65,7 +78,10 @@
       </div>
 
       <div class="panel-card">
-        <h2>Tu rol puede</h2>
+        <div class="panel-card-head">
+          <span class="panel-card-icono" aria-hidden="true"><%- ICONOS.escudo %></span>
+          <h2>Tu rol puede</h2>
+        </div>
         <% if (accesos.length === 0) { %>
           <p class="access-empty">Tu cuenta todavía no tiene permisos asignados.</p>
         <% } else { %>

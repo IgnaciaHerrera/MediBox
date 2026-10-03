@@ -284,64 +284,104 @@ body.sin-scroll {
 .dashboard-main {
   max-width: 72rem;
   margin: 0 auto;
-  padding: 3rem 2rem 4rem;
+  padding: 2.5rem 2rem 4rem;
+}
+
+/* Saludo: tarjeta clara con un lavado verde muy suave hacia la derecha;
+   mantiene la paleta sin volverse pesada. */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 2.25rem 2.5rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 14px;
+  background:
+    radial-gradient(90% 140% at 100% 50%, rgba(31, 107, 92, 0.09) 0%, transparent 60%),
+    var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
+}
+
+.dash-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .dash-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--teal-ink);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal);
 }
 
 .dash-hero h1 {
-  font-size: 2rem;
+  font-size: 1.85rem;
+  letter-spacing: -0.01em;
 }
 
 .dash-sub {
-  margin-top: 0.4rem;
+  max-width: 48ch;
+  margin-top: 0.55rem;
 }
 
 .dash-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 1rem;
-  margin: 2rem 0;
+  margin: 1.5rem 0 2.75rem;
 }
 
+/* Cifra: ícono y número en la misma fila, etiqueta debajo. */
 .stat-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  align-content: start;
+  column-gap: 0.85rem;
+  row-gap: 0.7rem;
+  padding: 1.2rem 1.3rem 1.15rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
   background: var(--paper-raised);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1.1rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 12px 26px -14px rgba(27, 33, 31, 0.22);
   opacity: 0;
   animation: dash-in var(--dur-base) var(--ease-out) forwards;
-  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+  border-color: rgba(31, 107, 92, 0.35);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 18px 34px -16px rgba(27, 33, 31, 0.3);
 }
 
 .stat-card .icono {
-  width: 1.75rem;
-  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 92, 0.09);
   color: var(--teal);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.stat-card:hover .icono {
+  background: var(--teal);
+  color: var(--paper);
 }
 
 .stat-card .icono svg {
-  width: 100%;
-  height: 100%;
+  width: 1.3rem;
+  height: 1.3rem;
 }
 
 .stat-card .valor {
+  justify-self: end;
   font-family: var(--font-display);
-  font-size: 2.1rem;
+  font-size: 2.2rem;
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
@@ -349,6 +389,9 @@ body.sin-scroll {
 }
 
 .stat-card .etiqueta {
+  grid-column: 1 / -1;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
   font-size: 0.85rem;
   color: var(--ink-soft);
 }
@@ -364,50 +407,153 @@ body.sin-scroll {
   }
 }
 
+.dash-seccion-titulo {
+  margin-bottom: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
 .dash-quickactions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.75rem;
 }
 
 .quick-action {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.6rem 1.1rem;
-  border-radius: 999px;
-  border: 1px solid var(--line-strong);
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: var(--paper-raised);
   color: var(--ink);
   text-decoration: none;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
-.quick-action:hover {
-  border-color: var(--teal);
-  color: var(--teal-ink);
-  transform: translateY(-1px);
+.quick-action:hover,
+.quick-action:focus-visible {
+  border-color: rgba(31, 107, 92, 0.45);
+  box-shadow: 0 12px 24px -14px rgba(22, 63, 55, 0.4);
+  transform: translateY(-2px);
 }
 
-.quick-action svg {
-  width: 1.1rem;
-  height: 1.1rem;
+.quick-action-icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  background: rgba(31, 107, 92, 0.09);
   color: var(--teal);
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.quick-action:hover .quick-action-icono,
+.quick-action:focus-visible .quick-action-icono {
+  background: var(--teal);
+  color: var(--paper);
+}
+
+.quick-action-icono svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.quick-action-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-action-flecha {
+  flex: none;
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  color: var(--ink-soft);
+  opacity: 0.45;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.quick-action-flecha svg {
+  width: 100%;
+  height: 100%;
+}
+
+.quick-action:hover .quick-action-flecha,
+.quick-action:focus-visible .quick-action-flecha {
+  opacity: 1;
+  color: var(--teal);
+  transform: translateX(3px);
 }
 
 .dash-columns {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 860px) {
   .dash-columns {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-main {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .dash-hero {
+    padding: 1.5rem 1.35rem;
+  }
+
+  .dash-hero h1 {
+    font-size: 1.55rem;
+  }
+
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0 2.25rem;
+  }
+
+  .stat-card {
+    column-gap: 0.6rem;
+    row-gap: 0.55rem;
+    padding: 0.9rem 0.95rem;
+  }
+
+  .stat-card .icono {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .stat-card .icono svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .stat-card .valor {
+    font-size: 1.7rem;
+  }
+
+  .stat-card .etiqueta {
+    padding-top: 0.55rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
   }
 }
 
@@ -431,19 +577,67 @@ body.sin-scroll {
   margin-bottom: 1rem;
 }
 
+/* Los paneles del dashboard se elevan sobre el fondo; .panel-card se
+   comparte con la agenda, por eso el ajuste va acotado a .dashboard-main. */
+.dashboard-main .panel-card {
+  border-color: rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 14px 30px -18px rgba(27, 33, 31, 0.22);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: -1.5rem -1.5rem 1.1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-main .panel-card-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.panel-card-icono {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  background: rgba(31, 107, 92, 0.09);
+  color: var(--teal);
+}
+
+.panel-card-icono svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .agenda-preview-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--line);
+  margin: 0 -0.75rem;
+  padding: 0.8rem 0.75rem;
+  border-radius: 6px;
   text-decoration: none;
   color: inherit;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 
-.agenda-preview-item:last-child {
-  border-bottom: none;
+.agenda-preview-item + .agenda-preview-item {
+  border-top: 1px solid var(--line);
+}
+
+.agenda-preview-item:hover,
+.agenda-preview-item:focus-visible {
+  background: rgba(31, 107, 92, 0.06);
 }
 
 .agenda-preview-item:hover .agenda-preview-titulo {
@@ -452,6 +646,7 @@ body.sin-scroll {
 
 .agenda-preview-item .tiempo {
   font-weight: 600;
+  color: var(--teal-ink);
 }
 
 .agenda-preview-titulo {
@@ -460,9 +655,60 @@ body.sin-scroll {
   font-size: 0.88rem;
 }
 
+.dash-vacio {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  padding: 1.5rem 1rem 1.25rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: rgba(243, 242, 237, 0.6);
+  text-align: center;
+}
+
+.dash-vacio-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: rgba(31, 107, 92, 0.09);
+  color: var(--teal);
+}
+
+.dash-vacio-icono svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.dash-vacio .access-empty {
+  padding: 0;
+}
+
 .btn-link-block {
   display: inline-block;
   margin-top: 0.5rem;
+}
+
+.dashboard-main .btn-link-block {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--teal-ink);
+  text-decoration: none;
+}
+
+.dashboard-main .btn-link-block:hover,
+.dashboard-main .btn-link-block:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .accesos-chips {
@@ -483,6 +729,16 @@ body.sin-scroll {
 .chip strong {
   color: var(--ink);
   font-weight: 600;
+}
+
+.dashboard-main .chip {
+  padding: 0.35rem 0.75rem;
+  background: rgba(31, 107, 92, 0.07);
+  border-color: rgba(31, 107, 92, 0.18);
+}
+
+.dashboard-main .chip strong {
+  color: var(--teal-ink);
 }
 
 .access-heading {
