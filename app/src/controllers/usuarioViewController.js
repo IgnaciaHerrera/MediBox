@@ -3,6 +3,7 @@ const usuarioService = require('../services/usuarioService');
 const rolService = require('../services/rolService');
 const medicoService = require('../services/medicoService');
 const { AppError } = require('../lib/AppError');
+const { toast } = require('../lib/toast');
 
 const crearSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
@@ -54,6 +55,7 @@ async function crear(req, res, next) {
     const { error, value } = crearSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
     await usuarioService.crear(value);
+    toast(req, 'Usuario creado');
     return res.redirect('/usuarios');
   } catch (err) {
     if (err instanceof AppError) {
@@ -106,6 +108,7 @@ async function editar(req, res, next) {
     if (value.nuevaPassword) {
       await usuarioService.cambiarPassword(id, value.nuevaPassword);
     }
+    toast(req, 'Usuario actualizado');
     return res.redirect('/usuarios');
   } catch (err) {
     if (err instanceof AppError) {

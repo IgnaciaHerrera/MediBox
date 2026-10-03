@@ -1,13 +1,14 @@
 const { AppError } = require('../lib/AppError');
 const { logger } = require('../lib/logger');
+const { responderError } = require('../lib/responderError');
 
 function errorHandler(err, req, res, _next) {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return responderError(req, res, err.statusCode, err.message);
   }
 
   logger.error({ err }, 'Unhandled error');
-  return res.status(500).json({ error: 'Error interno del servidor' });
+  return responderError(req, res, 500, 'Error interno del servidor');
 }
 
 module.exports = { errorHandler };

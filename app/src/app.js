@@ -10,6 +10,7 @@ const { requireAuth } = require('./middleware/requireAuth');
 const { attachUsuario } = require('./middleware/attachUsuario');
 const { dashboard } = require('./controllers/viewController');
 const { isoLocal } = require('./lib/fecha');
+const { pasarToastAVista } = require('./lib/toast');
 const authRoutes = require('./routes/auth');
 const agendaViewRoutes = require('./routes/agendaViews');
 const pacienteViewRoutes = require('./routes/pacienteViews');
@@ -49,6 +50,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(sessionMiddleware);
 app.use(issueCsrfToken);
+app.use(pasarToastAVista);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });

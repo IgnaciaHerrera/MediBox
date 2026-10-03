@@ -17,10 +17,6 @@
       <span class="box-card-estado box-estado-detalle <%= ocupado ? 'box-card-estado--ocupado' : 'box-card-estado--libre' %>"><%= ocupado ? 'Ocupado' : 'Libre' %></span>
     </div>
 
-    <% if (error) { %>
-      <p class="field-error" role="alert"><%= error %></p>
-    <% } %>
-
     <div class="box-detalle-grid<%= puedeEditarBox ? '' : ' box-detalle-grid--una' %>">
       <% if (puedeEditarBox) { %>
         <section class="panel-card cita-seccion" aria-labelledby="box-datos-titulo">

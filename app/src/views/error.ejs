@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('partials/head', { titulo }) %>
+<%
+  const TEXTOS = {
+    403: {
+      titulo: 'No tienes permiso para ver este módulo',
+      detalle: 'Tu rol no tiene acceso a esta parte de MediBox. Si necesitas entrar, pídele a un administrador que revise tus permisos.',
+      icono: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v2"/>',
+    },
+    404: {
+      titulo: 'No encontramos lo que buscas',
+      detalle: mensaje.replace(/\.$/, '') + '. Puede que se haya eliminado o que el enlace esté mal.',
+      icono: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8.5 11h5"/>',
+    },
+    500: {
+      titulo: 'Algo salió mal',
+      detalle: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
+      icono: '<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+    },
+  };
+  const texto = TEXTOS[status] || {
+    titulo: 'No se pudo completar la acción',
+    detalle: mensaje,
+    icono: TEXTOS[500].icono,
+  };
+%>
+</head>
+<body>
+  <% if (usuario) { %>
+    <%- include('partials/topbar', { usuario, csrfToken, activo: '' }) %>
+  <% } %>
+
+  <main class="page-main">
+    <section class="panel-card error-pagina" aria-labelledby="error-titulo">
+      <span class="error-pagina-icono<%= status === 403 ? ' error-pagina-icono--permiso' : '' %>" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><%- texto.icono %></svg>
+      </span>
+      <p class="error-pagina-codigo">Error <%= status %></p>
+      <h1 id="error-titulo"><%= texto.titulo %></h1>
+      <p class="error-pagina-detalle"><%= texto.detalle %></p>
+      <% if (usuario) { %>
+        <a class="btn btn-primary btn--auto btn--control" href="/dashboard">Volver al panel</a>
+      <% } else { %>
+        <a class="btn btn-primary btn--auto btn--control" href="/auth/login-form">Ir al inicio de sesión</a>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

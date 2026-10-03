@@ -7,6 +7,7 @@ const pacienteService = require('../services/pacienteService');
 const auditService = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
 const { hoyISO } = require('../lib/fecha');
+const { toast } = require('../lib/toast');
 
 const crearCitaSchema = Joi.object({
   pacienteId: Joi.number().integer().positive().required(),
@@ -153,6 +154,7 @@ async function crear(req, res, next) {
     }
 
     const cita = await citaService.crearCita(value, req.usuario.id);
+    toast(req, 'Cita agendada');
     return res.redirect(`/agenda?fecha=${value.fecha}#cita-${cita.id}`);
   } catch (err) {
     if (err instanceof AppError) {
@@ -209,6 +211,7 @@ async function cambiarEstado(req, res, next) {
   try {
     const id = Number(req.params.id);
     await citaService.actualizarEstadoCita(id, req.body.estado, req.usuario.id);
+    toast(req, 'Estado de la cita actualizado');
     res.redirect(`/agenda/${id}`);
   } catch (err) {
     next(err);
@@ -219,6 +222,7 @@ async function anular(req, res, next) {
   try {
     const id = Number(req.params.id);
     await citaService.anularCita(id, req.usuario.id);
+    toast(req, 'Cita anulada');
     res.redirect('/agenda');
   } catch (err) {
     next(err);

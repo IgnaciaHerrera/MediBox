@@ -17,6 +17,10 @@
   }
 
   function mostrarError(mensaje) {
+    if (window.mostrarToast) {
+      window.mostrarToast(mensaje, 'error');
+      return;
+    }
     if (!errorEl) return;
     errorEl.textContent = mensaje;
     errorEl.hidden = false;
@@ -58,6 +62,7 @@
     })
       .then(function (r) {
         if (!r.ok) throw new Error('No se pudo quitar el instrumento.');
+        if (window.mostrarToast) window.mostrarToast('Instrumento quitado');
         tr.classList.add('fila-saliendo');
         tr.addEventListener(
           'animationend',
@@ -110,6 +115,7 @@
           actualizarVacio();
           input.value = '';
           input.focus();
+          if (window.mostrarToast) window.mostrarToast('Instrumento agregado');
         })
         .catch(function (err) {
           mostrarError(err.message);

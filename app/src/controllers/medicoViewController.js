@@ -4,6 +4,7 @@ const especialidadService = require('../services/especialidadService');
 const citaService = require('../services/citaService');
 const { AppError } = require('../lib/AppError');
 const { hoyISO } = require('../lib/fecha');
+const { toast } = require('../lib/toast');
 
 const especialidadSchema = Joi.object({ nombre: Joi.string().min(2).max(100).required() }).unknown(true);
 const medicoSchema = Joi.object({
@@ -75,6 +76,7 @@ async function crearEspecialidad(req, res, next) {
     const { error, value } = especialidadSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await especialidadService.crear(value);
+    toast(req, 'Especialidad creada');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -88,6 +90,7 @@ async function editarEspecialidad(req, res, next) {
     const { error, value } = especialidadSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await especialidadService.actualizar(id, value);
+    toast(req, 'Especialidad actualizada');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -99,6 +102,7 @@ async function eliminarEspecialidad(req, res, next) {
   try {
     const id = Number(req.params.id);
     await especialidadService.eliminar(id);
+    toast(req, 'Especialidad eliminada');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -111,6 +115,7 @@ async function crearMedico(req, res, next) {
     const { error, value } = medicoSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await medicoService.crear(value);
+    toast(req, 'Médico agregado');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -122,6 +127,7 @@ async function eliminarMedico(req, res, next) {
   try {
     const id = Number(req.params.id);
     await medicoService.eliminar(id);
+    toast(req, 'Médico eliminado');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -135,6 +141,7 @@ async function editarMedico(req, res, next) {
     const { error, value } = medicoSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await medicoService.actualizar(id, value);
+    toast(req, 'Médico actualizado');
     return res.redirect('/medicos');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);

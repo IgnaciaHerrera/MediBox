@@ -17,10 +17,6 @@
       </div>
     </div>
 
-    <% if (error) { %>
-      <p class="field-error" role="alert"><%= error %></p>
-    <% } %>
-
     <form method="POST" action="/roles/actualizar-todo" id="form-matriz">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <% roles.forEach(function(rol) { %>

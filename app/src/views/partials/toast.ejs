@@ -1,0 +1,24 @@
+<%
+  // Toast de la acción anterior (guardado en sesión antes del redirect) o,
+  // si la vista se volvió a mostrar con un error, ese error en rojo.
+  const toastVisible = (typeof toast !== 'undefined' && toast)
+    || ((typeof error !== 'undefined' && error) ? { mensaje: error, tipo: 'error' } : null);
+%>
+<div class="toasts" id="toasts" aria-live="polite">
+  <% if (toastVisible) { %>
+    <div class="toast toast--<%= toastVisible.tipo %>" role="<%= toastVisible.tipo === 'error' ? 'alert' : 'status' %>">
+      <span class="toast-icono" aria-hidden="true">
+        <% if (toastVisible.tipo === 'error') { %>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5"/><path d="M12 16h.01"/></svg>
+        <% } else { %>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+        <% } %>
+      </span>
+      <p class="toast-mensaje"><%= toastVisible.mensaje %></p>
+      <button type="button" class="toast-cerrar" aria-label="Cerrar aviso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+  <% } %>
+</div>
+<script src="/js/toast.js" defer></script>

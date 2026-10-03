@@ -170,3 +170,64 @@ table.tabla a.fila-link:hover {
 .page-main .page-head--perfil .page-head-acciones {
   gap: 0.75rem;
 }
+
+/* ---------- Página de error (sin permiso, no encontrado, error interno) ---------- */
+
+.page-main .error-pagina {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 34rem;
+  margin: 3rem auto 0;
+  padding: 2.75rem 2rem 2.25rem;
+  text-align: center;
+}
+
+.error-pagina-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1.1rem;
+  border-radius: 50%;
+  background: rgba(168, 67, 42, 0.1);
+  color: var(--brick);
+}
+
+.error-pagina-icono--permiso {
+  background: rgba(185, 130, 47, 0.14);
+  color: #6b4a1d;
+}
+
+.error-pagina-icono svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.error-pagina-codigo {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.error-pagina h1 {
+  margin: 0 0 0.6rem;
+}
+
+.error-pagina-detalle {
+  max-width: 26rem;
+  margin: 0 0 1.6rem;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .page-main .error-pagina {
+    margin-top: 1.5rem;
+    padding: 2rem 1.25rem 1.75rem;
+  }
+}

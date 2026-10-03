@@ -5,6 +5,7 @@ const instrumentoService = require('../services/instrumentoService');
 const citaService = require('../services/citaService');
 const { AppError } = require('../lib/AppError');
 const { hoyISO } = require('../lib/fecha');
+const { toast } = require('../lib/toast');
 
 const pasilloSchema = Joi.object({ nombre: Joi.string().min(1).max(50).required() }).unknown(true);
 const boxSchema = Joi.object({
@@ -49,6 +50,7 @@ async function crearPasillo(req, res, next) {
     const { error, value } = pasilloSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await pasilloService.crear(value);
+    toast(req, 'Pasillo creado');
     return res.redirect('/espacios');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -62,6 +64,7 @@ async function editarPasillo(req, res, next) {
     const { error, value } = pasilloSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await pasilloService.actualizar(id, value);
+    toast(req, 'Pasillo actualizado');
     return res.redirect('/espacios');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -73,6 +76,7 @@ async function eliminarPasillo(req, res, next) {
   try {
     const id = Number(req.params.id);
     await pasilloService.eliminar(id);
+    toast(req, 'Pasillo eliminado');
     return res.redirect('/espacios');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -85,6 +89,7 @@ async function crearBox(req, res, next) {
     const { error, value } = boxSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
     await boxService.crear(value);
+    toast(req, 'Box creado');
     return res.redirect('/espacios');
   } catch (err) {
     if (err instanceof AppError) return renderIndex(req, res, { error: err.message, status: err.statusCode }).catch(next);
@@ -131,6 +136,7 @@ async function actualizarBox(req, res, next) {
     const { error, value } = boxSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
     await boxService.actualizar(id, value);
+    toast(req, 'Box actualizado');
     if (req.body.volver === 'index') return res.redirect('/espacios');
     return res.redirect(`/espacios/boxes/${id}`);
   } catch (err) {
@@ -146,6 +152,7 @@ async function eliminarBox(req, res, next) {
   try {
     const id = Number(req.params.id);
     await boxService.eliminar(id);
+    toast(req, 'Box eliminado');
     return res.redirect('/espacios');
   } catch (err) {
     if (err instanceof AppError) {
@@ -162,6 +169,7 @@ async function nuevoInstrumento(req, res, next) {
     const { error, value } = instrumentoSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
     await instrumentoService.crear({ ...value, boxId });
+    toast(req, 'Instrumento agregado');
     return res.redirect(`/espacios/boxes/${boxId}`);
   } catch (err) {
     return next(err);
@@ -173,6 +181,7 @@ async function eliminarInstrumento(req, res, next) {
     const boxId = Number(req.params.id);
     const instrumentoId = Number(req.params.instrumentoId);
     await instrumentoService.eliminar(instrumentoId, boxId);
+    toast(req, 'Instrumento quitado');
     return res.redirect(`/espacios/boxes/${boxId}`);
   } catch (err) {
     return next(err);

@@ -1,5 +1,6 @@
 const rolService = require('../services/rolService');
 const { AppError } = require('../lib/AppError');
+const { toast } = require('../lib/toast');
 
 // Orden de "menor a mayor" privilegio, para que la matriz se lea como una
 // progresión de acceso en vez del orden alfabético (que dejaría a `admin`
@@ -106,6 +107,7 @@ async function actualizarTodo(req, res, next) {
     }
 
     if (req.accepts('html') && !req.is('json')) {
+      toast(req, 'Permisos guardados');
       return res.redirect('/roles');
     }
     return res.status(200).json({ ok: true });

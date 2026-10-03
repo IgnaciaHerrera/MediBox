@@ -2,6 +2,7 @@ const Joi = require('joi');
 const pacienteService = require('../services/pacienteService');
 const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
+const { toast } = require('../lib/toast');
 
 const pacienteSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
@@ -82,6 +83,7 @@ async function crear(req, res, next) {
     }
 
     const paciente = await pacienteService.crearPaciente(value, req.usuario.id);
+    toast(req, 'Paciente registrado');
     return res.redirect(`/pacientes/${paciente.id}`);
   } catch (err) {
     if (err instanceof AppError) {
@@ -134,6 +136,7 @@ async function editar(req, res, next) {
     }
 
     await pacienteService.actualizarPaciente(id, value, req.usuario.id);
+    toast(req, 'Datos del paciente actualizados');
     return res.redirect(`/pacientes/${id}`);
   } catch (err) {
     if (err instanceof AppError) {
