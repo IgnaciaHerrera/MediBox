@@ -32,8 +32,7 @@
 
   // Filtros aplicados distintos de la vista por defecto (hoy, sin pasillo,
   // box ni médico). En "Mi agenda" el médico es el propio, no un filtro.
-  // "Hoy" se calcula igual que en el controlador para que coincidan.
-  const hoy = new Date().toISOString().slice(0, 10);
+  // "hoy" lo entrega el controlador, el mismo que usa como fecha por defecto.
   const filtrosActivos = [
     fecha !== hoy,
     !modoMia && pasilloIdSeleccionado,

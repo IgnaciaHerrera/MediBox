@@ -33,10 +33,6 @@
   }
 
   const usuarioSeleccionado = filtros.usuarioId ? usuarios.find((u) => String(u.id) === String(filtros.usuarioId)) : null;
-  // Muestra fechas ISO ("2026-10-03" o "2026-10-03 14:05") como día-mes-año
-  // ("03-10-2026 14:05"). Solo para texto visible: los value de los inputs
-  // de fecha deben seguir en ISO.
-  const fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
 %>
 </head>
 <body>

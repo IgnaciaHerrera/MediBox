@@ -34,6 +34,11 @@ const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Disponible en todas las vistas: muestra fechas ISO ("2026-10-03" o
+// "2026-10-03 14:05") como día-mes-año ("03-10-2026 14:05"). Solo para texto
+// visible; los value de los inputs de fecha deben seguir en ISO.
+app.locals.fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
+
 app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(pinoHttp({ logger, serializers: serializadoresHttp }));
