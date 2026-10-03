@@ -26,8 +26,23 @@
     return texto.charAt(0).toUpperCase() + texto.slice(1);
   }
 
-  const hayNoLeidas = notificaciones.some((n) => !n.leida);
-  let grupoActual = null;
+  // Las fechas dentro del mensaje ("2026-10-03") se muestran como día-mes-año;
+  // el texto guardado no cambia.
+  function mensajeLegible(mensaje) {
+    return mensaje.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (iso) => fechaDMA(iso));
+  }
+
+  const totalNoLeidas = notificaciones.filter((n) => !n.leida).length;
+  const hayNoLeidas = totalNoLeidas > 0;
+
+  // Agrupadas por día, en el orden en que llegan (más recientes primero).
+  const grupos = [];
+  notificaciones.forEach((n) => {
+    const etiqueta = etiquetaFecha(n.createdAt);
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.etiqueta === etiqueta) ultimo.items.push(n);
+    else grupos.push({ etiqueta, items: [n] });
+  });
 %>
 </head>
 <body>
@@ -35,44 +50,78 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Notificaciones</h1>
+      <div>
+        <h1>Notificaciones</h1>
+        <p class="page-sub">Avisos sobre las citas que se agendan o se anulan.</p>
+      </div>
       <% if (hayNoLeidas) { %>
         <form method="POST" action="/notificaciones/marcar-todas" id="form-marcar-todas">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button type="submit" class="btn btn-secondary btn--auto btn--control">Marcar todas como leídas</button>
+          <button type="submit" class="btn btn-neutro btn--auto btn--control btn--icono">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 12.5 4.5 4.5L15 8.5"/><path d="m11 16 1 1 8.5-8.5"/></svg>
+            Marcar todas como leídas
+          </button>
         </form>
       <% } %>
     </div>
 
-    <% if (notificaciones.length === 0) { %>
-      <div class="empty-state">
-        <p>No tienes notificaciones.</p>
-      </div>
-    <% } else { %>
-      <div id="lista-notificaciones" data-csrf="<%= csrfToken %>">
-        <% notificaciones.forEach(function(n, indice) { %>
-          <% const etiqueta = etiquetaFecha(n.createdAt); %>
-          <% if (etiqueta !== grupoActual) { grupoActual = etiqueta; %>
-            <h2 class="access-heading <%= indice === 0 ? 'sin-margen-superior' : '' %>"><%= etiqueta %></h2>
-          <% } %>
-          <% const tipo = tipoNotificacion(n.mensaje); %>
-          <div class="notif-item <%= n.leida ? 'notif-item--leida' : '' %>" data-id="<%= n.id %>">
-            <span class="notif-icono notif-icono--<%= tipo %>" aria-hidden="true"><%- ICONOS[tipo] %></span>
-            <div class="notif-cuerpo">
-              <p class="notif-mensaje"><% if (!n.leida) { %><span class="sr-only">Sin leer: </span><% } %><%= n.mensaje %></p>
-              <span class="notif-hora tiempo"><%= new Date(n.createdAt).toISOString().slice(11, 16) %></span>
-            </div>
-            <% if (!n.leida) { %>
-              <form method="POST" action="/notificaciones/<%= n.id %>/leida" class="form-marcar-leida">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                <button type="submit" class="btn-link">Marcar leída</button>
-              </form>
-            <% } %>
+    <section class="notif-seccion" aria-labelledby="notif-titulo">
+      <div class="panel-card notif-barra">
+        <h2 id="notif-titulo">Bandeja</h2>
+        <% if (notificaciones.length > 0) { %>
+          <div class="notif-filtros" role="group" aria-label="Filtrar notificaciones">
+            <button type="button" class="notif-filtro" data-filtro-notif="todas" aria-pressed="true">
+              Todas <span class="notif-filtro-conteo"><%= notificaciones.length %></span>
+            </button>
+            <button type="button" class="notif-filtro" data-filtro-notif="no-leidas" aria-pressed="false">
+              No leídas <span class="notif-filtro-conteo" data-conteo-no-leidas><%= totalNoLeidas %></span>
+            </button>
           </div>
-        <% }) %>
+        <% } %>
       </div>
-    <% } %>
+
+      <% if (notificaciones.length === 0) { %>
+        <div class="panel-card notif-vacio">
+          <span class="notif-vacio-icono" aria-hidden="true"><%- ICONOS.general %></span>
+          <p>No tienes notificaciones.</p>
+        </div>
+      <% } else { %>
+        <div id="lista-notificaciones" data-csrf="<%= csrfToken %>">
+          <% grupos.forEach(function(grupo) { %>
+            <div class="notif-grupo">
+              <h3 class="notif-dia"><%= grupo.etiqueta %></h3>
+              <% grupo.items.forEach(function(n) { %>
+                <% const tipo = tipoNotificacion(n.mensaje); %>
+                <div class="notif-item <%= n.leida ? 'notif-item--leida' : '' %>" data-id="<%= n.id %>">
+                  <span class="notif-icono notif-icono--<%= tipo %>" aria-hidden="true"><%- ICONOS[tipo] %></span>
+                  <div class="notif-cuerpo">
+                    <p class="notif-mensaje"><% if (!n.leida) { %><span class="sr-only">Sin leer: </span><% } %><%= mensajeLegible(n.mensaje) %></p>
+                    <span class="notif-hora tiempo"><%= new Date(n.createdAt).toISOString().slice(11, 16) %></span>
+                  </div>
+                  <% if (!n.leida) { %>
+                    <form method="POST" action="/notificaciones/<%= n.id %>/leida" class="form-marcar-leida">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="btn-mini notif-marcar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                        Marcar leída
+                      </button>
+                    </form>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          <% }) %>
+        </div>
+        <div class="panel-card notif-vacio" data-notif-sin-pendientes hidden>
+          <span class="notif-vacio-icono notif-vacio-icono--ok" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          </span>
+          <p>Estás al día: no tienes notificaciones sin leer.</p>
+        </div>
+      <% } %>
+    </section>
   </main>
   <script src="/js/notificaciones.js"></script>
+  <script src="/js/notificaciones-filtro.js"></script>
 </body>
 </html>

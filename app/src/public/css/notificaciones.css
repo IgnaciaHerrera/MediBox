@@ -1,22 +1,121 @@
 /* ---------- Notificaciones ---------- */
 
-.notif-item {
+/* Cuadro de encabezado: título "Bandeja" y, a la derecha, el filtro. */
+.page-main .notif-barra {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid var(--line);
-  transition: opacity var(--dur-base) var(--ease-out);
+  flex-wrap: wrap;
+  padding: 0.9rem 1.25rem;
 }
 
-.notif-item:last-child {
-  border-bottom: none;
+.page-main .notif-barra h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+/* Pestañas Todas / No leídas. */
+.notif-filtros {
+  display: inline-flex;
+  gap: 0.2rem;
+  margin-left: auto;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(218, 215, 204, 0.45);
+}
+
+.notif-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.8rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.notif-filtro:hover {
+  color: var(--ink);
+}
+
+.notif-filtro[aria-pressed="true"] {
+  background: var(--paper-raised);
+  color: var(--teal-ink);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.1), 0 2px 6px -2px rgba(27, 33, 31, 0.12);
+}
+
+.notif-filtro:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.25);
+}
+
+.notif-filtro-conteo {
+  min-width: 1.3rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 92, 0.12);
+  color: var(--teal-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.3rem;
+  text-align: center;
+}
+
+/* Grupos por día, sobre el fondo de la página. */
+.notif-grupo[hidden] {
+  display: none;
+}
+
+.notif-dia {
+  margin: 0 0 0.75rem;
+  padding: 1.4rem 0 0.5rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Cada notificación en su propia tarjeta: blanca si está leída y con un
+   tono verde suave mientras no se ha leído. */
+.notif-item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid rgba(195, 191, 177, 0.55);
+  border-radius: 12px;
+  background: var(--paper-raised);
+  box-shadow: 0 1px 2px rgba(27, 33, 31, 0.05), 0 8px 18px -14px rgba(27, 33, 31, 0.25);
+  transition: background-color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+}
+
+.notif-item[hidden] {
+  display: none;
+}
+
+.notif-item + .notif-item {
+  margin-top: 0.6rem;
+}
+
+.notif-item:not(.notif-item--leida) {
+  border-color: rgba(31, 107, 92, 0.25);
+  background: #e9f0ec;
 }
 
 .notif-icono {
   flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -45,11 +144,11 @@
 
 .notif-cuerpo {
   flex: 1;
-  padding-top: 0.3rem;
+  min-width: 0;
 }
 
 .notif-mensaje {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.15rem;
   color: var(--ink);
   font-weight: 600;
 }
@@ -59,8 +158,8 @@
   font-weight: 400;
 }
 
-.notif-item--leida {
-  opacity: 0.72;
+.notif-item--leida .notif-icono {
+  opacity: 0.7;
 }
 
 .notif-hora {
@@ -68,7 +167,74 @@
   color: var(--ink-soft);
 }
 
-.notif-item .form-marcar-leida {
-  padding-top: 0.3rem;
+.notif-marcar {
+  gap: 0.3rem;
+  white-space: nowrap;
 }
 
+.notif-marcar svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Estados vacíos. */
+.page-main .notif-vacio {
+  margin-top: 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.notif-vacio[hidden] {
+  display: none;
+}
+
+.notif-vacio p {
+  margin: 0;
+}
+
+.notif-vacio-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+.notif-vacio-icono--ok {
+  background: rgba(31, 107, 92, 0.1);
+  color: var(--teal);
+}
+
+.notif-vacio-icono svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+@media (max-width: 640px) {
+  .notif-filtros {
+    width: 100%;
+  }
+
+  .notif-filtro {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .notif-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .notif-item .form-marcar-leida {
+    width: 100%;
+    padding-left: 3.25rem;
+  }
+}
