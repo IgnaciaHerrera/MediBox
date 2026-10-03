@@ -35,3 +35,38 @@
   border-color: var(--line-strong);
 }
 
+/* ---------- Usuarios: tabla ---------- */
+
+.usuario-identidad {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.usuario-nombre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Marca la fila de la persona que está usando el sistema. */
+.usuario-tu {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 92, 0.1);
+  color: var(--teal-ink);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn-editar-usuario.btn-mini {
+  gap: 0.35rem;
+}
+
+.btn-editar-usuario.btn-mini svg {
+  width: 13px;
+  height: 13px;
+}
