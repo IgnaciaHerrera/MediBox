@@ -11,12 +11,11 @@
 
   <main class="page-main">
     <div class="page-head">
-      <h1>Roles y permisos</h1>
+      <div>
+        <h1>Roles y permisos</h1>
+        <p class="page-sub">Marca o desmarca los permisos de cada rol. Los cambios no se aplican hasta que presiones «Guardar cambios».</p>
+      </div>
     </div>
-
-    <p class="matriz-ayuda">
-      Marca o desmarca los permisos de cada rol. Los cambios no se aplican hasta que presiones «Guardar cambios».
-    </p>
 
     <% if (error) { %>
       <p class="field-error" role="alert"><%= error %></p>
@@ -76,10 +75,13 @@
   </main>
 
   <div class="barra-guardar" id="barra-guardar" role="status" aria-live="polite" hidden>
+    <span class="barra-guardar-icono" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+    </span>
     <span id="barra-guardar-texto">Cambios sin guardar</span>
     <div class="barra-guardar-acciones">
-      <button type="reset" form="form-matriz" class="btn btn-secondary btn--auto">Descartar</button>
-      <button type="submit" form="form-matriz" class="btn btn-primary btn--auto">Guardar cambios</button>
+      <button type="reset" form="form-matriz" class="btn btn--auto barra-btn-descartar">Descartar</button>
+      <button type="submit" form="form-matriz" class="btn btn--auto barra-btn-guardar">Guardar cambios</button>
     </div>
   </div>
 
