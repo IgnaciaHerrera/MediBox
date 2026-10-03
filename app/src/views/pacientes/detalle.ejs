@@ -25,6 +25,10 @@
   }
 
   const edad = calcularEdad(paciente.fechaNacimiento);
+  // Muestra fechas ISO ("2026-10-03" o "2026-10-03 14:05") como día-mes-año
+  // ("03-10-2026 14:05"). Solo para texto visible: los value de los inputs
+  // de fecha deben seguir en ISO.
+  const fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
 %>
 </head>
 <body>
@@ -38,7 +42,7 @@
         <span class="avatar avatar--grande"><%= iniciales(paciente.nombre) %></span>
         <div>
           <h1><%= paciente.nombre %></h1>
-          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= new Date(paciente.createdAt).toISOString().slice(0, 10) %></p>
+          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= fechaDMA(new Date(paciente.createdAt).toISOString().slice(0, 10)) %></p>
         </div>
       </div>
       <% if (puedeEditar) { %>
@@ -55,7 +59,7 @@
         </div>
         <div class="detalle-item">
           <span class="etiqueta">Fecha de nacimiento</span>
-          <span class="valor tiempo"><%= new Date(paciente.fechaNacimiento).toISOString().slice(0, 10) %></span>
+          <span class="valor tiempo"><%= fechaDMA(new Date(paciente.fechaNacimiento).toISOString().slice(0, 10)) %></span>
         </div>
         <div class="detalle-item">
           <span class="etiqueta">Contacto</span>

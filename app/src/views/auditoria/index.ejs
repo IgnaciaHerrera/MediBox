@@ -33,6 +33,10 @@
   }
 
   const usuarioSeleccionado = filtros.usuarioId ? usuarios.find((u) => String(u.id) === String(filtros.usuarioId)) : null;
+  // Muestra fechas ISO ("2026-10-03" o "2026-10-03 14:05") como día-mes-año
+  // ("03-10-2026 14:05"). Solo para texto visible: los value de los inputs
+  // de fecha deben seguir en ISO.
+  const fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
 %>
 </head>
 <body>
@@ -83,8 +87,8 @@
 
     <% if (filtros.accion || filtros.entidad || usuarioSeleccionado || filtros.desde || filtros.hasta) { %>
       <div class="chip-filtros chip-filtros--espaciado">
-        <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= filtros.desde %> <span class="x">×</span></a><% } %>
-        <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= filtros.hasta %> <span class="x">×</span></a><% } %>
+        <% if (filtros.desde) { %><a class="chip-filtro" href="<%= urlFiltros({ desde: '' }) %>">Desde <%= fechaDMA(filtros.desde) %> <span class="x">×</span></a><% } %>
+        <% if (filtros.hasta) { %><a class="chip-filtro" href="<%= urlFiltros({ hasta: '' }) %>">Hasta <%= fechaDMA(filtros.hasta) %> <span class="x">×</span></a><% } %>
         <% if (filtros.accion) { %><a class="chip-filtro" href="<%= urlFiltros({ accion: '' }) %>"><%= filtros.accion %> <span class="x">×</span></a><% } %>
         <% if (filtros.entidad) { %><a class="chip-filtro" href="<%= urlFiltros({ entidad: '' }) %>"><%= filtros.entidad %> <span class="x">×</span></a><% } %>
         <% if (usuarioSeleccionado) { %><a class="chip-filtro" href="<%= urlFiltros({ usuarioId: '' }) %>"><%= usuarioSeleccionado.nombre %> <span class="x">×</span></a><% } %>
@@ -109,7 +113,7 @@
               <% const categoria = categoriaDe(r.accion); %>
               <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
               <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
-                <td class="tiempo"><%= new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19) %></td>
+                <td class="tiempo"><%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').slice(0, 19)) %></td>
                 <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
                 <td>
                   <span class="badge-accion badge-accion--<%= categoria %>">
@@ -123,7 +127,7 @@
                 <td colspan="4">
                   <div class="detalle-auditoria">
                     <span><strong>Usuario:</strong> <%= r.usuario ? r.usuario.nombre + ' (' + r.usuario.email + ')' : 'Usuario eliminado' %></span>
-                    <span><strong>Marca de tiempo completa:</strong> <%= new Date(r.timestamp).toISOString() %></span>
+                    <span><strong>Marca de tiempo completa:</strong> <%= fechaDMA(new Date(r.timestamp).toISOString().replace('T', ' ').replace('Z', ' UTC')) %></span>
                     <% if (enlace) { %><a class="btn-link" href="<%= enlace %>">Ver <%= r.entidad.toLowerCase() %> →</a><% } %>
                   </div>
                 </td>

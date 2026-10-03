@@ -2,6 +2,12 @@
 <html lang="es">
 <head>
 <%- include('../partials/head', { titulo }) %>
+<%
+  // Muestra fechas ISO ("2026-10-03" o "2026-10-03 14:05") como día-mes-año
+  // ("03-10-2026 14:05"). Solo para texto visible: los value de los inputs
+  // de fecha deben seguir en ISO.
+  const fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
+%>
 </head>
 <body>
   <%- include('../partials/topbar', { usuario, csrfToken, activo: 'datos' }) %>
@@ -39,7 +45,7 @@
               <p class="exportar-card-meta">
                 <% if (t.ultimo) { %>
                   Última exportación: <strong><%= t.ultimo.usuario ? t.ultimo.usuario.nombre : 'usuario eliminado' %></strong>
-                  · <span class="tiempo"><%= new Date(t.ultimo.timestamp).toISOString().replace('T', ' ').slice(0, 16) %></span>
+                  · <span class="tiempo"><%= fechaDMA(new Date(t.ultimo.timestamp).toISOString().replace('T', ' ').slice(0, 16)) %></span>
                 <% } else { %>
                   Todavía no se ha exportado.
                 <% } %>
