@@ -158,8 +158,27 @@ async function obtenerCitaPorId(id) {
 
 // No incluye datos de Paciente, por la misma razón que obtenerCitaPorId: se
 // exporta únicamente el id de referencia, nunca nombre ni datos clínicos.
-async function listarTodasParaExport(usuarioId) {
+// Filtros opcionales: desde/hasta (AAAA-MM-DD, inclusivos) y estado
+// (agendada, atendido, no_atendido o anulada). Sin filtros exporta todas,
+// incluidas las anuladas, como antes.
+function construirWhereExport({ desde, hasta, estado } = {}) {
+  const fecha = {};
+  if (desde) fecha.gte = new Date(desde);
+  if (hasta) fecha.lte = new Date(hasta);
+
+  let porEstado = {};
+  if (estado === 'anulada') porEstado = { anulada: true };
+  else if (estado) porEstado = { estado, anulada: false };
+
+  return {
+    ...(Object.keys(fecha).length > 0 ? { fecha } : {}),
+    ...porEstado,
+  };
+}
+
+async function listarTodasParaExport(usuarioId, filtros = {}) {
   const items = await prisma.cita.findMany({
+    where: construirWhereExport(filtros),
     orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
     include: { medico: true, box: { include: { pasillo: true } } },
   });

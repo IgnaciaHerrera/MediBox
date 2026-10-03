@@ -32,8 +32,14 @@ async function listar({ page = 1, pageSize = 20, accion, entidad, usuarioId, des
   return { items, total, page, pageSize };
 }
 
-async function listarTodo(usuarioId) {
-  const items = await prisma.auditLog.findMany({ orderBy: { timestamp: 'desc' }, include: { usuario: true } });
+// Filtros opcionales para la exportación: desde/hasta (AAAA-MM-DD) y acción,
+// con el mismo criterio que la pantalla de auditoría. Sin filtros, todo.
+async function listarTodo(usuarioId, { accion, desde, hasta } = {}) {
+  const items = await prisma.auditLog.findMany({
+    where: construirWhere({ accion, desde, hasta }),
+    orderBy: { timestamp: 'desc' },
+    include: { usuario: true },
+  });
   await registrar({ usuarioId, accion: 'EXPORT', entidad: 'AuditLog', entidadId: 0 });
   return items;
 }

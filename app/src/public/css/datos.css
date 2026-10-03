@@ -30,16 +30,20 @@ code {
   font-size: 0.85em;
 }
 
+/* Las tarjetas comparten una altura mínima: cerradas se ven parejas y, al
+   abrir los filtros de una, solo esa crece y las demás no se mueven. */
 .exportar-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 1rem;
+  align-items: start;
 }
 
 .exportar-card {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 13.75rem;
   padding: 1.15rem 1.25rem;
   border-radius: 12px;
   border: 1px solid rgba(195, 191, 177, 0.55);
@@ -85,14 +89,87 @@ code {
 }
 
 .exportar-card-meta {
-  flex: 1;
   margin: 0;
   font-size: 0.82rem;
   color: var(--ink-soft);
 }
 
+/* El botón de descarga queda siempre al pie de la tarjeta; "Filtrar" queda
+   justo bajo el texto. */
 .exportar-card-boton {
   align-self: flex-start;
+  margin-top: auto;
+}
+
+/* Filtros opcionales de la exportación, desplegables dentro de la tarjeta. */
+.exportar-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exportar-filtros summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--teal-ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.exportar-filtros summary::-webkit-details-marker {
+  display: none;
+}
+
+.exportar-filtros summary::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0.15rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.exportar-filtros[open] summary::after {
+  transform: rotate(-135deg) translateY(-1px);
+}
+
+.exportar-filtros summary svg {
+  width: 14px;
+  height: 14px;
+}
+
+.exportar-filtros-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  animation: dash-in var(--dur-base) var(--ease-out);
+}
+
+.exportar-filtros-campos .field {
+  margin-bottom: 0;
+}
+
+.exportar-filtros-campos .field label {
+  font-size: 0.78rem;
+}
+
+.exportar-filtros-campos input,
+.exportar-filtros-campos select {
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.exportar-filtros-ancho {
+  grid-column: 1 / -1;
 }
 
 .dropzone {

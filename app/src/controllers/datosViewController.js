@@ -10,6 +10,26 @@ const importarSchema = Joi.object({
   csv: Joi.string().min(1).required(),
 }).unknown(true);
 
+// Filtros de la exportación (llegan por query string desde los formularios
+// de la pestaña Exportar). Vacíos o ausentes significan "sin filtro".
+const fechaFiltro = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).empty('');
+const filtrosCitasSchema = Joi.object({
+  desde: fechaFiltro,
+  hasta: fechaFiltro,
+  estado: Joi.string().valid('agendada', 'atendido', 'no_atendido', 'anulada').empty(''),
+});
+const filtrosAuditoriaSchema = Joi.object({
+  desde: fechaFiltro,
+  hasta: fechaFiltro,
+  accion: Joi.string().pattern(/^[A-Z_]+$/).max(40).empty(''),
+});
+
+function validarFiltros(schema, query) {
+  const { error, value } = schema.validate(query, { stripUnknown: true });
+  if (error) throw new AppError(error.details[0].message, 400);
+  return value;
+}
+
 function enviarCsv(res, nombreArchivo, contenido) {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
@@ -24,6 +44,14 @@ const ENTIDADES_EXPORTABLES = [
   { entidad: 'Cita', etiqueta: 'Agenda de citas', permiso: 'agenda.read', url: '/datos/exportar/citas.csv' },
   { entidad: 'AuditLog', etiqueta: 'Registro de auditoría', permiso: 'auditoria.read', url: '/datos/exportar/auditoria.csv' },
 ];
+
+async function datosVista(permisos) {
+  const tarjetasExport = await construirTarjetasExport(permisos);
+  const accionesAuditoria = tarjetasExport.some((t) => t.entidad === 'AuditLog')
+    ? await auditService.listarAccionesDistintas()
+    : [];
+  return { tarjetasExport, accionesAuditoria };
+}
 
 async function construirTarjetasExport(permisos) {
   if (!permisos.includes('data.export')) return [];
@@ -44,7 +72,7 @@ async function index(req, res, next) {
       csrfToken: res.locals.csrfToken,
       error: null,
       resultado: null,
-      tarjetasExport: await construirTarjetasExport(req.usuario.permisos),
+      ...(await datosVista(req.usuario.permisos)),
     });
   } catch (err) {
     next(err);
@@ -66,7 +94,8 @@ async function exportarPacientes(req, res, next) {
 
 async function exportarCitas(req, res, next) {
   try {
-    const citas = await citaService.listarTodasParaExport(req.usuario.id);
+    const filtros = validarFiltros(filtrosCitasSchema, req.query);
+    const citas = await citaService.listarTodasParaExport(req.usuario.id, filtros);
     const filas = citas.map((c) => ({
       id: c.id,
       pacienteId: c.pacienteId,
@@ -91,7 +120,8 @@ async function exportarCitas(req, res, next) {
 
 async function exportarAuditoria(req, res, next) {
   try {
-    const registros = await auditService.listarTodo(req.usuario.id);
+    const filtros = validarFiltros(filtrosAuditoriaSchema, req.query);
+    const registros = await auditService.listarTodo(req.usuario.id, filtros);
     const filas = registros.map((r) => ({
       id: r.id,
       fecha: r.timestamp.toISOString(),
@@ -119,7 +149,7 @@ async function importarEspacios(req, res, next) {
       csrfToken: res.locals.csrfToken,
       error: null,
       resultado,
-      tarjetasExport: await construirTarjetasExport(req.usuario.permisos),
+      ...(await datosVista(req.usuario.permisos)),
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -129,7 +159,7 @@ async function importarEspacios(req, res, next) {
         csrfToken: res.locals.csrfToken,
         error: err.message,
         resultado: null,
-        tarjetasExport: await construirTarjetasExport(req.usuario.permisos),
+        ...(await datosVista(req.usuario.permisos)),
       });
     }
     return next(err);

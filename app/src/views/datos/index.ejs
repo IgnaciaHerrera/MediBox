@@ -57,7 +57,51 @@
                   Todavía no se ha exportado.
                 <% } %>
               </p>
-              <a class="btn btn-neutro btn--auto btn--control btn--icono exportar-card-boton" href="<%= t.url %>"><%- ICONO_DESCARGA %>Descargar CSV</a>
+              <% if (t.entidad === 'Cita' || t.entidad === 'AuditLog') { %>
+                <form method="GET" action="<%= t.url %>" class="exportar-form">
+                  <details class="exportar-filtros">
+                    <summary>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"/></svg>
+                      Filtrar
+                    </summary>
+                    <div class="exportar-filtros-campos">
+                      <div class="field">
+                        <label for="filtro-<%= t.entidad %>-desde">Desde</label>
+                        <input type="date" id="filtro-<%= t.entidad %>-desde" name="desde" />
+                      </div>
+                      <div class="field">
+                        <label for="filtro-<%= t.entidad %>-hasta">Hasta</label>
+                        <input type="date" id="filtro-<%= t.entidad %>-hasta" name="hasta" />
+                      </div>
+                      <% if (t.entidad === 'Cita') { %>
+                        <div class="field exportar-filtros-ancho">
+                          <label for="filtro-Cita-estado">Estado</label>
+                          <select id="filtro-Cita-estado" name="estado">
+                            <option value="">Todos</option>
+                            <option value="agendada">Agendada</option>
+                            <option value="atendido">Atendido</option>
+                            <option value="no_atendido">No atendido</option>
+                            <option value="anulada">Anulada</option>
+                          </select>
+                        </div>
+                      <% } else { %>
+                        <div class="field exportar-filtros-ancho">
+                          <label for="filtro-AuditLog-accion">Acción</label>
+                          <select id="filtro-AuditLog-accion" name="accion">
+                            <option value="">Todas</option>
+                            <% accionesAuditoria.forEach(function(a) { %>
+                              <option value="<%= a %>"><%= a %></option>
+                            <% }) %>
+                          </select>
+                        </div>
+                      <% } %>
+                    </div>
+                  </details>
+                  <button type="submit" class="btn btn-neutro btn--auto btn--control btn--icono exportar-card-boton"><%- ICONO_DESCARGA %>Descargar CSV</button>
+                </form>
+              <% } else { %>
+                <a class="btn btn-neutro btn--auto btn--control btn--icono exportar-card-boton" href="<%= t.url %>"><%- ICONO_DESCARGA %>Descargar CSV</a>
+              <% } %>
             </div>
           <% }) %>
         </div>
