@@ -2,6 +2,7 @@ const { prisma } = require('../lib/prisma');
 const { hashPassword } = require('./authService');
 const { AppError } = require('../lib/AppError');
 const { registrar } = require('./auditService');
+const { cerrarSesionesDe } = require('./sesionService');
 
 const SELECT_SEGURO = { id: true, nombre: true, email: true, rolId: true, createdAt: true, rol: true };
 
@@ -85,22 +86,27 @@ async function actualizar(id, opciones, solicitanteId) {
 }
 
 /**
- * Cambia la contraseña de una cuenta y lo audita (sin la contraseña).
+ * Cambia la contraseña de una cuenta y lo audita (sin la contraseña). Cierra
+ * las sesiones abiertas de esa cuenta: si se cambia porque estaba
+ * comprometida, quien la usaba pierde el acceso al instante.
  *
  * @param {number} id - cuenta a cambiar.
  * @param {string} nuevaPassword
  * @param {number} solicitanteId - quien hace el cambio.
+ * @param {{sesionActual?: string}} [opciones] - id de la sesión de quien hace
+ *   el cambio, que se conserva.
  * @returns {Promise<void>}
  *
  * Consumidores: usuarioViewController.editar.
  */
-async function cambiarPassword(id, nuevaPassword, solicitanteId) {
+async function cambiarPassword(id, nuevaPassword, solicitanteId, { sesionActual } = {}) {
   await obtenerPorId(id);
   const passwordHash = await hashPassword(nuevaPassword);
   await prisma.$transaction(async (tx) => {
     await tx.usuario.update({ where: { id }, data: { passwordHash } });
     await registrar({ usuarioId: solicitanteId, accion: 'UPDATE_PASSWORD', entidad: 'Usuario', entidadId: id }, tx);
   });
+  await cerrarSesionesDe(id, { excepto: sesionActual, solicitanteId });
 }
 
 async function listarPorRolNombre(rolNombre) {

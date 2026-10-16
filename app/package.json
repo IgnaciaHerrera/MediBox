@@ -20,6 +20,7 @@
     "alertas": "node src/alertas.js",
     "incidente:alcance": "node src/incidente.js",
     "llaves:rotar": "node src/rotar-llaves.js",
+    "sesiones:cerrar": "node src/sesiones.js",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",

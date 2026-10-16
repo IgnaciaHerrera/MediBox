@@ -106,7 +106,7 @@ async function editar(req, res, next) {
 
     await usuarioService.actualizar(id, { nombre: value.nombre, rolId: value.rolId, medicoId: value.medicoId }, req.usuario.id);
     if (value.nuevaPassword) {
-      await usuarioService.cambiarPassword(id, value.nuevaPassword, req.usuario.id);
+      await usuarioService.cambiarPassword(id, value.nuevaPassword, req.usuario.id, { sesionActual: req.sessionID });
     }
     toast(req, 'Usuario actualizado');
     return res.redirect('/usuarios');
