@@ -105,7 +105,7 @@ describe('Paciente encryption and access control', () => {
     expect(segundo.body.error).toMatch(/Ya existe un paciente/);
   });
 
-  it('GET /api/pacientes?q filters by name without exposing rut in the list', async () => {
+  it('POST /api/pacientes/buscar filters by name without exposing rut in the list', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -118,18 +118,18 @@ describe('Paciente encryption and access control', () => {
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
 
-    const conCoincidencia = await agent.get('/api/pacientes').query({ q: 'Zoraida Buscable' });
+    const conCoincidencia = await agent.post('/api/pacientes/buscar').send({ q: 'Zoraida Buscable' });
     expect(conCoincidencia.status).toBe(200);
     expect(conCoincidencia.body.items.some((p) => p.id === createRes.body.id)).toBe(true);
     // El listado trae solo lo necesario para reconocer al paciente.
     expect(Object.keys(conCoincidencia.body.items[0]).sort()).toEqual(['createdAt', 'edad', 'id', 'nombre']);
 
-    const sinCoincidencia = await agent.get('/api/pacientes').query({ q: 'NombreQueNoExisteEnNadie' });
+    const sinCoincidencia = await agent.post('/api/pacientes/buscar').send({ q: 'NombreQueNoExisteEnNadie' });
     expect(sinCoincidencia.status).toBe(200);
     expect(sinCoincidencia.body.items.some((p) => p.id === createRes.body.id)).toBe(false);
   });
 
-  it('GET /api/pacientes?q finds a patient by full RUT through the blind index', async () => {
+  it('POST /api/pacientes/buscar finds a patient by full RUT through the blind index', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -142,12 +142,12 @@ describe('Paciente encryption and access control', () => {
     expect(createRes.status).toBe(201);
     pacienteIds.push(createRes.body.id);
 
-    const porRut = await agent.get('/api/pacientes').query({ q: '18.181.818-2' });
+    const porRut = await agent.post('/api/pacientes/buscar').send({ q: '18.181.818-2' });
     expect(porRut.status).toBe(200);
     expect(porRut.body.items.map((p) => p.id)).toEqual([createRes.body.id]);
     expect(porRut.body.items[0].nombre).toBe('Rosa Busqueda Rut');
 
-    const rutParcial = await agent.get('/api/pacientes').query({ q: '18181818' });
+    const rutParcial = await agent.post('/api/pacientes/buscar').send({ q: '18181818' });
     expect(rutParcial.body.items.some((p) => p.id === createRes.body.id)).toBe(false);
 
     // Un paciente migrado puede traer un RUT anterior a la validación del
@@ -158,7 +158,7 @@ describe('Paciente encryption and access control', () => {
       },
     });
     pacienteIds.push(migrado.id);
-    const porRutAntiguo = await agent.get('/api/pacientes').query({ q: '11.111.111-2' });
+    const porRutAntiguo = await agent.post('/api/pacientes/buscar').send({ q: '11.111.111-2' });
     expect(porRutAntiguo.body.items.map((p) => p.id)).toEqual([migrado.id]);
   });
 

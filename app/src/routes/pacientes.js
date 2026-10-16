@@ -11,6 +11,7 @@ router.use(requireAuth, attachUsuario);
 // la lectura a sus propios pacientes.
 const puedeLeer = requireAnyPermission('paciente.read', 'paciente.read.propios');
 router.get('/', puedeLeer, controller.index);
+router.post('/buscar', puedeLeer, controller.buscar);
 router.get('/:id', puedeLeer, controller.show);
 router.post('/', requirePermission('paciente.write'), controller.store);
 router.patch('/:id', requirePermission('paciente.write'), controller.update);

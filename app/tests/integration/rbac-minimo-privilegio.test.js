@@ -82,7 +82,7 @@ describe('RBAC de mínimo privilegio', () => {
     expect((await agent.get(`/api/pacientes/${pacienteAjeno.id}`)).status).toBe(404);
     expect((await agent.get(`/pacientes/${pacienteAjeno.id}`)).status).toBe(404);
 
-    const porRutAjeno = await agent.get('/api/pacientes').query({ q: '23.232.323-K' });
+    const porRutAjeno = await agent.post('/api/pacientes/buscar').send({ q: '23.232.323-K' });
     expect(porRutAjeno.body.items).toEqual([]);
   });
 

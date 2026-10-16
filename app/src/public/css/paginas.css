@@ -46,6 +46,11 @@
   font-size: 0.85rem;
 }
 
+/* La paginación de una búsqueda va por POST: el término no pasa a la URL. */
+.paginacion-form {
+  display: inline;
+}
+
 .paginacion-nav {
   display: flex;
   gap: 1.5rem;

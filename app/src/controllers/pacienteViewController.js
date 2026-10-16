@@ -23,10 +23,14 @@ const pacienteSchema = Joi.object({
   contacto: Joi.string().trim().min(5).max(100).empty(''),
 }).unknown(true); // el formulario HTML envía además el campo _csrf
 
+// La búsqueda llega por POST (/pacientes/buscar) y se muestra en la misma
+// respuesta: el término no queda en la URL, en el historial ni en la sesión.
+// La paginación de una búsqueda también va por POST.
 async function index(req, res, next) {
   try {
-    const page = Number(req.query.page) || 1;
-    const q = req.query.q || '';
+    const enBusqueda = req.method === 'POST';
+    const page = Number(enBusqueda ? req.body.page : req.query.page) || 1;
+    const q = enBusqueda ? String(req.body.q || '').trim().slice(0, 150) : '';
     const pageSize = 20;
     const { items: pacientes, total } = await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario);
     res.render('pacientes/index', {

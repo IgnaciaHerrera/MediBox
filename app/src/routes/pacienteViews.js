@@ -12,6 +12,7 @@ const router = express.Router();
 router.use(requireAuth, attachUsuario, requireAnyPermission('paciente.read', 'paciente.read.propios'));
 
 router.get('/', controller.index);
+router.post('/buscar', controller.index);
 router.get('/nuevo', requirePermission('paciente.write'), controller.nuevaForm);
 router.post('/nuevo', requirePermission('paciente.write'), controller.crear);
 router.get('/:id/editar', requirePermission('paciente.write'), controller.editarForm);

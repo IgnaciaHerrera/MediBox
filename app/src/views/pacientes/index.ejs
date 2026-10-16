@@ -31,7 +31,8 @@
     <div class="panel-card panel-lista">
       <div class="panel-lista-head">
         <h2>Pacientes registrados</h2>
-        <form method="GET" action="/pacientes" class="buscador-form" role="search">
+        <form method="POST" action="/pacientes/buscar" class="buscador-form" role="search">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <label for="q" class="sr-only">Buscar por nombre o RUT</label>
           <div class="buscador-wrap">
             <svg class="buscador-lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -83,8 +84,14 @@
         <div class="paginacion panel-lista-pie">
           <span class="paginacion-info"><%= total %> paciente<%= total === 1 ? '' : 's' %> en total — página <%= page %> de <%= totalPaginas %></span>
           <div class="paginacion-nav">
-            <% if (page > 1) { %><a href="/pacientes?page=<%= page - 1 %>&q=<%= encodeURIComponent(q) %>" class="btn btn-neutro btn--auto btn--control">← Anterior</a><% } %>
-            <% if (page < totalPaginas) { %><a href="/pacientes?page=<%= page + 1 %>&q=<%= encodeURIComponent(q) %>" class="btn btn-neutro btn--auto btn--control">Siguiente →</a><% } %>
+            <% if (q) { %>
+              <%# Con una búsqueda, la página siguiente también va por POST: el término no pasa a la URL. %>
+              <% if (page > 1) { %><form method="POST" action="/pacientes/buscar" class="paginacion-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><input type="hidden" name="q" value="<%= q %>" /><button name="page" value="<%= page - 1 %>" class="btn btn-neutro btn--auto btn--control">← Anterior</button></form><% } %>
+              <% if (page < totalPaginas) { %><form method="POST" action="/pacientes/buscar" class="paginacion-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>" /><input type="hidden" name="q" value="<%= q %>" /><button name="page" value="<%= page + 1 %>" class="btn btn-neutro btn--auto btn--control">Siguiente →</button></form><% } %>
+            <% } else { %>
+              <% if (page > 1) { %><a href="/pacientes?page=<%= page - 1 %>" class="btn btn-neutro btn--auto btn--control">← Anterior</a><% } %>
+              <% if (page < totalPaginas) { %><a href="/pacientes?page=<%= page + 1 %>" class="btn btn-neutro btn--auto btn--control">Siguiente →</a><% } %>
+            <% } %>
           </div>
         </div>
       <% } %>
