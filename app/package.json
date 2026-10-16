@@ -18,6 +18,7 @@
     "recordatorios": "node src/recordatorios.js",
     "supresiones:reaplicar": "node src/supresiones.js",
     "alertas": "node src/alertas.js",
+    "incidente:alcance": "node src/incidente.js",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
