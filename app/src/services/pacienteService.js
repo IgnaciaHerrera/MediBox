@@ -349,6 +349,24 @@ async function contactoParaVerificacion(pacienteId, solicitante) {
 }
 
 /**
+ * Contactos en claro de varios pacientes, para un proceso del sistema que
+ * ya comprobó el consentimiento de cada uno (recordatorios). No audita por
+ * paciente: el proceso deja su propia fila con el conteo.
+ *
+ * @param {number[]} pacienteIds
+ * @returns {Promise<Map<number, string>>} solo los que tienen contacto.
+ *
+ * Consumidores: recordatorioService.enviarRecordatorios.
+ */
+async function contactosParaProceso(pacienteIds) {
+  const filas = await prisma.paciente.findMany({
+    where: { id: { in: pacienteIds }, contactoCifrado: { not: null } },
+    select: { id: true, contactoCifrado: true },
+  });
+  return new Map(filas.map((f) => [f.id, descifrar('paciente.contacto', f.contactoCifrado)]));
+}
+
+/**
  * Fecha del último cambio de un campo del paciente.
  *
  * @param {number} pacienteId
@@ -412,17 +430,27 @@ async function listarPacientes({ page = 1, pageSize = 20, q } = {}, solicitante)
  * de gestión no los necesita (Hito 1, flujo F4). Se audita.
  *
  * @param {number} usuarioId - quien exporta.
+ * @param {{pacienteIds?: number[], finalidad?: string}} [opciones] - para el
+ *   reporte de investigación: solo los pacientes con ese consentimiento
+ *   vigente (la finalidad queda en la auditoría).
  * @returns {Promise<Array<{paciente: string, tramoEtario: string, anioRegistro: number, citas: number}>>}
  *
- * Consumidores: datosViewController.exportarPacientes.
+ * Consumidores: datosViewController.exportarPacientes y exportarInvestigacion.
  */
-async function listarSeudonimizadoParaExport(usuarioId) {
+async function listarSeudonimizadoParaExport(usuarioId, { pacienteIds, finalidad } = {}) {
   const filas = await prisma.paciente.findMany({
+    where: pacienteIds ? { id: { in: pacienteIds } } : {},
     select: { id: true, fechaNacimientoCifrada: true, createdAt: true, _count: { select: { citas: { where: { anulada: false } } } } },
     orderBy: { id: 'asc' },
   });
 
-  await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Paciente', entidadId: 0 });
+  await registrar({
+    usuarioId,
+    accion: 'EXPORT',
+    entidad: finalidad ? 'Investigacion' : 'Paciente',
+    entidadId: 0,
+    ...(finalidad ? { detalle: { finalidad, pacientes: filas.length } } : {}),
+  });
   return filas.map((fila) => ({
     paciente: seudonimo(fila.id),
     tramoEtario: tramoEtario(edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada))),
@@ -445,6 +473,7 @@ module.exports = {
   ultimoCambioDe,
   exigirAlcance,
   edadDe,
+  contactosParaProceso,
   contactoParaVerificacion,
   listarPacientes,
   listarSeudonimizadoParaExport,

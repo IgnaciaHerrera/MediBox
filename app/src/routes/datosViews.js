@@ -23,6 +23,7 @@ router.get('/', (req, res, next) => {
 // que el rol no podría leer por otra vía. El reporte de pacientes es la
 // excepción: está seudonimizado y no identifica a nadie.
 router.get('/exportar/pacientes.csv', requirePermission('data.export'), controller.exportarPacientes);
+router.get('/exportar/investigacion.csv', requirePermission('data.export'), controller.exportarInvestigacion);
 router.get(
   '/exportar/citas.csv',
   requirePermission('data.export'),

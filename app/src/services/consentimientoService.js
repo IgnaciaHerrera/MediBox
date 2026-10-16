@@ -234,8 +234,32 @@ async function tieneVigente(pacienteId, finalidadClave) {
   return Boolean(estado) && estado.estado === 'vigente';
 }
 
+/**
+ * Pacientes que tienen vigente el consentimiento de una finalidad: su último
+ * otorgamiento no está revocado y es sobre el texto vigente. Lo consultan los
+ * procesos de esa finalidad justo antes de tratar los datos.
+ *
+ * @param {string} finalidadClave
+ * @returns {Promise<number[]>} ids de pacientes.
+ *
+ * Consumidores: recordatorioService, datosViewController (reporte de investigación).
+ */
+async function pacientesConVigente(finalidadClave) {
+  const finalidad = await finalidadPorClave(finalidadClave);
+  const [vigente] = finalidad.textos;
+  // El último otorgamiento de cada paciente para esta finalidad.
+  const ultimos = await prisma.consentimiento.findMany({
+    where: { finalidadId: finalidad.id },
+    distinct: ['pacienteId'],
+    orderBy: [{ pacienteId: 'asc' }, { id: 'desc' }],
+    select: { pacienteId: true, revocadoEl: true, textoId: true },
+  });
+  return ultimos.filter((c) => !c.revocadoEl && c.textoId === vigente.id).map((c) => c.pacienteId);
+}
+
 module.exports = {
   CANALES,
+  pacientesConVigente,
   RELACIONES,
   EDAD_CONSENTIMIENTO_PROPIO,
   METODOS_CONSENTIMIENTO,

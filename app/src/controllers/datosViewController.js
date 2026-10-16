@@ -3,6 +3,7 @@ const pacienteService = require('../services/pacienteService');
 const citaService = require('../services/citaService');
 const auditService = require('../services/auditService');
 const datosService = require('../services/datosService');
+const consentimientoService = require('../services/consentimientoService');
 const { toCsv } = require('../lib/csv');
 const { AppError } = require('../lib/AppError');
 
@@ -46,6 +47,9 @@ function enviarCsv(res, nombreArchivo, contenido) {
 // un permiso de lectura extra porque no contiene la identidad de nadie.
 const ENTIDADES_EXPORTABLES = [
   { entidad: 'Paciente', etiqueta: 'Pacientes (seudonimizado)', permiso: 'data.export', url: '/datos/exportar/pacientes.csv' },
+  // Solo pacientes con el consentimiento "investigación" vigente: revocarlo
+  // los saca del reporte siguiente.
+  { entidad: 'Investigacion', etiqueta: 'Pacientes para investigación (con consentimiento)', permiso: 'data.export', url: '/datos/exportar/investigacion.csv' },
   { entidad: 'Cita', etiqueta: 'Agenda de citas', permiso: 'agenda.read', url: '/datos/exportar/citas.csv' },
   { entidad: 'AuditLog', etiqueta: 'Registro de auditoría', permiso: 'auditoria.read', url: '/datos/exportar/auditoria.csv' },
 ];
@@ -89,6 +93,17 @@ async function exportarPacientes(req, res, next) {
     const filas = await pacienteService.listarSeudonimizadoParaExport(req.usuario.id);
     const csv = toCsv(['paciente', 'tramoEtario', 'anioRegistro', 'citas'], filas);
     enviarCsv(res, 'pacientes-seudonimizado.csv', csv);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportarInvestigacion(req, res, next) {
+  try {
+    const pacienteIds = await consentimientoService.pacientesConVigente('investigacion');
+    const filas = await pacienteService.listarSeudonimizadoParaExport(req.usuario.id, { pacienteIds, finalidad: 'investigacion' });
+    const csv = toCsv(['paciente', 'tramoEtario', 'anioRegistro', 'citas'], filas);
+    enviarCsv(res, 'pacientes-investigacion.csv', csv);
   } catch (err) {
     next(err);
   }
@@ -173,4 +188,4 @@ async function importarEspacios(req, res, next) {
   }
 }
 
-module.exports = { index, exportarPacientes, exportarCitas, exportarAuditoria, importarEspacios };
+module.exports = { index, exportarPacientes, exportarInvestigacion, exportarCitas, exportarAuditoria, importarEspacios };
