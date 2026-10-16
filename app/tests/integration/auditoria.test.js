@@ -30,6 +30,9 @@ describe('GET /api/auditoria', () => {
     const res = await agent.get('/api/auditoria');
     expect(res.status).toBe(200);
     expect(res.body.total).toBeGreaterThanOrEqual(1);
+    // Solo el nombre de quien actuó: nunca el hash ni el correo de su cuenta.
+    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|\$2[aby]\$|email/);
+    expect(Object.keys(res.body.items[0].usuario).sort()).toEqual(['id', 'nombre']);
   });
 
   it('filters by accion, entidad and usuarioId', async () => {

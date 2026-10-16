@@ -1,12 +1,25 @@
 const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
 
+// De la cuenta vinculada solo se trae el correo, que la vista de médicos
+// muestra como contacto institucional. Nunca la fila completa: incluiría el
+// hash de la contraseña.
+const INCLUDE_MEDICO = { especialidad: true, usuario: { select: { id: true, email: true } } };
+
+/**
+ * Lista los médicos con su especialidad y el correo de su cuenta, si tienen.
+ *
+ * @returns {Promise<Array<object>>} médicos ordenados por nombre.
+ *
+ * Consumidores: medicoController.index, medicoViewController,
+ *   agendaViewController, usuarioViewController.
+ */
 async function listar() {
-  return prisma.medico.findMany({ include: { especialidad: true, usuario: true }, orderBy: { nombre: 'asc' } });
+  return prisma.medico.findMany({ include: INCLUDE_MEDICO, orderBy: { nombre: 'asc' } });
 }
 
 async function obtenerPorId(id) {
-  const medico = await prisma.medico.findUnique({ where: { id }, include: { especialidad: true, usuario: true } });
+  const medico = await prisma.medico.findUnique({ where: { id }, include: INCLUDE_MEDICO });
   if (!medico) throw new AppError('Médico no encontrado', 404);
   return medico;
 }

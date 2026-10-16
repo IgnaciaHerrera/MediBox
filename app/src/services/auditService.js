@@ -1,5 +1,9 @@
 const { prisma } = require('../lib/prisma');
 
+// De quien actuó basta su nombre: la fila completa del usuario incluye el
+// hash de su contraseña y su correo, y la API de auditoría la devolvería.
+const INCLUDE_USUARIO = { usuario: { select: { id: true, nombre: true } } };
+
 async function registrar({ usuarioId, accion, entidad, entidadId }, client = prisma) {
   await client.auditLog.create({ data: { usuarioId, accion, entidad, entidadId } });
 }
@@ -25,7 +29,7 @@ async function listar({ page = 1, pageSize = 20, accion, entidad, usuarioId, des
       orderBy: { timestamp: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-      include: { usuario: true },
+      include: INCLUDE_USUARIO,
     }),
     prisma.auditLog.count({ where }),
   ]);
@@ -38,7 +42,7 @@ async function listarTodo(usuarioId, { accion, desde, hasta } = {}) {
   const items = await prisma.auditLog.findMany({
     where: construirWhere({ accion, desde, hasta }),
     orderBy: { timestamp: 'desc' },
-    include: { usuario: true },
+    include: INCLUDE_USUARIO,
   });
   await registrar({ usuarioId, accion: 'EXPORT', entidad: 'AuditLog', entidadId: 0 });
   return items;
@@ -48,7 +52,7 @@ async function obtenerUltimoRegistro({ accion, entidad }) {
   return prisma.auditLog.findFirst({
     where: { accion, entidad },
     orderBy: { timestamp: 'desc' },
-    include: { usuario: true },
+    include: INCLUDE_USUARIO,
   });
 }
 
@@ -56,7 +60,7 @@ async function listarPorEntidad(entidad, entidadId) {
   return prisma.auditLog.findMany({
     where: { entidad, entidadId },
     orderBy: { timestamp: 'asc' },
-    include: { usuario: true },
+    include: INCLUDE_USUARIO,
   });
 }
 

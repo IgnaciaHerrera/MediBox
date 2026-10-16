@@ -8,10 +8,29 @@ const crearSchema = Joi.object({
   usuarioId: Joi.number().integer().positive().allow(null, '').optional(),
 });
 
+/**
+ * Forma pública de un médico en la API: lo que necesita quien arma la agenda
+ * (nombre y especialidad). De la cuenta vinculada solo se informa si existe;
+ * el correo y el id de usuario quedan fuera.
+ *
+ * @param {object} medico - fila de medicoService.listar().
+ * @returns {{id: number, nombre: string, especialidad: {id: number, nombre: string}, tieneCuenta: boolean}}
+ *
+ * Consumidores: index().
+ */
+function aRespuesta(medico) {
+  return {
+    id: medico.id,
+    nombre: medico.nombre,
+    especialidad: { id: medico.especialidad.id, nombre: medico.especialidad.nombre },
+    tieneCuenta: Boolean(medico.usuarioId),
+  };
+}
+
 async function index(req, res, next) {
   try {
     const medicos = await medicoService.listar();
-    res.json(medicos);
+    res.json(medicos.map(aRespuesta));
   } catch (err) {
     next(err);
   }

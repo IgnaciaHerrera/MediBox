@@ -39,6 +39,17 @@ describe('POST /api/medicos', () => {
     await prisma.$disconnect();
   });
 
+  it('lists médicos without exposing the linked account (hash, email)', async () => {
+    const { agent, loginRes } = await loginAgent(app, { email: 'medico-user-test@medibox.local', password });
+    expect(loginRes.status).toBe(200);
+    const res = await agent.get('/api/medicos');
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThan(0);
+    const texto = JSON.stringify(res.body);
+    expect(texto).not.toMatch(/passwordHash|\$2[aby]\$|email/);
+    expect(Object.keys(res.body[0]).sort()).toEqual(['especialidad', 'id', 'nombre', 'tieneCuenta']);
+  });
+
   it('rejects creation from a non-admin role with 403', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'medico-user-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
