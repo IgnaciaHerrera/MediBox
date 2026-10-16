@@ -31,6 +31,36 @@ function hashCodigo(sal, codigo) {
 }
 
 /**
+ * Genera un código de un solo uso y las columnas que se guardan de él (nunca
+ * el código mismo).
+ *
+ * @returns {{codigo: string, codigoHash: Buffer, sal: Buffer, expiraEl: Date}}
+ *
+ * Consumidores: enviarCodigo(), portalService.solicitarIngreso.
+ */
+function nuevoCodigo() {
+  const codigo = String(crypto.randomInt(10 ** DIGITOS_CODIGO)).padStart(DIGITOS_CODIGO, '0');
+  const sal = crypto.randomBytes(16);
+  return { codigo, codigoHash: hashCodigo(sal, codigo), sal, expiraEl: new Date(Date.now() + MINUTOS_CODIGO * 60 * 1000) };
+}
+
+/**
+ * Si el contacto del paciente lleva al menos 24 horas sin cambiar (y no
+ * cambió después de `desde`): solo a un contacto así se envía un código.
+ *
+ * @param {number} pacienteId
+ * @param {Date} creadoEl - alta del paciente, si el contacto nunca cambió.
+ * @param {Date} [desde] - recepción de la solicitud.
+ * @returns {Promise<boolean>}
+ *
+ * Consumidores: enviarCodigo(), portalService.solicitarIngreso.
+ */
+async function contactoEstable(pacienteId, creadoEl, desde) {
+  const registradoEl = (await pacienteService.ultimoCambioDe(pacienteId, 'contacto')) || creadoEl;
+  return registradoEl <= minutosAntes(HORAS_CONTACTO_ESTABLE * 60) && !(desde && registradoEl >= desde);
+}
+
+/**
  * Registra que el funcionario vio en persona la cédula del titular.
  *
  * @param {number} pacienteId
@@ -69,8 +99,7 @@ async function enviarCodigo(pacienteId, solicitante, { desde } = {}) {
   if (!contacto) {
     throw new AppError('El paciente no tiene un contacto registrado: verifica con su cédula en la próxima visita', 409);
   }
-  const registradoEl = (await pacienteService.ultimoCambioDe(pacienteId, 'contacto')) || createdAt;
-  if (registradoEl > minutosAntes(HORAS_CONTACTO_ESTABLE * 60) || (desde && registradoEl >= desde)) {
+  if (!(await contactoEstable(pacienteId, createdAt, desde))) {
     throw new AppError('El contacto cambió recientemente: el código solo se envía a un contacto registrado antes de la petición', 409);
   }
 
@@ -80,15 +109,14 @@ async function enviarCodigo(pacienteId, solicitante, { desde } = {}) {
     data: { expiraEl: new Date() },
   });
 
-  const codigo = String(crypto.randomInt(10 ** DIGITOS_CODIGO)).padStart(DIGITOS_CODIGO, '0');
-  const sal = crypto.randomBytes(16);
-  const expiraEl = new Date(Date.now() + MINUTOS_CODIGO * 60 * 1000);
+  const { codigo, ...columnas } = nuevoCodigo();
   const fila = await prisma.verificacionIdentidad.create({
-    data: { pacienteId, metodo: METODOS.CODIGO, verificadaPorId: solicitante.id, codigoHash: hashCodigo(sal, codigo), sal, expiraEl },
+    data: { pacienteId, metodo: METODOS.CODIGO, verificadaPorId: solicitante.id, ...columnas },
   });
+  const { expiraEl } = columnas;
 
   try {
-    canalEnvio.enviar(contacto, `Su código de verificación de MediBox es ${codigo}. Dígaselo solo al funcionario que lo atiende. Vence en ${MINUTOS_CODIGO} minutos.`);
+    await canalEnvio.enviar(contacto, `Su código de verificación de MediBox es ${codigo}. Dígaselo solo al funcionario que lo atiende. Vence en ${MINUTOS_CODIGO} minutos.`);
   } catch {
     await prisma.verificacionIdentidad.update({ where: { id: fila.id }, data: { expiraEl: new Date() } });
     throw new AppError('No hay un canal de envío configurado: verifica con la cédula del titular', 409);
@@ -117,18 +145,39 @@ async function confirmarCodigo(pacienteId, codigo, solicitante) {
     orderBy: { id: 'desc' },
   });
 
-  const usable = fila && fila.expiraEl > new Date() && fila.intentos < INTENTOS_MAXIMOS;
-  const correcto = usable && crypto.timingSafeEqual(hashCodigo(fila.sal, String(codigo)), fila.codigoHash);
-
-  if (!correcto) {
-    if (usable) await prisma.verificacionIdentidad.update({ where: { id: fila.id }, data: { intentos: { increment: 1 } } });
+  if (!(await consumirCodigo(fila, codigo))) {
     await registrar({ usuarioId: solicitante.id, accion: 'VERIFICAR_IDENTIDAD', entidad: 'Paciente', entidadId: pacienteId, resultado: 'fallido', detalle: { metodo: METODOS.CODIGO } });
     throw new AppError('Código incorrecto o vencido', 400);
   }
-
-  await prisma.verificacionIdentidad.update({ where: { id: fila.id }, data: { verificadaEl: new Date() } });
   await registrar({ usuarioId: solicitante.id, accion: 'VERIFICAR_IDENTIDAD', entidad: 'Paciente', entidadId: pacienteId, detalle: { metodo: METODOS.CODIGO } });
   return { verificacionId: fila.id };
+}
+
+/**
+ * Prueba un código contra su fila pendiente y, si es correcto, la marca
+ * verificada. Las dos escrituras son condicionales en la base: cada intento
+ * reserva uno de los 5 antes de comparar, así que intentos simultáneos no
+ * superan el tope, y solo uno de dos usos simultáneos del código correcto lo
+ * consume.
+ *
+ * @param {(object|null)} fila - fila de verificaciones_identidad pendiente.
+ * @param {string} codigo - lo que ingresó la persona.
+ * @returns {Promise<boolean>} true solo si el código era correcto y quedó usado.
+ *
+ * Consumidores: confirmarCodigo(), portalService.confirmarIngreso.
+ */
+async function consumirCodigo(fila, codigo) {
+  if (!fila || !fila.codigoHash || fila.expiraEl <= new Date()) return false;
+  const { count: reservado } = await prisma.verificacionIdentidad.updateMany({
+    where: { id: fila.id, verificadaEl: null, intentos: { lt: INTENTOS_MAXIMOS } },
+    data: { intentos: { increment: 1 } },
+  });
+  if (reservado !== 1 || !crypto.timingSafeEqual(hashCodigo(fila.sal, String(codigo)), fila.codigoHash)) return false;
+  const { count: usado } = await prisma.verificacionIdentidad.updateMany({
+    where: { id: fila.id, verificadaEl: null, expiraEl: { gt: new Date() } },
+    data: { verificadaEl: new Date() },
+  });
+  return usado === 1;
 }
 
 /**
@@ -199,6 +248,10 @@ module.exports = {
   verificarConCedula,
   enviarCodigo,
   confirmarCodigo,
+  consumirCodigo,
+  nuevoCodigo,
+  contactoEstable,
+  MINUTOS_CODIGO,
   verificacionVigente,
   exigirVerificacion,
 };

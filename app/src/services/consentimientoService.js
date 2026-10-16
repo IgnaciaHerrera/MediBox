@@ -181,15 +181,16 @@ async function otorgar({ pacienteId, finalidadClave, textoId, canal, representan
  *
  * @param {{pacienteId: number, finalidadClave: string, canal: string}} datos
  * @param {{id: number}} solicitante - req.usuario.
- * @returns {Promise<void>} no hace nada si no había un otorgamiento abierto.
+ * @returns {Promise<number>} cuántos otorgamientos cerró: 0 si no había uno
+ *   abierto (la vista no debe decir "revocado").
  * @throws {AppError} 403 sin una verificación vigente; 400 sin canal.
  *
- * Consumidores: pacienteViewController, derechosService (oposición y supresión).
+ * Consumidores: pacienteViewController.revocarConsentimiento.
  */
 async function revocar({ pacienteId, finalidadClave, canal }, solicitante) {
   validarCanal(canal);
   const verificacion = await exigirVerificacion(pacienteId, solicitante.id, METODOS_CONSENTIMIENTO);
-  await revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId: solicitante.id, verificacionId: verificacion.id });
+  return revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId: solicitante.id, verificacionId: verificacion.id });
 }
 
 /**

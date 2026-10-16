@@ -21,8 +21,9 @@ describe('Alcance de un incidente', () => {
     atacante = await usuarioDePrueba('incidente-atacante@medibox.local', 'operador', password);
     otro = await usuarioDePrueba('incidente-otro@medibox.local', 'operador', password);
     adulto = await pacienteDePrueba({ nombre: 'Incidente Adulto', fechaNacimiento: '1970-01-01' });
-    const nacimiento = new Date();
-    nacimiento.setFullYear(nacimiento.getFullYear() - 10);
+    // Menor a la fecha del incidente: la edad se calcula a esa fecha, no a la de hoy.
+    const nacimiento = new Date(dia);
+    nacimiento.setUTCFullYear(nacimiento.getUTCFullYear() - 10);
     menor = await pacienteDePrueba({ nombre: 'Incidente Menor', fechaNacimiento: nacimiento.toISOString().slice(0, 10) });
 
     const fila = (datos) => prisma.auditLog.create({ data: { entidad: 'Paciente', timestamp: enUtc(3), ...datos } });

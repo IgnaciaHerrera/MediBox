@@ -54,9 +54,14 @@ describe('Revisión final: bloqueo y supresión de punta a punta', () => {
     const supresion = await prisma.solicitudDerecho.create({
       data: { pacienteId: paciente.id, derecho: 'supresion', canal: 'presencial', venceEl: new Date(), recibidaPorId: operador.id },
     });
-    // La supresión llega con el paciente ya bloqueado: privacidad la verifica con cédula.
-    await agentePrivacidad.post(`/verificacion/${paciente.id}/cedula`).send({ cedulaVista: 'si' });
-    await derechos.verificarSolicitud(supresion.id, privacidad);
+    // La supresión llega con el paciente ya bloqueado: el operador ya no lo
+    // ve, así que la verifica con cédula otra persona de privacidad (cuatro
+    // ojos: quien verifica no ejecuta).
+    const segunda = await usuarioDePrueba('revision-privacidad-2@medibox.local', 'privacidad', password);
+    const { agent: agenteSegunda } = await loginAgent(app, { email: segunda.email, password });
+    await agenteSegunda.post(`/verificacion/${paciente.id}/cedula`).send({ cedulaVista: 'si' });
+    await derechos.verificarSolicitud(supresion.id, { ...privacidad, id: segunda.id });
+    await expect(derechos.ejecutar(supresion.id, { ...privacidad, id: segunda.id }, { respuesta: 'Suprimido.' })).rejects.toMatchObject({ statusCode: 409 });
     await derechos.ejecutar(supresion.id, privacidad, { respuesta: 'Suprimido.' });
 
     expect((await agentePrivacidad.post(`/solicitudes/${bloqueo.id}/desbloquear`)).status).toBe(409);

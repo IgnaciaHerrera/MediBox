@@ -1,6 +1,7 @@
 const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
 const pacienteService = require('./pacienteService');
+const { isoLocal } = require('../lib/fecha');
 
 // Alcance de un incidente (plan de respuesta, Hito 3): a partir de la
 // auditoría, cuántos titulares y qué categorías de datos tocaron los accesos
@@ -74,10 +75,13 @@ async function estimarAlcance({ desde, hasta, usuarioId, conIds = false }) {
   const porCategoria = { identidad: 0, contacto: 0, salud: 0 };
   for (const categorias of categoriasPorTitular.values()) categorias.forEach((c) => (porCategoria[c] += 1));
 
+  // Menor de edad a la fecha del incidente (el fin de la ventana), no a la de
+  // hoy: quien era menor entonces se notifica como menor aunque ya no lo sea.
+  const alISO = isoLocal(hasta).slice(0, 10);
   let menores = 0;
   for (const pacienteId of categoriasPorTitular.keys()) {
     try {
-      if ((await pacienteService.edadDe(pacienteId)) < EDAD_ADULTA) menores += 1;
+      if ((await pacienteService.edadDe(pacienteId, alISO)) < EDAD_ADULTA) menores += 1;
     } catch {
       // Un paciente que ya no está en la base (por ejemplo, de una base restaurada).
     }

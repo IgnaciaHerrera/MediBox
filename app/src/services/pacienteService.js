@@ -250,7 +250,8 @@ function valoresComparables({ nombre, rut, fechaNacimiento, contacto }) {
  * @param {number} usuarioId - quien edita.
  * @param {{solicitudId?: number}} [opciones] - la solicitud de rectificación
  *   que origina el cambio, si la hay. Solo con ella se puede rectificar a un
- *   paciente bloqueado: nadie más lo edita.
+ *   paciente bloqueado: nadie más lo edita. `client`: la transacción en curso
+ *   de quien llama (la ejecución de la solicitud), para que todo sea atómico.
  * @returns {Promise<object>} resumen del paciente.
  * @throws {AppError} 404 si no existe o está bloqueado; 409 si el RUT ya es
  *   de otro paciente.
@@ -258,30 +259,29 @@ function valoresComparables({ nombre, rut, fechaNacimiento, contacto }) {
  * Consumidores: pacienteController.update, pacienteViewController.editar,
  *   derechosService.ejecutar (rectificación).
  */
-async function actualizarPaciente(id, datos, usuarioId, { solicitudId } = {}) {
-  return prisma
-    .$transaction(async (tx) => {
-      const actual = await tx.paciente.findUnique({ where: { id }, select: { ...SELECT_FICHA, bloqueado: true } });
-      // Un paciente bloqueado (o suprimido) no se edita por id directo: un
-      // formulario abierto antes de la supresión no puede devolverle el contacto.
-      if (!actual || (actual.bloqueado && !solicitudId)) throw new AppError('Paciente no encontrado', 404);
+async function actualizarPaciente(id, datos, usuarioId, { solicitudId, client } = {}) {
+  const enTransaccion = (fn) => (client ? fn(client) : prisma.$transaction(fn));
+  return enTransaccion(async (tx) => {
+    const actual = await tx.paciente.findUnique({ where: { id }, select: { ...SELECT_FICHA, bloqueado: true } });
+    // Un paciente bloqueado (o suprimido) no se edita por id directo: un
+    // formulario abierto antes de la supresión no puede devolverle el contacto.
+    if (!actual || (actual.bloqueado && !solicitudId)) throw new AppError('Paciente no encontrado', 404);
 
-      const antes = valoresComparables(ficha(actual));
-      const despues = valoresComparables(datos);
-      const cambios = CAMPOS_RECTIFICABLES.filter((campo) => antes[campo] !== despues[campo]).map((campo) => ({
-        pacienteId: id,
-        campo,
-        valorAnteriorCifrado: antes[campo] === null ? null : cifrar(`historial.${campo}`, antes[campo]),
-        cambiadoPorId: usuarioId,
-        solicitudId: solicitudId || null,
-      }));
+    const antes = valoresComparables(ficha(actual));
+    const despues = valoresComparables(datos);
+    const cambios = CAMPOS_RECTIFICABLES.filter((campo) => antes[campo] !== despues[campo]).map((campo) => ({
+      pacienteId: id,
+      campo,
+      valorAnteriorCifrado: antes[campo] === null ? null : cifrar(`historial.${campo}`, antes[campo]),
+      cambiadoPorId: usuarioId,
+      solicitudId: solicitudId || null,
+    }));
 
-      const fila = await tx.paciente.update({ where: { id }, data: cifrarPaciente(datos), select: SELECT_RESUMEN });
-      if (cambios.length > 0) await tx.historialCambio.createMany({ data: cambios });
-      await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id, detalle: { campos: cambios.map((c) => c.campo) } }, tx);
-      return resumen(fila);
-    })
-    .catch(traducirErrorPrisma);
+    const fila = await tx.paciente.update({ where: { id }, data: cifrarPaciente(datos), select: SELECT_RESUMEN });
+    if (cambios.length > 0) await tx.historialCambio.createMany({ data: cambios });
+    await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id, detalle: { campos: cambios.map((c) => c.campo) } }, tx);
+    return resumen(fila);
+  }).catch(traducirErrorPrisma);
 }
 
 /**
@@ -325,15 +325,17 @@ async function exigirAlcance(pacienteId, solicitante) {
  * dato a nadie (como contar()).
  *
  * @param {number} pacienteId
+ * @param {string} [alISO] - fecha de referencia "AAAA-MM-DD"; por omisión, hoy.
  * @returns {Promise<number>} años cumplidos.
  * @throws {AppError} 404 si no existe.
  *
- * Consumidores: consentimientoService.otorgar, derechosService.
+ * Consumidores: consentimientoService.otorgar, derechosService,
+ *   incidenteService (edad a la fecha del incidente), portalService.
  */
-async function edadDe(pacienteId) {
+async function edadDe(pacienteId, alISO) {
   const fila = await prisma.paciente.findUnique({ where: { id: pacienteId }, select: { fechaNacimientoCifrada: true } });
   if (!fila) throw new AppError('Paciente no encontrado', 404);
-  return edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada));
+  return edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada), alISO);
 }
 
 /**
@@ -396,21 +398,23 @@ async function contactosParaProceso(pacienteIds) {
  *
  * @param {number} pacienteId
  * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
- * @param {{solicitudId: number}} opciones
- * @returns {Promise<object>} ficha con bloqueado y bloqueadoEl.
+ * @param {{solicitudId: number, completa?: boolean}} opciones - completa
+ *   (por omisión) solo con la solicitud abierta; si no, únicamente el nombre.
+ * @returns {Promise<object>} ficha (o id y nombre) con bloqueado y bloqueadoEl.
  * @throws {AppError} 403 sin derechos.gestionar; 404 si no existe.
  *
  * Consumidores: derechosService.obtenerParaGestion.
  */
-async function obtenerFichaParaGestion(pacienteId, solicitante, { solicitudId }) {
+async function obtenerFichaParaGestion(pacienteId, solicitante, { solicitudId, completa = true }) {
   if (!solicitante.permisos.includes('derechos.gestionar')) throw new AppError('Permiso insuficiente', 403);
   const fila = await prisma.paciente.findUnique({
     where: { id: pacienteId },
-    select: { ...SELECT_FICHA, bloqueado: true, bloqueadoEl: true },
+    select: { ...(completa ? SELECT_FICHA : { id: true, nombreCifrado: true }), bloqueado: true, bloqueadoEl: true },
   });
   if (!fila) throw new AppError('Paciente no encontrado', 404);
-  await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId } });
-  return { ...ficha(fila), bloqueado: fila.bloqueado, bloqueadoEl: fila.bloqueadoEl };
+  await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, ...(completa ? {} : { alcance: 'nombre' }) } });
+  const datos = completa ? ficha(fila) : { id: fila.id, nombre: descifrar('paciente.nombre', fila.nombreCifrado), contacto: null };
+  return { ...datos, bloqueado: fila.bloqueado, bloqueadoEl: fila.bloqueadoEl };
 }
 
 /**

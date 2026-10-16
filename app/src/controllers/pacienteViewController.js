@@ -254,8 +254,8 @@ async function otorgarConsentimiento(req, res, next) {
 async function revocarConsentimiento(req, res, next) {
   try {
     const value = validar(revocarSchema, req.body);
-    await consentimientoService.revocar({ pacienteId: Number(req.params.id), finalidadClave: req.params.clave, canal: value.canal }, req.usuario);
-    responderAccion(req, res, 'Consentimiento revocado');
+    const revocados = await consentimientoService.revocar({ pacienteId: Number(req.params.id), finalidadClave: req.params.clave, canal: value.canal }, req.usuario);
+    responderAccion(req, res, revocados > 0 ? 'Consentimiento revocado' : 'No había un consentimiento abierto que revocar', { revocados });
   } catch (err) {
     next(err);
   }

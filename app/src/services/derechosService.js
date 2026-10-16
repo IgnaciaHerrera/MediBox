@@ -4,6 +4,7 @@ const { AppError } = require('../lib/AppError');
 const { cifrar, descifrar } = require('../lib/cifrado');
 const { TRATAMIENTO } = require('../lib/tratamiento');
 const { normalizarRut, rutValido } = require('../lib/rut');
+const { logger } = require('../lib/logger');
 const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
 const citaService = require('./citaService');
@@ -255,11 +256,16 @@ function exigirVerificada(solicitud) {
   }
 }
 
+// Cierra la solicitud solo si sigue verificada: es una escritura condicional,
+// así que de dos ejecuciones simultáneas (un doble clic) solo una la cierra y
+// la otra falla. Quien llama la hace antes de los efectos y en la misma
+// transacción: la segunda espera el bloqueo de la fila y no repite nada.
 async function cerrar(solicitud, solicitante, { estado, respuesta, entrega }, client = prisma) {
-  await client.solicitudDerecho.update({
-    where: { id: solicitud.id },
+  const { count } = await client.solicitudDerecho.updateMany({
+    where: { id: solicitud.id, estado: 'verificada' },
     data: { estado, respuestaCifrada: cifrar('solicitud.respuesta', respuesta), resueltaEl: new Date(), resueltaPorId: solicitante.id, ...(entrega ? { entrega } : {}) },
   });
+  if (count !== 1) throw new AppError('La solicitud ya se resolvió', 409);
   await registrar(
     {
       usuarioId: solicitante.id,
@@ -270,6 +276,17 @@ async function cerrar(solicitud, solicitante, { estado, respuesta, entrega }, cl
     },
     client,
   );
+}
+
+// Lo irreversible (supresión y bloqueo) lo ejecuta una persona distinta de
+// quien verificó la identidad del titular: nadie puede, solo, verificar a un
+// supuesto titular y borrar sus datos (cuatro ojos).
+const IRREVERSIBLES = ['supresion', 'bloqueo'];
+
+function exigirCuatroOjos(solicitud, solicitante) {
+  if (IRREVERSIBLES.includes(solicitud.derecho) && solicitud.verificadaPorId === solicitante.id) {
+    throw new AppError('La supresión y el bloqueo los ejecuta una persona distinta de quien verificó la identidad del titular', 409);
+  }
 }
 
 /**
@@ -304,7 +321,11 @@ async function listarPendientes(solicitante) {
  */
 async function obtenerParaGestion(solicitudId, solicitante) {
   const solicitud = await solicitudOError(solicitudId);
-  const paciente = await pacienteService.obtenerFichaParaGestion(solicitud.pacienteId, solicitante, { solicitudId });
+  // Con la solicitud cerrada ya no hace falta la ficha completa: solo quién
+  // es el titular y si está bloqueado (para levantar el bloqueo o registrar
+  // una solicitud nueva). Así una solicitud vieja no reabre su ficha.
+  const abierta = solicitud.estado === 'recibida' || solicitud.estado === 'verificada';
+  const paciente = await pacienteService.obtenerFichaParaGestion(solicitud.pacienteId, solicitante, { solicitudId, completa: abierta });
   return {
     solicitud: {
       ...solicitud,
@@ -317,8 +338,8 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       motivoBloqueo: paciente.bloqueado ? await motivoBloqueoDe(solicitud.pacienteId) : null,
       suprimido: Boolean(await supresionResueltaDe(solicitud.pacienteId)),
     },
-    consentimientos: await consentimientoService.estadoPorPaciente(solicitud.pacienteId),
-    historial: await pacienteService.listarHistorial(solicitud.pacienteId),
+    consentimientos: abierta ? await consentimientoService.estadoPorPaciente(solicitud.pacienteId) : [],
+    historial: abierta ? await pacienteService.listarHistorial(solicitud.pacienteId) : [],
   };
 }
 
@@ -347,40 +368,59 @@ async function ejecutar(solicitudId, solicitante, datos) {
     throw new AppError('El acceso y la portabilidad se resuelven al generar el archivo del titular', 409);
   }
 
+  exigirCuatroOjos(solicitud, solicitante);
+
+  // En cada caso se cierra primero (escritura condicional) y después se
+  // aplican los efectos, en la misma transacción: todo o nada, y una
+  // ejecución repetida no aplica nada dos veces.
   if (solicitud.derecho === 'rectificacion') {
-      const actual = await pacienteService.datosParaTitular(pacienteId);
+    const actual = await pacienteService.datosParaTitular(pacienteId);
     const valor = descifrar(`solicitud.valor.${solicitud.campo}`, solicitud.valorPropuestoCifrado);
-    await pacienteService.actualizarPaciente(pacienteId, { ...actual, [solicitud.campo]: valor }, solicitante.id, { solicitudId });
-    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta });
+    await prisma.$transaction(async (tx) => {
+      await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
+      await pacienteService.actualizarPaciente(pacienteId, { ...actual, [solicitud.campo]: valor }, solicitante.id, { solicitudId, client: tx });
+    });
     return;
   }
 
   if (solicitud.derecho === 'oposicion') {
-    await consentimientoService.revocarAbiertos(pacienteId, { finalidadClave: solicitud.finalidadClave, canal: solicitud.canal, usuarioId: solicitante.id, verificacionId: solicitud.verificacionId });
-    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta });
+    await prisma.$transaction(async (tx) => {
+      await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
+      await consentimientoService.revocarAbiertos(pacienteId, { finalidadClave: solicitud.finalidadClave, canal: solicitud.canal, usuarioId: solicitante.id, verificacionId: solicitud.verificacionId }, tx);
+    });
     return;
   }
 
   // Supresión y bloqueo: lo que la ley no obliga a conservar se elimina de
-  // verdad; lo clínico se conserva bloqueado. Todo o nada.
+  // verdad; lo clínico se conserva bloqueado.
   await prisma.$transaction(async (tx) => {
+    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
     if (solicitud.derecho === 'supresion') {
       await pacienteService.suprimirContacto(pacienteId, marca, tx);
       await consentimientoService.revocarAbiertos(pacienteId, { canal: solicitud.canal, usuarioId: solicitante.id, verificacionId: solicitud.verificacionId }, tx);
       await tx.consentimiento.updateMany({ where: { pacienteId, representanteCifrado: { not: null } }, data: { representanteCifrado: null } });
     }
     await pacienteService.cambiarBloqueo(pacienteId, true, marca, tx);
-    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
   });
-
-  // La supresión queda anotada fuera de la base, para reaplicarla si se
-  // restaura un respaldo anterior.
-  if (solicitud.derecho === 'supresion') registrarSupresion(pacienteId, solicitudId);
 
   // Un paciente bloqueado no se atiende con lo agendado: se anulan sus citas
   // futuras (cada una auditada y avisada al médico, como cualquier anulación).
   for (const citaId of await citaService.futurasDe(pacienteId)) {
     await citaService.anularCita(citaId, solicitante.id);
+  }
+
+  // La supresión queda anotada fuera de la base, para reaplicarla si se
+  // restaura un respaldo anterior. Ya está aplicada y respondida: si el
+  // archivo no se puede escribir, no se le devuelve un error al funcionario
+  // (repetirla daría 409), sino que queda en la auditoría como fallida para
+  // que el administrador la anote a mano antes de cualquier restauración.
+  if (solicitud.derecho === 'supresion') {
+    try {
+      registrarSupresion(pacienteId, solicitudId);
+    } catch (err) {
+      logger.error({ err: { code: err.code }, solicitudId }, 'No se pudo anotar la supresión en registro/supresiones.jsonl');
+      await registrar({ actor: 'sistema', accion: 'ANOTAR_SUPRESION', entidad: 'Paciente', entidadId: pacienteId, resultado: 'fallido', detalle: { solicitudId } });
+    }
   }
 }
 
