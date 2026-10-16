@@ -121,6 +121,10 @@ describe('RBAC de mínimo privilegio', () => {
     expect((await agent.get('/api/pacientes')).status).toBe(403);
     expect((await agent.get(`/pacientes/${pacientePropio.id}`)).status).toBe(403);
     expect((await agent.get('/api/auditoria')).status).toBe(403);
+    // Sin agenda.read, el menú y el panel no lo llevan a una página que le daría 403.
+    const panel = await agent.get('/dashboard');
+    expect(panel.status).toBe(200);
+    expect(panel.text).not.toContain('href="/agenda"');
   });
 
   it('el gestor audita y exporta, pero no lee pacientes ni agenda citas', async () => {

@@ -51,6 +51,7 @@
     <% } %>
 
     <div class="dash-columns">
+      <% if (agendaHoy) { %>
       <div class="panel-card">
         <div class="panel-card-head">
           <span class="panel-card-icono" aria-hidden="true"><%- ICONOS.agenda %></span>
@@ -76,6 +77,7 @@
         <% } %>
         <a class="btn-link btn-link-block" href="<%= agendaHoy.href %>"><%= agendaHoy.total > agendaHoy.items.length ? 'Ver las ' + agendaHoy.total + ' citas de hoy' : 'Ver agenda completa' %> →</a>
       </div>
+      <% } %>
 
       <div class="panel-card">
         <div class="panel-card-head">

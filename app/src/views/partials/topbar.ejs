@@ -65,7 +65,9 @@
       </button>
     </div>
     <a href="/dashboard" <%- navAttrs('dashboard') %>><%- icono('panel') %>Panel</a>
-    <a href="/agenda" <%- navAttrs('agenda') %>><%- icono('agenda') %>Agenda</a>
+    <% if (usuario.permisos.includes('agenda.read')) { %>
+      <a href="/agenda" <%- navAttrs('agenda') %>><%- icono('agenda') %>Agenda</a>
+    <% } %>
     <% if (usuario.rolNombre === 'medico') { %>
       <a href="/agenda/mia" <%- navAttrs('mia') %>><%- icono('mia') %>Mi agenda</a>
     <% } %>

@@ -91,7 +91,8 @@ async function dashboard(req, res, next) {
     const hoy = hoyISO();
 
     const stats = [];
-    let agendaHoy = { titulo: 'Agenda de hoy', href: '/agenda', items: [], total: 0 };
+    // Sin agenda.read (el admin) no hay panel de agenda: su enlace daría 403.
+    let agendaHoy = permisos.includes('agenda.read') ? { titulo: 'Agenda de hoy', href: '/agenda', items: [], total: 0 } : null;
     const atajos = [];
 
     if (permisos.includes('agenda.write')) atajos.push({ etiqueta: 'Nueva cita', href: '/agenda/nueva', icono: 'agenda' });
