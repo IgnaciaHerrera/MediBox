@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const DERECHOS = { acceso: 'Acceso', portabilidad: 'Portabilidad', rectificacion: 'Rectificación', supresion: 'Supresión', bloqueo: 'Bloqueo', oposicion: 'Oposición' };
+  const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo' };
+  const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
+  const METODOS = { cedula_presencial: 'cédula en persona', codigo_contacto: 'código al contacto registrado' };
+  const ESTADOS = { recibida: 'Pendiente de verificación', verificada: 'Verificada', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+  const QUE_HACE = {
+    acceso: 'Genera una copia de todos los datos del titular (JSON).',
+    portabilidad: 'Genera una copia de todos los datos del titular (JSON), para llevarlos a otro responsable.',
+    rectificacion: 'Aplica el valor propuesto a la ficha, con historial del cambio.',
+    supresion: 'Elimina el contacto, los consentimientos y los datos del representante, y bloquea lo clínico, que la ley obliga a conservar. Anula sus citas futuras.',
+    bloqueo: 'Bloquea al paciente: se conserva, pero no se usa para nada. Anula sus citas futuras.',
+    oposicion: 'Revoca el consentimiento del uso al que se opone.',
+  };
+  const s = solicitud;
+  const abierta = s.estado === 'recibida' || s.estado === 'verificada';
+  const esArchivo = s.derecho === 'acceso' || s.derecho === 'portabilidad';
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'solicitudes' }) %>
+
+  <main class="page-main">
+    <a class="volver" href="/solicitudes">← Volver a solicitudes</a>
+    <div class="page-head">
+      <div>
+        <h1><%= DERECHOS[s.derecho] %>: <%= paciente.nombre %></h1>
+        <p class="page-sub">
+          Recibida el <%= fechaDMA(isoLocal(s.recibidaEl).slice(0, 10)) %> (<%= CANALES[s.canal].toLowerCase() %>) · vence el <%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %> · <%= ESTADOS[s.estado] %>
+          <% if (s.metodoVerificacion) { %> con <%= METODOS[s.metodoVerificacion] %><% } %>
+        </p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Qué pide</h2></div>
+      <p><%= QUE_HACE[s.derecho] %></p>
+      <% if (s.solicitanteEsRepresentante) { %><p class="aviso">La presenta su representante (<%= s.solicitanteRelacion %>).</p><% } %>
+      <% if (s.derecho === 'rectificacion') { %>
+        <p><strong><%= CAMPOS[s.campo] %></strong>: el valor propuesto es <strong><%= s.valorPropuesto %></strong>. Revísalo antes de aplicarlo.</p>
+      <% } %>
+      <% if (s.derecho === 'oposicion') { %><p>Uso al que se opone: <strong><%= s.finalidadClave %></strong>.</p><% } %>
+      <% if (paciente.bloqueado) { %><p class="aviso">Paciente bloqueado: <%= paciente.motivoBloqueo %></p><% } %>
+      <% if (s.respuesta) { %><p>Respuesta registrada: <%= s.respuesta %></p><% } %>
+      <p class="ayuda">Método aceptado: <%= s.metodosAceptados.map(function(m) { return METODOS[m]; }).join(' o ') %>.</p>
+    </section>
+
+    <% if (s.estado === 'recibida') { %>
+      <section class="panel-card panel-lista">
+        <div class="panel-lista-head"><h2>Verificar la identidad</h2></div>
+        <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
+        <form method="POST" action="/solicitudes/<%= s.id %>/verificar">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button type="submit" class="btn btn-primary btn--auto btn--control">Adjuntar la verificación a la solicitud</button>
+        </form>
+        <p class="ayuda">Si no se puede verificar ahora, la solicitud queda pendiente hasta la próxima visita del titular. No se rechaza por eso.</p>
+      </section>
+    <% } %>
+
+    <% if (s.estado === 'verificada' && esArchivo) { %>
+      <section class="panel-card panel-lista">
+        <div class="panel-lista-head"><h2>Generar el archivo del titular</h2></div>
+        <% if (!reautenticado) { %>
+          <form class="consentimiento-fila" method="POST" action="/solicitudes/reautenticar">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <label for="reaut">Confirma tu contraseña</label>
+            <input id="reaut" type="password" name="password" autocomplete="current-password" required />
+            <button type="submit" class="btn btn-neutro btn--auto btn--control">Confirmar</button>
+          </form>
+        <% } else { %>
+          <form class="consentimiento-fila" method="POST" action="/solicitudes/<%= s.id %>/descargar">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <select name="entrega" required aria-label="Cómo se entrega">
+              <option value="">¿Cómo se entrega?</option>
+              <option value="presencial">En persona</option>
+              <option value="contacto_registrado">Al contacto registrado</option>
+            </select>
+            <button type="submit" class="btn btn-primary btn--auto btn--control">Generar y descargar</button>
+          </form>
+        <% } %>
+        <p class="ayuda">El archivo se entrega solo en persona o al contacto que ya estaba registrado, nunca por el canal por el que llamaron.</p>
+      </section>
+    <% } %>
+
+    <% if (s.estado === 'verificada' && !esArchivo) { %>
+      <section class="panel-card panel-lista">
+        <div class="panel-lista-head"><h2>Resolver</h2></div>
+        <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/ejecutar">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <label for="respuesta">Respuesta al titular</label>
+          <textarea id="respuesta" name="respuesta" rows="3" maxlength="2000" required></textarea>
+          <button type="submit" class="btn btn-primary btn--auto btn--control">Ejecutar y responder</button>
+        </form>
+      </section>
+    <% } %>
+
+    <% if (s.estado === 'verificada') { %>
+      <section class="panel-card panel-lista">
+        <div class="panel-lista-head"><h2>Rechazar por el fondo</h2></div>
+        <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/rechazar">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <label for="motivo-rechazo">Motivo, para el titular</label>
+          <textarea id="motivo-rechazo" name="respuesta" rows="2" maxlength="2000" required></textarea>
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Rechazar</button>
+        </form>
+      </section>
+    <% } %>
+
+    <% if (s.derecho === 'bloqueo' && s.estado === 'resuelta' && paciente.bloqueado) { %>
+      <section class="panel-card panel-lista">
+        <div class="panel-lista-head"><h2>Levantar el bloqueo</h2></div>
+        <form method="POST" action="/solicitudes/<%= s.id %>/desbloquear">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">La situación se aclaró: desbloquear</button>
+        </form>
+      </section>
+    <% } %>
+  </main>
+</body>
+</html>

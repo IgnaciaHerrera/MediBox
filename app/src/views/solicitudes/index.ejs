@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const DERECHOS = { acceso: 'Acceso', portabilidad: 'Portabilidad', rectificacion: 'Rectificación', supresion: 'Supresión', bloqueo: 'Bloqueo', oposicion: 'Oposición' };
+  const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo' };
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'solicitudes' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <div>
+        <h1>Solicitudes de derechos</h1>
+        <p class="page-sub">Abiertas, de la más próxima a vencer a la más lejana. Plazo de respuesta: <%= plazoDias %> días corridos desde la recepción (a confirmar con la línea jurídica).</p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista">
+      <% if (solicitudes.length === 0) { %>
+        <p class="panel-lista-vacio">No hay solicitudes abiertas.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
+              <tr><th>Vence</th><th>Titular</th><th>Derecho</th><th>Canal</th><th>Estado</th><th><span class="sr-only">Abrir</span></th></tr>
+            </thead>
+            <tbody>
+              <% solicitudes.forEach(function(s) { %>
+                <tr>
+                  <td class="tiempo<%= s.dentroDePlazo ? '' : ' solicitud-pendiente' %>"><%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %><%= s.dentroDePlazo ? '' : ' (vencida)' %></td>
+                  <td><%= s.paciente %></td>
+                  <td><%= DERECHOS[s.derecho] %></td>
+                  <td><%= CANALES[s.canal] %></td>
+                  <td>
+                    <% if (s.pendienteDeVerificacion) { %>
+                      <span class="badge badge-agendada">Pendiente de verificación</span>
+                    <% } else { %>
+                      <span class="badge badge-atendido">Verificada</span>
+                    <% } %>
+                  </td>
+                  <td><a class="btn btn-neutro btn--auto btn--control" href="/solicitudes/<%= s.id %>">Abrir</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  </main>
+</body>
+</html>

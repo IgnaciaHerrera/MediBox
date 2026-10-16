@@ -7,7 +7,7 @@ const verificacionService = require('../services/verificacionService');
 const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { toast } = require('../lib/toast');
-const { volver } = require('../lib/responderError');
+const { responderAccion } = require('../lib/responderError');
 const { hoyISO } = require('../lib/fecha');
 
 const pacienteSchema = Joi.object({
@@ -225,15 +225,6 @@ const revocarSchema = Joi.object({
   canal: Joi.string().valid(...consentimientoService.CANALES).required().messages({ 'any.only': 'Indica por qué canal llegó la petición', 'any.required': 'Indica por qué canal llegó la petición' }),
 }).unknown(true);
 
-// Un formulario de la ficha vuelve a ella con un aviso; la API, JSON.
-function responderFormulario(req, res, mensaje) {
-  if (req.accepts(['json', 'html']) === 'html') {
-    toast(req, mensaje);
-    return volver(req, res);
-  }
-  return res.json({ ok: true, mensaje });
-}
-
 function validar(schema, cuerpo) {
   const { error, value } = schema.validate(cuerpo);
   if (error) throw new AppError(error.details[0].message, 400);
@@ -250,7 +241,7 @@ async function otorgarConsentimiento(req, res, next) {
       { pacienteId: Number(req.params.id), finalidadClave: req.params.clave, textoId: value.textoId, canal: value.canal, representante },
       req.usuario,
     );
-    responderFormulario(req, res, 'Consentimiento registrado');
+    responderAccion(req, res, 'Consentimiento registrado');
   } catch (err) {
     next(err);
   }
@@ -260,7 +251,7 @@ async function revocarConsentimiento(req, res, next) {
   try {
     const value = validar(revocarSchema, req.body);
     await consentimientoService.revocar({ pacienteId: Number(req.params.id), finalidadClave: req.params.clave, canal: value.canal }, req.usuario);
-    responderFormulario(req, res, 'Consentimiento revocado');
+    responderAccion(req, res, 'Consentimiento revocado');
   } catch (err) {
     next(err);
   }
@@ -269,11 +260,7 @@ async function revocarConsentimiento(req, res, next) {
 async function registrarSolicitud(req, res, next) {
   try {
     const { id } = await derechosService.registrarSolicitud({ ...req.body, pacienteId: Number(req.params.id) }, req.usuario);
-    if (req.accepts(['json', 'html']) === 'html') {
-      toast(req, 'Solicitud registrada. Verifica la identidad del titular para que privacidad pueda resolverla.');
-      return volver(req, res);
-    }
-    return res.json({ ok: true, id });
+    return responderAccion(req, res, 'Solicitud registrada. Verifica la identidad del titular para que privacidad pueda resolverla.', { id });
   } catch (err) {
     return next(err);
   }
@@ -282,7 +269,7 @@ async function registrarSolicitud(req, res, next) {
 async function verificarSolicitud(req, res, next) {
   try {
     await derechosService.verificarSolicitud(Number(req.params.sid), req.usuario, { pacienteId: Number(req.params.id) });
-    responderFormulario(req, res, 'Solicitud verificada');
+    responderAccion(req, res, 'Solicitud verificada');
   } catch (err) {
     next(err);
   }

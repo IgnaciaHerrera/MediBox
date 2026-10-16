@@ -5,7 +5,7 @@ const { toast } = require('../lib/toast');
 // Orden de "menor a mayor" privilegio, para que la matriz se lea como una
 // progresión de acceso en vez del orden alfabético (que dejaría a `admin`
 // primero por azar).
-const ORDEN_ROLES = ['consulta', 'operador', 'medico', 'gestor', 'admin'];
+const ORDEN_ROLES = ['consulta', 'operador', 'medico', 'privacidad', 'gestor', 'admin'];
 
 const ORDEN_DOMINIOS = ['dashboard', 'agenda', 'box', 'medicos', 'paciente', 'consentimiento', 'derechos', 'notificaciones', 'auditoria', 'data', 'admin'];
 
@@ -39,6 +39,7 @@ const ETIQUETAS_PERMISO = {
   'paciente.write': 'Crear y editar pacientes',
   'consentimiento.write': 'Registrar consentimientos y revocaciones',
   'derechos.registrar': 'Recibir solicitudes de derechos y verificar al titular',
+  'derechos.gestionar': 'Resolver solicitudes de derechos (privacidad)',
   'notificaciones.read': 'Ver notificaciones',
   'auditoria.read': 'Ver registro de auditoría',
   'data.import': 'Importar datos',

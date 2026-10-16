@@ -231,6 +231,61 @@ async function listarPorPaciente(pacienteId) {
   return citas.map(descifrarMotivo);
 }
 
+/**
+ * Citas de un paciente para la exportación a él mismo (acceso y
+ * portabilidad): sin ids internos ni quién las editó.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<Array<{fecha: string, horaInicio: string, horaFin: string,
+ *   estado: string, anulada: boolean, box: string, pasillo: string, medico: string,
+ *   especialidad: string, motivoConsulta: ?string}>>}
+ *
+ * Consumidores: derechosService.exportarDatosTitular.
+ */
+async function listarParaTitular(pacienteId) {
+  const citas = await prisma.cita.findMany({
+    where: { pacienteId },
+    orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
+    select: {
+      fecha: true,
+      horaInicio: true,
+      horaFin: true,
+      estado: true,
+      anulada: true,
+      motivoConsultaCifrado: true,
+      box: { select: { nombre: true, pasillo: { select: { nombre: true } } } },
+      medico: { select: { nombre: true, especialidad: { select: { nombre: true } } } },
+    },
+  });
+  return citas.map((c) => ({
+    fecha: c.fecha.toISOString().slice(0, 10),
+    horaInicio: c.horaInicio,
+    horaFin: c.horaFin,
+    estado: c.estado,
+    anulada: c.anulada,
+    box: c.box.nombre,
+    pasillo: c.box.pasillo.nombre,
+    medico: c.medico.nombre,
+    especialidad: c.medico.especialidad.nombre,
+    motivoConsulta: c.motivoConsultaCifrado ? descifrar('cita.motivoConsulta', c.motivoConsultaCifrado) : null,
+  }));
+}
+
+/**
+ * Ids de las citas futuras y vigentes de un paciente, para anularlas cuando
+ * se bloquea.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<number[]>}
+ *
+ * Consumidores: derechosService.ejecutar.
+ */
+async function futurasDe(pacienteId) {
+  const desde = new Date(new Date().toISOString().slice(0, 10));
+  const citas = await prisma.cita.findMany({ where: { pacienteId, anulada: false, estado: 'agendada', fecha: { gte: desde } }, select: { id: true } });
+  return citas.map((c) => c.id);
+}
+
 // Motivo de una cita, para su detalle. Igual que listarPorPaciente, solo se
 // usa junto con la lectura auditada del paciente.
 async function obtenerMotivo(citaId) {
@@ -283,6 +338,8 @@ async function listarTodasParaExport(usuarioId, filtros = {}) {
 }
 
 module.exports = {
+  listarParaTitular,
+  futurasDe,
   ESTADOS_CITA,
   verificarConflicto,
   crearCita,

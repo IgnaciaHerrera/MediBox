@@ -50,6 +50,8 @@ function puedeLeerPacientes(solicitante) {
 function alcanceDe(solicitante) {
   if (solicitante.permisos.includes('paciente.read')) return {};
   if (puedeLeerPacientes(solicitante)) return { citas: { some: { medico: { usuarioId: solicitante.id } } } };
+  // Privacidad: solo los pacientes con una solicitud de derechos abierta.
+  if (solicitante.permisos.includes('derechos.gestionar')) return { solicitudes: { some: { estado: { in: ['recibida', 'verificada'] } } } };
   throw new AppError('Permiso insuficiente', 403);
 }
 
@@ -367,6 +369,99 @@ async function contactosParaProceso(pacienteIds) {
 }
 
 /**
+ * Ficha de un paciente para resolver una de sus solicitudes de derechos
+ * (rol privacidad). Lee también a un paciente bloqueado, y la lectura queda
+ * auditada con la solicitud que la justifica.
+ *
+ * @param {number} pacienteId
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @param {{solicitudId: number}} opciones
+ * @returns {Promise<object>} ficha con bloqueado y bloqueadoEl.
+ * @throws {AppError} 403 sin derechos.gestionar; 404 si no existe.
+ *
+ * Consumidores: derechosService.obtenerParaGestion.
+ */
+async function obtenerFichaParaGestion(pacienteId, solicitante, { solicitudId }) {
+  if (!solicitante.permisos.includes('derechos.gestionar')) throw new AppError('Permiso insuficiente', 403);
+  const fila = await prisma.paciente.findUnique({
+    where: { id: pacienteId },
+    select: { ...SELECT_FICHA, bloqueado: true, bloqueadoEl: true },
+  });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
+  await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId } });
+  return { ...ficha(fila), bloqueado: fila.bloqueado, bloqueadoEl: fila.bloqueadoEl };
+}
+
+/**
+ * Datos de identidad y contacto en claro, para la exportación al propio
+ * titular. Sin auditoría propia: la exportación deja EXPORT_TITULAR.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<{nombre: string, rut: string, fechaNacimiento: string, contacto: ?string, registradoEl: Date}>}
+ *
+ * Consumidores: derechosService.exportarDatosTitular.
+ */
+async function datosParaTitular(pacienteId) {
+  const fila = await prisma.paciente.findUnique({ where: { id: pacienteId }, select: SELECT_FICHA });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
+  const { nombre, rut, fechaNacimiento, contacto, createdAt } = ficha(fila);
+  return { nombre, rut, fechaNacimiento, contacto, registradoEl: createdAt };
+}
+
+/**
+ * Nombres de varios pacientes, para la lista de solicitudes de privacidad.
+ * La lectura queda auditada como un listado.
+ *
+ * @param {number[]} pacienteIds
+ * @param {number} usuarioId
+ * @returns {Promise<Map<number, string>>}
+ *
+ * Consumidores: derechosService.listarPendientes.
+ */
+async function nombresDe(pacienteIds, usuarioId) {
+  const filas = await prisma.paciente.findMany({ where: { id: { in: pacienteIds } }, select: { id: true, nombreCifrado: true } });
+  await registrar({ usuarioId, accion: 'LIST', entidad: 'Paciente', entidadId: 0, detalle: { motivo: 'solicitudes' } });
+  return new Map(filas.map((f) => [f.id, descifrar('paciente.nombre', f.nombreCifrado)]));
+}
+
+/**
+ * Supresión del contacto por un derecho del titular: lo deja en NULL y deja
+ * constancia en el historial del cambio, pero SIN el valor anterior (guardarlo
+ * anularía la supresión).
+ *
+ * @param {number} pacienteId
+ * @param {{usuarioId: number, solicitudId: number}} datos
+ * @param {object} client - la transacción en curso.
+ * @returns {Promise<void>}
+ *
+ * Consumidores: derechosService.ejecutar (supresión).
+ */
+async function suprimirContacto(pacienteId, { usuarioId, solicitudId }, client) {
+  const fila = await client.paciente.findUnique({ where: { id: pacienteId }, select: { contactoCifrado: true } });
+  if (!fila || !fila.contactoCifrado) return;
+  await client.paciente.update({ where: { id: pacienteId }, data: { contactoCifrado: null } });
+  await client.historialCambio.create({ data: { pacienteId, campo: 'contacto', valorAnteriorCifrado: null, cambiadoPorId: usuarioId, solicitudId } });
+}
+
+/**
+ * Bloquea o desbloquea a un paciente. Bloqueado, se conserva pero no se usa:
+ * no aparece en listados ni al agendar, y sale de reportes y procesos. El
+ * motivo queda en la solicitud que lo origina.
+ *
+ * @param {number} pacienteId
+ * @param {boolean} bloquear
+ * @param {{usuarioId: number, solicitudId: number}} datos
+ * @param {object} [client] - prisma o la transacción en curso.
+ * @returns {Promise<void>}
+ *
+ * Consumidores: derechosService.ejecutar y desbloquear.
+ */
+async function cambiarBloqueo(pacienteId, bloquear, { usuarioId, solicitudId }, client = prisma) {
+  await client.paciente.update({ where: { id: pacienteId }, data: { bloqueado: bloquear, bloqueadoEl: bloquear ? new Date() : null } });
+  await registrar({ usuarioId, accion: bloquear ? 'BLOQUEAR' : 'DESBLOQUEAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId } }, client);
+}
+
+/**
  * Fecha del último cambio de un campo del paciente.
  *
  * @param {number} pacienteId
@@ -473,6 +568,11 @@ module.exports = {
   ultimoCambioDe,
   exigirAlcance,
   edadDe,
+  obtenerFichaParaGestion,
+  datosParaTitular,
+  nombresDe,
+  suprimirContacto,
+  cambiarBloqueo,
   contactosParaProceso,
   contactoParaVerificacion,
   listarPacientes,

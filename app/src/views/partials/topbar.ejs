@@ -27,7 +27,7 @@
     return `<svg class="topbar-icon" ${extra} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${trazos[nombre]}</svg>`;
   }
 
-  const etiquetasRol = { admin: 'Administrador', medico: 'Médico', gestor: 'Gestor', consulta: 'Consulta', operador: 'Operador' };
+  const etiquetasRol = { admin: 'Administrador', medico: 'Médico', gestor: 'Gestor', consulta: 'Consulta', operador: 'Operador', privacidad: 'Privacidad' };
   const rolVisible = etiquetasRol[usuario.rolNombre] || usuario.rolNombre;
   // Si el nombre ya dice el rol ("Administrador MediBox") no lo repetimos.
   const mostrarRol = !usuario.nombre.toLowerCase().includes(rolVisible.toLowerCase());
@@ -36,7 +36,8 @@
   const verUsuarios = usuario.permisos.includes('admin.users');
   const verRoles = usuario.permisos.includes('admin.roles');
   const verDatos = usuario.permisos.includes('data.export') || usuario.permisos.includes('data.import');
-  const hayAdmin = verAuditoria || verUsuarios || verRoles || verDatos;
+  const verSolicitudes = usuario.permisos.includes('derechos.gestionar');
+  const hayAdmin = verAuditoria || verUsuarios || verRoles || verDatos || verSolicitudes;
 
   const noLeidas = usuario.notificacionesNoLeidas;
 %>
@@ -79,6 +80,7 @@
     <% } %>
     <a href="/medicos" <%- navAttrs('medicos') %>><%- icono('medicos') %>Médicos</a>
     <% if (hayAdmin) { %>
+      <% if (verSolicitudes) { %><a href="/solicitudes" <%- navAttrs('solicitudes') %>><%- icono('auditoria') %>Solicitudes</a><% } %>
       <% if (verAuditoria) { %><a href="/auditoria" <%- navAttrs('auditoria') %>><%- icono('auditoria') %>Auditoría</a><% } %>
       <% if (verUsuarios) { %><a href="/usuarios" <%- navAttrs('usuarios') %>><%- icono('usuarios') %>Usuarios</a><% } %>
       <% if (verRoles) { %><a href="/roles" <%- navAttrs('roles') %>><%- icono('roles') %>Roles</a><% } %>

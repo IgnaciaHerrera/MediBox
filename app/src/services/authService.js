@@ -62,4 +62,19 @@ async function buscarIdPorEmail(email) {
   return usuario ? usuario.id : null;
 }
 
-module.exports = { hashPassword, verifyPassword, autenticar, buscarIdPorEmail };
+/**
+ * Comprueba la contraseña de un usuario ya autenticado (reautenticación
+ * antes de una acción sensible, como generar el archivo de un titular).
+ *
+ * @param {number} usuarioId
+ * @param {string} password
+ * @returns {Promise<boolean>}
+ *
+ * Consumidores: solicitudViewController.reautenticar.
+ */
+async function verificarContrasena(usuarioId, password) {
+  const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId }, select: { passwordHash: true } });
+  return Boolean(usuario) && verifyPassword(String(password || ''), usuario.passwordHash);
+}
+
+module.exports = { hashPassword, verifyPassword, autenticar, buscarIdPorEmail, verificarContrasena };

@@ -47,12 +47,23 @@ function responderNoAutenticado(req, res) {
 }
 
 /**
- * Vuelve a la página anterior (de este mismo sitio) después de un formulario.
+ * Responde una acción de un formulario: el navegador vuelve a la página
+ * anterior (de este mismo sitio) con un aviso; la API y los tests reciben JSON.
  *
- * Consumidores: routes/verificacion.js y los formularios de la ficha.
+ * @param {object} req
+ * @param {object} res
+ * @param {string} mensaje - el aviso.
+ * @param {object} [datos] - campos extra para la respuesta JSON.
+ *
+ * Consumidores: routes/verificacion.js, pacienteViewController,
+ *   solicitudViewController.
  */
-function volver(req, res) {
-  return res.redirect(paginaAnterior(req));
+function responderAccion(req, res, mensaje, datos = {}) {
+  if (pideHtml(req)) {
+    toast(req, mensaje);
+    return res.redirect(paginaAnterior(req));
+  }
+  return res.json({ ok: true, mensaje, ...datos });
 }
 
-module.exports = { responderError, responderNoAutenticado, volver };
+module.exports = { responderError, responderNoAutenticado, responderAccion };

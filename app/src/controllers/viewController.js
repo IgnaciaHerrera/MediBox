@@ -28,6 +28,7 @@ const ACCIONES = {
   'estado.propias': 'atender las propias',
   historial: 'ver historial',
   registrar: 'recibir',
+  gestionar: 'resolver',
   import: 'importar',
   export: 'exportar',
   users: 'usuarios',

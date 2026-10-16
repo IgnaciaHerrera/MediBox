@@ -5,8 +5,7 @@ const { attachUsuario } = require('../middleware/attachUsuario');
 const { requireAnyPermission } = require('../middleware/requirePermission');
 const verificacion = require('../services/verificacionService');
 const { AppError } = require('../lib/AppError');
-const { toast } = require('../lib/toast');
-const { volver } = require('../lib/responderError');
+const { responderAccion: responder } = require('../lib/responderError');
 
 const router = express.Router();
 
@@ -23,16 +22,7 @@ function pacienteIdDe(req) {
   return id;
 }
 
-// Un formulario de la ficha vuelve a la página con un aviso; la API recibe
-// JSON. En ningún caso la respuesta lleva el código.
-function responder(req, res, mensaje, datos = {}) {
-  if (req.accepts(['json', 'html']) === 'html') {
-    toast(req, mensaje);
-    return volver(req, res);
-  }
-  return res.json({ ok: true, mensaje, ...datos });
-}
-
+// En ningún caso la respuesta lleva el código: solo a dónde se envió.
 router.post('/:pacienteId/cedula', async (req, res, next) => {
   try {
     const pacienteId = pacienteIdDe(req);
