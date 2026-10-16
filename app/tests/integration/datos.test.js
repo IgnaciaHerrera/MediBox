@@ -7,10 +7,6 @@ const { seudonimo } = require('../../src/services/pacienteService');
 describe('Importación y exportación de datos (data.export / data.import)', () => {
   const password = 'Password123!';
   let usuarioExportador;
-  let usuarioSinPermisos;
-  let usuarioSoloExport;
-  let usuarioSoloImport;
-  let usuarioOperador;
   let rolSoloExport;
   let rolSoloImport;
   let pacienteId;
@@ -48,22 +44,22 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
       update: {},
       create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolGestor.id },
     });
-    usuarioSinPermisos = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'datos-sinpermisos-test@medibox.local' },
       update: {},
       create: { nombre: 'Sin Permisos Datos Test', email: 'datos-sinpermisos-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolConsulta.id },
     });
-    usuarioSoloExport = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'datos-soloexport-test@medibox.local' },
       update: {},
       create: { nombre: 'Solo Export Test', email: 'datos-soloexport-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolSoloExport.id },
     });
-    usuarioSoloImport = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'datos-soloimport-test@medibox.local' },
       update: {},
       create: { nombre: 'Solo Import Test', email: 'datos-soloimport-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolSoloImport.id },
     });
-    usuarioOperador = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'datos-operador-test@medibox.local' },
       update: {},
       create: { nombre: 'Operador Datos Test', email: 'datos-operador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolOperador.id },
@@ -77,6 +73,8 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     const pasillosImportados = await prisma.pasillo.findMany({
       where: { nombre: { in: ['Pasillo Import Test', 'Pasillo Import Test 2'] } },
     });
@@ -88,19 +86,6 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     if (pacienteId) {
       await prisma.paciente.deleteMany({ where: { id: pacienteId } });
     }
-    await prisma.auditLog.deleteMany({
-      where: {
-        usuarioId: {
-          in: [usuarioExportador.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id],
-        },
-      },
-    });
-    await prisma.usuario.deleteMany({
-      where: { id: { in: [usuarioExportador.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id] } },
-    });
-    const rolesTest = [rolSoloExport.id, rolSoloImport.id];
-    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: rolesTest } } });
-    await prisma.rol.deleteMany({ where: { id: { in: rolesTest } } });
     await prisma.$disconnect();
   });
 

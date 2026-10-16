@@ -50,7 +50,7 @@ describe('citaService.crearCita — transacción Serializable y reintento', () =
 
     expect(resultado).toEqual({ id: 42 });
     expect(txAuditCreate).toHaveBeenCalledWith({
-      data: { usuarioId: 99, accion: 'CREATE', entidad: 'Cita', entidadId: 42 },
+      data: expect.objectContaining({ usuarioId: 99, accion: 'CREATE', entidad: 'Cita', entidadId: 42 }),
     });
     expect(prisma.auditLog.create).not.toHaveBeenCalled();
   });

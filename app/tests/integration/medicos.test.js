@@ -5,7 +5,6 @@ const { cifrarPaciente } = require('../../src/services/pacienteService');
 const { loginAgent } = require('../helpers/csrf');
 
 describe('POST /api/medicos', () => {
-  let usuarioAdmin;
   let usuarioMedico;
   let especialidad;
   const password = 'Password123!';
@@ -14,7 +13,7 @@ describe('POST /api/medicos', () => {
     especialidad = await prisma.especialidad.upsert({ where: { nombre: 'Neurología' }, update: {}, create: { nombre: 'Neurología' } });
     const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
     const rolMedico = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'medico' } });
-    usuarioAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'medico-admin-test@medibox.local' },
       update: {},
       create: { nombre: 'Admin Test', email: 'medico-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
@@ -27,6 +26,8 @@ describe('POST /api/medicos', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { medico: { nombre: 'Dr. Con Citas Test' } } });
     // Limpieza defensiva: borra cualquier médico que este archivo haya creado
     // en esta corrida o en una anterior interrumpida (Medico.nombre no es
@@ -34,8 +35,6 @@ describe('POST /api/medicos', () => {
     await prisma.medico.deleteMany({
       where: { nombre: { in: ['Dr. Rechazado', 'Dr. Aceptado', 'Dr. Aceptado Editado', 'Dr. Con Citas Test', 'Dr. Para Eliminar Test'] } },
     });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [usuarioAdmin.id, usuarioMedico.id] } } });
-    await prisma.usuario.deleteMany({ where: { id: { in: [usuarioAdmin.id, usuarioMedico.id] } } });
     await prisma.$disconnect();
   });
 

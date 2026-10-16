@@ -28,8 +28,10 @@ describe('Plazos de conservación', () => {
 
   beforeAll(async () => {
     const rol = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'medico' } });
-    usuario = await prisma.usuario.create({
-      data: { nombre: 'Retencion Test', email: 'retencion-test@medibox.local', passwordHash: await bcrypt.hash('x', 4), rolId: rol.id },
+    usuario = await prisma.usuario.upsert({
+      where: { email: 'retencion-test@medibox.local' },
+      update: {},
+      create: { nombre: 'Retencion Test', email: 'retencion-test@medibox.local', passwordHash: await bcrypt.hash('x', 4), rolId: rol.id },
     });
     especialidad = await prisma.especialidad.create({ data: { nombre: 'Especialidad Retencion Test' } });
     medico = await prisma.medico.create({ data: { nombre: 'Dr. Retencion Test', especialidadId: especialidad.id } });
@@ -48,11 +50,12 @@ describe('Plazos de conservación', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     const ids = Object.values(pacientes).map((p) => p.id);
     await prisma.cita.deleteMany({ where: { pacienteId: { in: ids } } });
     await prisma.paciente.deleteMany({ where: { id: { in: ids } } });
     await prisma.notificacion.deleteMany({ where: { usuarioId: usuario.id } });
-    await prisma.usuario.delete({ where: { id: usuario.id } });
     await prisma.medico.delete({ where: { id: medico.id } });
     await prisma.especialidad.delete({ where: { id: especialidad.id } });
     await prisma.box.delete({ where: { id: box.id } });
@@ -78,5 +81,13 @@ describe('Plazos de conservación', () => {
     // Idempotente: una segunda pasada no encuentra nada nuevo que borrar.
     const segunda = await aplicarRetencion();
     expect(segunda.notificacionesEliminadas).toBe(0);
+  });
+
+  it('deja RETENCION en la auditoría con actor sistema y los conteos en detalle', async () => {
+    const antes = new Date();
+    const resumen = await aplicarRetencion();
+    const fila = await prisma.auditLog.findFirst({ where: { accion: 'RETENCION', timestamp: { gte: antes } }, orderBy: { id: 'desc' } });
+    expect(fila).toMatchObject({ actor: 'sistema', usuarioId: null, entidad: 'Sistema', entidadId: 0 });
+    expect(fila.detalle).toEqual(resumen);
   });
 });

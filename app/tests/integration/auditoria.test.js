@@ -19,8 +19,8 @@ describe('GET /api/auditoria', () => {
   });
 
   afterAll(async () => {
-    await prisma.auditLog.deleteMany({ where: { usuarioId: usuarioGestor.id } });
-    await prisma.usuario.delete({ where: { id: usuarioGestor.id } });
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.$disconnect();
   });
 

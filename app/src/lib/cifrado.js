@@ -38,6 +38,9 @@ const LLAVE_POR_CAMPO = {
 const LLAVE_INDICE_POR_CAMPO = {
   'paciente.rut': 'PACIENTE_RUT_HMAC_KEY',
   'paciente.seudonimo': 'PACIENTE_SEUDONIMO_KEY',
+  // Correo de un inicio de sesión fallido: se cuentan los intentos sobre una
+  // cuenta sin guardar el correo. Es un dato del personal, no del paciente.
+  'auditoria.email': 'AUDITORIA_HMAC_KEY',
 };
 
 const VARIABLES_DE_LLAVE = [
@@ -119,7 +122,7 @@ function descifrar(campo, blob) {
  * @param {string} valor - valor ya normalizado.
  * @returns {Buffer} 32 bytes.
  *
- * Consumidores: services/pacienteService.js.
+ * Consumidores: services/pacienteService.js, services/auditService.js.
  */
 function indiceCiego(campo, valor) {
   const llave = leerLlave(variableDe(LLAVE_INDICE_POR_CAMPO, campo));

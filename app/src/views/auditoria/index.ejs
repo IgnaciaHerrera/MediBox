@@ -129,7 +129,7 @@
                 <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
                 <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
                   <td class="tiempo"><%= fechaDMA(isoLocal(r.timestamp)) %></td>
-                  <td><%= r.usuario ? r.usuario.nombre : '—' %></td>
+                  <td><%= r.usuario ? r.usuario.nombre : (r.actor === 'sistema' ? 'Sistema' : 'Sin cuenta') %></td>
                   <td>
                     <span class="badge-accion badge-accion--<%= categoria %>">
                       <span aria-hidden="true"><%- ICONOS_ACCION[categoria] %></span>
@@ -145,8 +145,12 @@
                   <td colspan="5">
                     <div class="detalle-auditoria">
                       <div class="detalle-auditoria-dato">
-                        <span class="detalle-auditoria-etiqueta">Correo del usuario</span>
-                        <span class="detalle-auditoria-valor"><%= r.usuario ? r.usuario.email : 'Usuario eliminado' %></span>
+                        <span class="detalle-auditoria-etiqueta">Resultado</span>
+                        <span class="detalle-auditoria-valor"><%= { exito: 'Éxito', denegado: 'Denegado', fallido: 'Fallido' }[r.resultado] || r.resultado %></span>
+                      </div>
+                      <div class="detalle-auditoria-dato">
+                        <span class="detalle-auditoria-etiqueta">Desde (IP)</span>
+                        <span class="detalle-auditoria-valor"><%= r.ip || (r.actor === 'sistema' ? 'Proceso del sistema' : '—') %></span>
                       </div>
                       <div class="detalle-auditoria-dato">
                         <span class="detalle-auditoria-etiqueta">Marca de tiempo completa</span>

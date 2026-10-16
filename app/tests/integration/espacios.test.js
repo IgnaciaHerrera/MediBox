@@ -5,7 +5,6 @@ const { cifrarPaciente } = require('../../src/services/pacienteService');
 const { loginAgent } = require('../helpers/csrf');
 
 describe('Espacios físicos', () => {
-  let usuarioGestor;
   let pasillo;
   const password = 'Password123!';
 
@@ -21,7 +20,7 @@ describe('Espacios físicos', () => {
     // real de datos de demo (seed.js) con sus propios boxes encima.
     pasillo = await prisma.pasillo.upsert({ where: { nombre: NOMBRE_PASILLO }, update: {}, create: { nombre: NOMBRE_PASILLO } });
     const rolGestor = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'gestor' } });
-    usuarioGestor = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'espacios-test@medibox.local' },
       update: {},
       create: { nombre: 'Gestor Test', email: 'espacios-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolGestor.id },
@@ -29,6 +28,8 @@ describe('Espacios físicos', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { box: { nombre: 'Box Con Citas Test' } } });
     await prisma.instrumento.deleteMany({
       where: { box: { nombre: { in: ['Box 99', 'Box 100', 'Box 101', 'Box Con Citas Test', 'Box Para Eliminar Test'] } } },
@@ -37,8 +38,6 @@ describe('Espacios físicos', () => {
     await prisma.pasillo.deleteMany({
       where: { nombre: { in: [NOMBRE_PASILLO, 'Pasillo Nuevo Test', 'Pasillo Duplicado Test', 'Pasillo Renombrado Test', 'Pasillo Vacio Test'] } },
     });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: usuarioGestor.id } });
-    await prisma.usuario.delete({ where: { id: usuarioGestor.id } });
     await prisma.$disconnect();
   });
 

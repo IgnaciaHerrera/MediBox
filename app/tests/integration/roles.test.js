@@ -5,8 +5,6 @@ const { loginAgent } = require('../helpers/csrf');
 
 describe('Gestión de roles y permisos (admin.roles)', () => {
   let usuarioAdmin;
-  let usuarioNoAdmin;
-  let usuarioOtroAdmin;
   let rolConsulta;
   let rolPrueba;
   let rolOtroAdmin;
@@ -20,7 +18,7 @@ describe('Gestión de roles y permisos (admin.roles)', () => {
       update: {},
       create: { nombre: 'Admin Roles Test', email: 'roles-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
     });
-    usuarioNoAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'roles-noadmin-test@medibox.local' },
       update: {},
       create: { nombre: 'No Admin Roles Test', email: 'roles-noadmin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolConsulta.id },
@@ -40,7 +38,7 @@ describe('Gestión de roles y permisos (admin.roles)', () => {
       update: {},
       create: { rolId: rolOtroAdmin.id, permisoId: permisoRoles.id },
     });
-    usuarioOtroAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'roles-otroadmin-test@medibox.local' },
       update: {},
       create: { nombre: 'Otro Admin Roles Test', email: 'roles-otroadmin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolOtroAdmin.id },
@@ -48,11 +46,8 @@ describe('Gestión de roles y permisos (admin.roles)', () => {
   });
 
   afterAll(async () => {
-    const usuarios = [usuarioAdmin.id, usuarioNoAdmin.id, usuarioOtroAdmin.id];
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: usuarios } } });
-    await prisma.usuario.deleteMany({ where: { id: { in: usuarios } } });
-    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: [rolPrueba.id, rolOtroAdmin.id] } } });
-    await prisma.rol.deleteMany({ where: { id: { in: [rolPrueba.id, rolOtroAdmin.id] } } });
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.$disconnect();
   });
 

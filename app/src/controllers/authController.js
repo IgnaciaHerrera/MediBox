@@ -1,5 +1,6 @@
 const Joi = require('joi');
-const { autenticar } = require('../services/authService');
+const { autenticar, buscarIdPorEmail } = require('../services/authService');
+const { registrar, indiceEmail } = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
 const { issueCsrfToken } = require('../middleware/csrf');
 
@@ -17,7 +18,20 @@ async function login(req, res, next) {
     if (error) throw new AppError(error.details[0].message, 400);
 
     const usuario = await autenticar(value.email, value.password);
-    if (!usuario) throw new AppError('Credenciales inválidas', 401);
+    if (!usuario) {
+      // Se audita sin el correo en claro: con su HMAC se cuentan los intentos
+      // sobre una misma cuenta, exista o no (alertasService).
+      const usuarioId = await buscarIdPorEmail(value.email);
+      await registrar({
+        usuarioId,
+        accion: 'LOGIN_FALLIDO',
+        entidad: 'Usuario',
+        entidadId: usuarioId || 0,
+        resultado: 'fallido',
+        emailIndice: indiceEmail(value.email),
+      });
+      throw new AppError('Credenciales inválidas', 401);
+    }
 
     // Identificador de sesión nuevo al autenticarse: si alguien logró
     // plantarle a la víctima su propia cookie antes del login (fijación de
@@ -29,6 +43,7 @@ async function login(req, res, next) {
     });
     issueCsrfToken(req, res, () => {});
     req.session.usuarioId = usuario.id;
+    await registrar({ usuarioId: usuario.id, accion: 'LOGIN', entidad: 'Usuario', entidadId: usuario.id });
     // `req.accepts('html')` solo (sin Accept header) sería truthy también para
     // clientes JSON (p. ej. supertest sin cabecera Accept explícita), lo que
     // rompería a los consumidores de la API. Se exige además que el cuerpo de

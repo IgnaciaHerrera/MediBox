@@ -1,4 +1,5 @@
 const { prisma } = require('../lib/prisma');
+const { registrar } = require('./auditService');
 
 // Plazos de conservación del inventario del Hito 1 que vencen antes que el
 // registro clínico. Los que fija la ley no se tocan aquí: pacientes, citas y
@@ -23,8 +24,8 @@ function mesesAntes(fecha, meses) {
  *     avisarle de cambios en sus citas. El resto de la ficha se conserva.
  *
  * Es idempotente: correrlo de nuevo no cambia nada hasta que venza otro
- * plazo. No registra auditoría, porque la tabla exige un usuario y lo corre
- * el sistema; el resumen queda en el log de quien lo ejecuta.
+ * plazo. Queda en la auditoría como acción del sistema, con los conteos y
+ * sin datos personales.
  *
  * @param {Date} [ahora] - fecha de referencia; por omisión, ahora.
  * @returns {Promise<{notificacionesEliminadas: number, contactosEliminados: number}>}
@@ -46,7 +47,9 @@ async function aplicarRetencion(ahora = new Date()) {
     data: { contactoCifrado: null },
   });
 
-  return { notificacionesEliminadas, contactosEliminados };
+  const resumen = { notificacionesEliminadas, contactosEliminados };
+  await registrar({ actor: 'sistema', accion: 'RETENCION', entidad: 'Sistema', entidadId: 0, detalle: resumen });
+  return resumen;
 }
 
 module.exports = { aplicarRetencion };

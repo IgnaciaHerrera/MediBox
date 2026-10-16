@@ -83,16 +83,14 @@ describe('Motivo de consulta en la cita', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { pacienteId: { in: pacienteIds } } });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [escritura.id, lectura.id] } } });
     await prisma.paciente.deleteMany({ where: { id: { in: pacienteIds } } });
     await prisma.box.delete({ where: { id: box.id } });
     await prisma.pasillo.delete({ where: { id: pasillo.id } });
     await prisma.medico.delete({ where: { id: medico.id } });
     await prisma.especialidad.delete({ where: { id: especialidad.id } });
-    await prisma.usuario.deleteMany({ where: { id: { in: [escritura.id, lectura.id] } } });
-    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: [rolEscritura.id, rolLectura.id] } } });
-    await prisma.rol.deleteMany({ where: { id: { in: [rolEscritura.id, rolLectura.id] } } });
     await prisma.$disconnect();
   });
 

@@ -47,4 +47,19 @@ async function autenticar(email, password) {
   return { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rolId: usuario.rolId };
 }
 
-module.exports = { hashPassword, verifyPassword, autenticar };
+/**
+ * Id de la cuenta con ese correo, para auditar un login fallido a nombre de
+ * la cuenta atacada. Se consulta en todo login fallido, exista o no la
+ * cuenta, así que no agrega una diferencia de tiempo entre ambos casos.
+ *
+ * @param {string} email
+ * @returns {Promise<(number|null)>}
+ *
+ * Consumidores: authController.login.
+ */
+async function buscarIdPorEmail(email) {
+  const usuario = await prisma.usuario.findUnique({ where: { email }, select: { id: true } });
+  return usuario ? usuario.id : null;
+}
+
+module.exports = { hashPassword, verifyPassword, autenticar, buscarIdPorEmail };

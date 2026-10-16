@@ -90,14 +90,14 @@ describe('Filtros de la exportación de datos', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { pacienteId: paciente.id } });
     await prisma.paciente.delete({ where: { id: paciente.id } });
     await prisma.box.delete({ where: { id: box.id } });
     await prisma.pasillo.delete({ where: { id: pasillo.id } });
     await prisma.medico.delete({ where: { id: medico.id } });
     await prisma.especialidad.delete({ where: { id: especialidad.id } });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: usuario.id } });
-    await prisma.usuario.delete({ where: { id: usuario.id } });
     await prisma.$disconnect();
   });
 
@@ -146,7 +146,7 @@ describe('Filtros de la exportación de datos', () => {
 
     const soloExport = await agent.get('/datos/exportar/auditoria.csv?accion=EXPORT');
     expect(soloExport.status).toBe(200);
-    const acciones = new Set(filasDe(soloExport.text).map((f) => f[3]));
+    const acciones = new Set(filasDe(soloExport.text).map((f) => f[4]));
     expect([...acciones]).toEqual(['EXPORT']);
 
     const futuro = await agent.get('/datos/exportar/auditoria.csv?desde=2099-01-01');

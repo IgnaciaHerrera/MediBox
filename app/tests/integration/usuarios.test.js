@@ -5,7 +5,6 @@ const { loginAgent } = require('../helpers/csrf');
 
 describe('Gestión de usuarios (admin.users)', () => {
   let usuarioAdmin;
-  let usuarioNoAdmin;
   let rolConsulta;
   const password = 'Password123!';
   const usuarioIdsCreados = [];
@@ -18,7 +17,7 @@ describe('Gestión de usuarios (admin.users)', () => {
       update: {},
       create: { nombre: 'Admin Usuarios Test', email: 'usuarios-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
     });
-    usuarioNoAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'usuarios-noadmin-test@medibox.local' },
       update: {},
       create: { nombre: 'No Admin Test', email: 'usuarios-noadmin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolConsulta.id },
@@ -26,11 +25,11 @@ describe('Gestión de usuarios (admin.users)', () => {
   });
 
   afterAll(async () => {
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [usuarioAdmin.id, usuarioNoAdmin.id] } } });
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     if (usuarioIdsCreados.length > 0) {
       await prisma.usuario.deleteMany({ where: { id: { in: usuarioIdsCreados } } });
     }
-    await prisma.usuario.deleteMany({ where: { id: { in: [usuarioAdmin.id, usuarioNoAdmin.id] } } });
     await prisma.$disconnect();
   });
 

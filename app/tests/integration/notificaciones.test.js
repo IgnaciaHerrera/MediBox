@@ -19,8 +19,9 @@ describe('Notificaciones', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.notificacion.deleteMany({ where: { usuarioId: usuario.id } });
-    await prisma.usuario.delete({ where: { id: usuario.id } });
     await prisma.$disconnect();
   });
 

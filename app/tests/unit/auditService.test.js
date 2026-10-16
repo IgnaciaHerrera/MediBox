@@ -1,5 +1,6 @@
 const { registrar, listar } = require('../../src/services/auditService');
 const { prisma } = require('../../src/lib/prisma');
+const contexto = require('../../src/lib/contexto');
 
 jest.mock('../../src/lib/prisma', () => ({
   prisma: {
@@ -18,8 +19,14 @@ describe('auditService', () => {
     prisma.auditLog.create.mockResolvedValue({});
     await registrar({ usuarioId: 1, accion: 'READ', entidad: 'Paciente', entidadId: 42 });
     expect(prisma.auditLog.create).toHaveBeenCalledWith({
-      data: { usuarioId: 1, accion: 'READ', entidad: 'Paciente', entidadId: 42 },
+      data: { usuarioId: 1, accion: 'READ', entidad: 'Paciente', entidadId: 42, actor: 'usuario', resultado: 'exito', ip: null, emailIndice: null, detalle: undefined },
     });
+  });
+
+  it('registrar toma la ip del contexto de la petición', async () => {
+    prisma.auditLog.create.mockResolvedValue({});
+    await contexto.ejecutar({ ip: '10.0.0.7' }, () => registrar({ usuarioId: 1, accion: 'READ', entidad: 'Paciente', entidadId: 1 }));
+    expect(prisma.auditLog.create.mock.calls[0][0].data.ip).toBe('10.0.0.7');
   });
 
   it('listar paginates and returns total count', async () => {

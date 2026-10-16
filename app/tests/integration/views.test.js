@@ -45,9 +45,8 @@ describe('Views', () => {
       });
     });
 
-    afterAll(async () => {
-      await prisma.usuario.delete({ where: { email: 'test-view-flow@medibox.local' } });
-    });
+    // El usuario de prueba se conserva y se reutiliza con upsert: tiene filas
+    // en la auditoría, que es de solo inserción.
 
     it('logs in via the HTML form, reaches the dashboard, and logs out — all via redirects', async () => {
       const agent = request.agent(app);

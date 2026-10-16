@@ -5,12 +5,11 @@ const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
 
 describe('GET /api/especialidades', () => {
-  let usuario;
   const password = 'Password123!';
 
   beforeAll(async () => {
     const rol = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'medico' } });
-    usuario = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'especialidad-test@medibox.local' },
       update: {},
       create: {
@@ -24,8 +23,9 @@ describe('GET /api/especialidades', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.especialidad.deleteMany({ where: { nombre: { in: ['Especialidad Editada Test'] } } });
-    await prisma.usuario.delete({ where: { id: usuario.id } });
     await prisma.$disconnect();
   });
 
@@ -52,7 +52,7 @@ describe('GET /api/especialidades', () => {
 
   it('allows an admin to rename a specialty', async () => {
     const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
-    const usuarioAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'especialidad-admin-test@medibox.local' },
       update: {},
       create: { nombre: 'Admin Test', email: 'especialidad-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
@@ -66,12 +66,11 @@ describe('GET /api/especialidades', () => {
     expect(res.body.nombre).toBe('Especialidad Editada Test 2');
 
     await prisma.especialidad.delete({ where: { id: especialidad.id } });
-    await prisma.usuario.delete({ where: { id: usuarioAdmin.id } });
   });
 
   it('rejects a duplicate specialty name with 409', async () => {
     const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
-    const usuarioAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'especialidad-admin-test@medibox.local' },
       update: {},
       create: { nombre: 'Admin Test', email: 'especialidad-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
@@ -82,12 +81,11 @@ describe('GET /api/especialidades', () => {
     const res = await agent.post('/api/especialidades').send({ nombre: 'Cardiología' });
     expect(res.status).toBe(409);
 
-    await prisma.usuario.delete({ where: { id: usuarioAdmin.id } });
   });
 
   it('rejects deleting a specialty with médicos assigned, and allows it once empty', async () => {
     const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
-    const usuarioAdmin = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'especialidad-admin-test@medibox.local' },
       update: {},
       create: { nombre: 'Admin Test', email: 'especialidad-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
@@ -107,6 +105,5 @@ describe('GET /api/especialidades', () => {
 
     await prisma.medico.deleteMany({ where: { nombre: 'Dr. Especialidad Test' } });
     await prisma.especialidad.delete({ where: { id: conMedicoRes.body.id } });
-    await prisma.usuario.delete({ where: { id: usuarioAdmin.id } });
   });
 });

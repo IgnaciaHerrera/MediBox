@@ -6,20 +6,18 @@ const { loginAgent } = require('../helpers/csrf');
 const { cifrarPaciente } = require('../../src/services/pacienteService');
 
 describe('Paciente encryption and access control', () => {
-  let usuarioOperador;
-  let usuarioConsulta;
   const password = 'Password123!';
   const pacienteIds = [];
 
   beforeAll(async () => {
     const rolOperador = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'operador' } });
     const rolConsulta = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'consulta' } });
-    usuarioOperador = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'paciente-operador-test@medibox.local' },
       update: {},
       create: { nombre: 'Operador Test', email: 'paciente-operador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolOperador.id },
     });
-    usuarioConsulta = await prisma.usuario.upsert({
+    await prisma.usuario.upsert({
       where: { email: 'paciente-consulta-test@medibox.local' },
       update: {},
       create: { nombre: 'Consulta Test', email: 'paciente-consulta-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolConsulta.id },
@@ -27,11 +25,11 @@ describe('Paciente encryption and access control', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     if (pacienteIds.length > 0) {
       await prisma.$executeRaw`DELETE FROM pacientes WHERE id IN (${Prisma.join(pacienteIds)})`;
     }
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [usuarioOperador.id, usuarioConsulta.id] } } });
-    await prisma.usuario.deleteMany({ where: { id: { in: [usuarioOperador.id, usuarioConsulta.id] } } });
     await prisma.$disconnect();
   });
 

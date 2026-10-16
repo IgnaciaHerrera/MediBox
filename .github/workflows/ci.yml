@@ -34,7 +34,7 @@ jobs:
       - name: Generar secretos de la ejecución
         run: |
           for variable in SESSION_SECRET PACIENTE_IDENTIDAD_KEY PACIENTE_CONTACTO_KEY \
-            PACIENTE_CLINICO_KEY PACIENTE_RUT_HMAC_KEY PACIENTE_SEUDONIMO_KEY; do
+            PACIENTE_CLINICO_KEY PACIENTE_RUT_HMAC_KEY PACIENTE_SEUDONIMO_KEY AUDITORIA_HMAC_KEY; do
             valor="$(openssl rand -base64 32)"
             echo "::add-mask::$valor"
             echo "$variable=$valor" >> "$GITHUB_ENV"

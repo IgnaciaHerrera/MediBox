@@ -128,13 +128,16 @@ async function exportarAuditoria(req, res, next) {
       id: r.id,
       fecha: r.timestamp.toISOString(),
       usuario: r.usuario ? r.usuario.nombre : '',
+      actor: r.actor,
       accion: r.accion,
       entidad: r.entidad,
       // Un paciente se identifica por su seudónimo, igual que en el CSV de
       // citas; 0 marca las acciones sobre la lista completa (LIST, EXPORT).
       entidadId: r.entidad === 'Paciente' && r.entidadId !== 0 ? pacienteService.seudonimo(r.entidadId) : r.entidadId,
+      resultado: r.resultado,
+      ip: r.ip || '',
     }));
-    const csv = toCsv(['id', 'fecha', 'usuario', 'accion', 'entidad', 'entidadId'], filas);
+    const csv = toCsv(['id', 'fecha', 'usuario', 'actor', 'accion', 'entidad', 'entidadId', 'resultado', 'ip'], filas);
     enviarCsv(res, 'auditoria.csv', csv);
   } catch (err) {
     next(err);

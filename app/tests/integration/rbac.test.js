@@ -39,7 +39,8 @@ describe('RBAC: paciente.read is not implied by agenda.read', () => {
   });
 
   afterAll(async () => {
-    await prisma.usuario.delete({ where: { id: usuarioConsulta.id } });
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.$disconnect();
   });
 

@@ -57,15 +57,14 @@ describe('RBAC de mínimo privilegio', () => {
   });
 
   afterAll(async () => {
-    const ids = Object.values(usuarios).map((u) => u.id);
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { boxId: box.id } });
     await prisma.paciente.deleteMany({ where: { id: { in: [pacientePropio.id, pacienteAjeno.id] } } });
     await prisma.medico.deleteMany({ where: { id: { in: [medicoPropio.id, medicoAjeno.id] } } });
     await prisma.box.delete({ where: { id: box.id } });
     await prisma.pasillo.delete({ where: { id: pasillo.id } });
     await prisma.especialidad.delete({ where: { id: especialidad.id } });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: ids } } });
-    await prisma.usuario.deleteMany({ where: { id: { in: ids } } });
     await prisma.$disconnect();
   });
 

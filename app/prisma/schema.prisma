@@ -154,17 +154,28 @@ model Cita {
   @@map("citas")
 }
 
+// Rastro de auditoría: solo ids y metadatos, nunca el dato personal mismo.
 model AuditLog {
   id        Int      @id @default(autoincrement())
-  usuarioId Int      @map("usuario_id")
+  // Null cuando actúa el sistema o cuando falla un login con un correo que no
+  // existe (en ese caso queda emailIndice).
+  usuarioId Int?     @map("usuario_id")
+  actor     String   @default("usuario") // 'usuario' | 'sistema'
   accion    String
   entidad   String
   entidadId Int      @map("entidad_id")
+  resultado String   @default("exito") // 'exito' | 'denegado' | 'fallido'
+  ip        String?
+  // HMAC del correo de un login fallido (AUDITORIA_HMAC_KEY).
+  emailIndice Bytes? @map("email_indice")
+  // Conteos o referencias internas, sin datos personales.
+  detalle   Json?
   timestamp DateTime @default(now())
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
 
   @@index([entidad, entidadId])
+  @@index([accion, timestamp])
   @@map("audit_log")
 }
 

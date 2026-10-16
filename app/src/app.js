@@ -5,6 +5,7 @@ const pinoHttp = require('pino-http');
 const { logger, serializadoresHttp } = require('./lib/logger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { sessionMiddleware } = require('./middleware/session');
+const contexto = require('./lib/contexto');
 const { issueCsrfToken, verifyCsrf } = require('./middleware/csrf');
 const { requireAuth } = require('./middleware/requireAuth');
 const { attachUsuario } = require('./middleware/attachUsuario');
@@ -49,6 +50,9 @@ app.use(pinoHttp({ logger, serializers: serializadoresHttp }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(sessionMiddleware);
+// Después de la sesión: el contexto (la IP para la auditoría) debe abrirse
+// una vez cargada, para que su callback no lo pierda.
+app.use(contexto.middleware);
 app.use(issueCsrfToken);
 app.use(pasarToastAVista);
 

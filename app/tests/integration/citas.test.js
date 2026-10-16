@@ -49,6 +49,8 @@ describe('Agenda: conflict prevention and soft delete', () => {
   });
 
   afterAll(async () => {
+    // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
+    // upsert: tienen filas en la auditoría, que es de solo inserción.
     await prisma.cita.deleteMany({ where: { boxId: box.id } });
     if (pacienteIds.length > 0) {
       await prisma.paciente.deleteMany({ where: { id: { in: pacienteIds } } });
@@ -56,11 +58,8 @@ describe('Agenda: conflict prevention and soft delete', () => {
     await prisma.box.delete({ where: { id: box.id } });
     await prisma.medico.update({ where: { id: medico.id }, data: { usuarioId: null } });
     await prisma.medico.delete({ where: { id: medico.id } });
-    await prisma.auditLog.deleteMany({ where: { usuarioId: usuarioOperador.id } });
-    await prisma.usuario.delete({ where: { id: usuarioOperador.id } });
     if (usuarioMedicoNotif) {
       await prisma.notificacion.deleteMany({ where: { usuarioId: usuarioMedicoNotif.id } });
-      await prisma.usuario.delete({ where: { id: usuarioMedicoNotif.id } });
     }
     await prisma.$disconnect();
   });
