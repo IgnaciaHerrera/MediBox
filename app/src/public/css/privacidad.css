@@ -94,7 +94,31 @@
   justify-content: space-between;
 }
 
-.consentimiento-head h3 {
+.titular-bloque {
+  margin-top: 1.5rem;
+}
+
+.titular-subtitulo {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.solicitudes-form {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-raised);
+}
+
+.solicitud-pendiente {
+  color: #8a5f1f;
+  font-size: 0.84rem;
+}
+
+.consentimiento-head h4 {
   margin: 0;
   font-size: 1rem;
 }

@@ -37,6 +37,13 @@ const LLAVE_POR_CAMPO = {
   // {nombre, rut, relacion} del representante que consiente por un menor de
   // 14: es un dato de identidad (de otra persona).
   'consentimiento.representante': 'PACIENTE_IDENTIDAD_KEY',
+  // Lo que pide una rectificación: la misma llave que el campo.
+  'solicitud.valor.nombre': 'PACIENTE_IDENTIDAD_KEY',
+  'solicitud.valor.rut': 'PACIENTE_IDENTIDAD_KEY',
+  'solicitud.valor.fechaNacimiento': 'PACIENTE_IDENTIDAD_KEY',
+  'solicitud.valor.contacto': 'PACIENTE_CONTACTO_KEY',
+  // Lo que se le respondió al titular (puede explicar sus datos).
+  'solicitud.respuesta': 'PACIENTE_IDENTIDAD_KEY',
 };
 
 // Llaves de HMAC. Separadas de las de cifrado: quien tenga una puede

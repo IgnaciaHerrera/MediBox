@@ -18,6 +18,8 @@ router.get('/:id/editar', requirePermission('paciente.write'), controller.editar
 router.post('/:id/editar', requirePermission('paciente.write'), controller.editar);
 router.post('/:id/consentimientos/:clave/otorgar', requirePermission('consentimiento.write'), controller.otorgarConsentimiento);
 router.post('/:id/consentimientos/:clave/revocar', requirePermission('consentimiento.write'), controller.revocarConsentimiento);
+router.post('/:id/solicitudes', requirePermission('derechos.registrar'), controller.registrarSolicitud);
+router.post('/:id/solicitudes/:sid/verificar', requirePermission('derechos.registrar'), controller.verificarSolicitud);
 router.get('/:id', controller.detalle);
 
 module.exports = router;

@@ -2,6 +2,7 @@ const Joi = require('joi');
 const pacienteService = require('../services/pacienteService');
 const citaService = require('../services/citaService');
 const consentimientoService = require('../services/consentimientoService');
+const derechosService = require('../services/derechosService');
 const verificacionService = require('../services/verificacionService');
 const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
@@ -81,9 +82,12 @@ async function detalle(req, res, next) {
     const historial = await pacienteService.listarHistorial(id);
     // Consentimientos: solo para quien los gestiona (el operador). El médico
     // no los necesita para atender.
+    // Lo mismo con las solicitudes de derechos: las ve quien las recibe.
     const gestionaConsentimientos = req.usuario.permisos.includes('consentimiento.write');
+    const recibeSolicitudes = req.usuario.permisos.includes('derechos.registrar');
     const consentimientos = gestionaConsentimientos ? await consentimientoService.estadoPorPaciente(id) : null;
-    const verificacion = gestionaConsentimientos ? await verificacionService.estadoParaVista(id, req.usuario.id, paciente.contacto) : null;
+    const solicitudes = recibeSolicitudes ? await derechosService.listarPorPaciente(id) : null;
+    const verificacion = gestionaConsentimientos || recibeSolicitudes ? await verificacionService.estadoParaVista(id, req.usuario.id, paciente.contacto) : null;
     res.render('pacientes/detalle', {
       titulo: paciente.nombre,
       usuario: req.usuario,
@@ -92,6 +96,7 @@ async function detalle(req, res, next) {
       citas,
       historial,
       consentimientos,
+      solicitudes,
       verificacion,
       consentimiento: {
         canales: consentimientoService.CANALES,
@@ -261,4 +266,37 @@ async function revocarConsentimiento(req, res, next) {
   }
 }
 
-module.exports = { index, detalle, nuevaForm, crear, editarForm, editar, otorgarConsentimiento, revocarConsentimiento };
+async function registrarSolicitud(req, res, next) {
+  try {
+    const { id } = await derechosService.registrarSolicitud({ ...req.body, pacienteId: Number(req.params.id) }, req.usuario);
+    if (req.accepts(['json', 'html']) === 'html') {
+      toast(req, 'Solicitud registrada. Verifica la identidad del titular para que privacidad pueda resolverla.');
+      return volver(req, res);
+    }
+    return res.json({ ok: true, id });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function verificarSolicitud(req, res, next) {
+  try {
+    await derechosService.verificarSolicitud(Number(req.params.sid), req.usuario, { pacienteId: Number(req.params.id) });
+    responderFormulario(req, res, 'Solicitud verificada');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  index,
+  detalle,
+  nuevaForm,
+  crear,
+  editarForm,
+  editar,
+  otorgarConsentimiento,
+  revocarConsentimiento,
+  registrarSolicitud,
+  verificarSolicitud,
+};

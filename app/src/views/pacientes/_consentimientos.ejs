@@ -13,15 +13,11 @@
   const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro' };
   const METODOS = { cedula_presencial: 'cédula', codigo_contacto: 'código' };
 %>
-<section class="panel-card panel-lista" id="consentimientos" aria-labelledby="paciente-consentimientos-titulo">
-  <div class="panel-lista-head">
-    <h2 id="paciente-consentimientos-titulo">Consentimientos</h2>
-  </div>
+<div class="titular-bloque" id="consentimientos">
+  <h3 class="titular-subtitulo">Consentimientos</h3>
   <p class="consentimientos-nota">
     Son solo para usos opcionales. La atención, la agenda y los avisos de cambios en sus citas no dependen de ellos: negarse o revocar no afecta su atención.
   </p>
-
-  <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
 
   <% if (consentimiento.requiereRepresentante) { %>
     <p class="aviso">El paciente tiene menos de 14 años: el consentimiento lo da quien tiene su cuidado personal, y se registran sus datos.</p>
@@ -34,7 +30,7 @@
       <% const estado = ESTADOS[c.estado]; %>
       <article class="consentimiento-card">
         <header class="consentimiento-head">
-          <h3><%= c.finalidad.nombre %></h3>
+          <h4><%= c.finalidad.nombre %></h4>
           <span class="badge <%= estado.clase %>"><%= estado.texto %></span>
         </header>
 
@@ -102,4 +98,4 @@
       </article>
     <% }) %>
   </div>
-</section>
+</div>

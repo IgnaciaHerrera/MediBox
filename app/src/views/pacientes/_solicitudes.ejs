@@ -1,0 +1,115 @@
+<%
+  // Solicitudes de derechos del titular. El operador las registra por el
+  // canal por el que llegaron y adjunta la verificación de identidad; el rol
+  // de privacidad las resuelve. Nunca se muestra el valor propuesto.
+  const DERECHOS = {
+    acceso: 'Acceso',
+    portabilidad: 'Portabilidad',
+    rectificacion: 'Rectificación',
+    supresion: 'Supresión',
+    bloqueo: 'Bloqueo',
+    oposicion: 'Oposición',
+  };
+  const ESTADOS = {
+    recibida: { texto: 'Pendiente de verificación', clase: 'badge-agendada' },
+    verificada: { texto: 'Verificada: en manos de privacidad', clase: '' },
+    resuelta: { texto: 'Resuelta', clase: 'badge-atendido' },
+    rechazada: { texto: 'Rechazada', clase: 'badge-anulada' },
+  };
+  const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo' };
+  const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
+  const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro' };
+  const METODOS = { cedula_presencial: 'cédula', codigo_contacto: 'código' };
+%>
+<div class="titular-bloque" id="solicitudes">
+  <h3 class="titular-subtitulo">Solicitudes de derechos</h3>
+  <p class="consentimientos-nota">Supresión y bloqueo: solo con cédula, porque no se pueden deshacer. El resto acepta cédula o código. Si no se puede verificar ahora, la solicitud queda pendiente hasta la próxima visita.</p>
+
+  <form class="solicitudes-form" method="POST" action="/pacientes/<%= paciente.id %>/solicitudes">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div class="form-grid">
+      <div class="field">
+        <label for="sol-derecho">Derecho</label>
+        <select id="sol-derecho" name="derecho" required>
+          <option value="">Elige…</option>
+          <% Object.keys(DERECHOS).forEach(function(d) { %><option value="<%= d %>"><%= DERECHOS[d] %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sol-canal">Canal</label>
+        <select id="sol-canal" name="canal" required>
+          <option value="">¿Por dónde llegó?</option>
+          <% consentimiento.canales.forEach(function(c) { %><option value="<%= c %>"><%= CANALES[c] %></option><% }) %>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="sol-campo">Dato a corregir (rectificación)</label>
+        <select id="sol-campo" name="campo">
+          <option value="">—</option>
+          <% Object.keys(CAMPOS).forEach(function(c) { %><option value="<%= c %>"><%= CAMPOS[c] %></option><% }) %>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sol-valor">Valor correcto (rectificación)</label>
+        <input id="sol-valor" name="valorPropuesto" maxlength="150" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="sol-finalidad">Uso al que se opone (oposición)</label>
+        <select id="sol-finalidad" name="finalidadClave">
+          <option value="">—</option>
+          <option value="recordatorios">Recordatorios de citas</option>
+          <option value="investigacion">Investigación y estadística</option>
+          <option value="encuestas">Encuestas de satisfacción</option>
+        </select>
+      </div>
+    </div>
+    <div class="consentimiento-fila">
+      <label class="casilla">
+        <input type="checkbox" name="solicitanteEsRepresentante" value="si" <%= consentimiento.requiereRepresentante ? 'required' : '' %> />
+        La pide su representante
+      </label>
+      <select name="solicitanteRelacion" aria-label="Relación del representante">
+        <option value="">Relación…</option>
+        <% consentimiento.relaciones.forEach(function(r) { %><option value="<%= r %>"><%= RELACIONES[r] %></option><% }) %>
+      </select>
+      <button type="submit" class="btn btn-primary btn--auto btn--control">Registrar solicitud</button>
+    </div>
+  </form>
+
+  <% if (solicitudes.length === 0) { %>
+    <p class="panel-lista-vacio">El titular no ha presentado solicitudes.</p>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr><th>Recibida</th><th>Derecho</th><th>Canal</th><th>Estado</th><th>Vence</th><th><span class="sr-only">Acciones</span></th></tr>
+        </thead>
+        <tbody>
+          <% solicitudes.forEach(function(s) { %>
+            <% const estado = ESTADOS[s.estado]; %>
+            <tr>
+              <td class="tiempo"><%= fechaDMA(isoLocal(s.recibidaEl).slice(0, 10)) %></td>
+              <td><%= DERECHOS[s.derecho] %><%= s.campo ? ' (' + CAMPOS[s.campo].toLowerCase() + ')' : '' %></td>
+              <td><%= CANALES[s.canal] %></td>
+              <td>
+                <span class="badge <%= estado.clase %>"><%= estado.texto %></span>
+                <% if (s.metodoVerificacion) { %><span class="ayuda">con <%= METODOS[s.metodoVerificacion] %></span><% } %>
+              </td>
+              <td class="tiempo<%= s.dentroDePlazo ? '' : ' solicitud-pendiente' %>"><%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %></td>
+              <td>
+                <% if (s.pendienteDeVerificacion) { %>
+                  <form method="POST" action="/pacientes/<%= paciente.id %>/solicitudes/<%= s.id %>/verificar">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="btn btn-neutro btn--auto btn--control" title="Acepta: <%= s.metodosAceptados.map(function(m) { return METODOS[m]; }).join(' o ') %>">Verificar</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

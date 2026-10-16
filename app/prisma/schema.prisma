@@ -27,6 +27,9 @@ model Usuario {
   verificaciones             VerificacionIdentidad[]
   consentimientosRegistrados Consentimiento[]        @relation("ConsentimientoRegistradoPor")
   revocacionesRegistradas    Consentimiento[]        @relation("ConsentimientoRevocadoPor")
+  solicitudesRecibidas       SolicitudDerecho[]      @relation("SolicitudRecibidaPor")
+  solicitudesVerificadas     SolicitudDerecho[]      @relation("SolicitudVerificadaPor")
+  solicitudesResueltas       SolicitudDerecho[]      @relation("SolicitudResueltaPor")
 
   @@map("usuarios")
 }
@@ -131,6 +134,7 @@ model Paciente {
   cambios         HistorialCambio[]
   verificaciones  VerificacionIdentidad[]
   consentimientos Consentimiento[]
+  solicitudes     SolicitudDerecho[]
 
   @@map("pacientes")
 }
@@ -147,8 +151,9 @@ model HistorialCambio {
   cambiadoPorId        Int      @map("cambiado_por")
   solicitudId          Int?     @map("solicitud_id")
 
-  paciente    Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
-  cambiadoPor Usuario  @relation(fields: [cambiadoPorId], references: [id], onDelete: Restrict)
+  paciente    Paciente          @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  cambiadoPor Usuario           @relation(fields: [cambiadoPorId], references: [id], onDelete: Restrict)
+  solicitud   SolicitudDerecho? @relation(fields: [solicitudId], references: [id], onDelete: Restrict)
 
   @@index([pacienteId, campo])
   @@map("historial_cambios")
@@ -171,8 +176,9 @@ model VerificacionIdentidad {
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
   verificadaPor Usuario  @relation(fields: [verificadaPorId], references: [id], onDelete: Restrict)
 
-  consentimientosOtorgados Consentimiento[] @relation("ConsentimientoVerificacion")
-  consentimientosRevocados Consentimiento[] @relation("ConsentimientoRevocacionVerificacion")
+  consentimientosOtorgados Consentimiento[]   @relation("ConsentimientoVerificacion")
+  consentimientosRevocados Consentimiento[]   @relation("ConsentimientoRevocacionVerificacion")
+  solicitudes              SolicitudDerecho[]
 
   @@index([pacienteId, verificadaPorId])
   @@map("verificaciones_identidad")
@@ -296,4 +302,42 @@ model Notificacion {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@map("notificaciones")
+}
+
+// Solicitud de un derecho del titular (ARCO+). La registra un funcionario por
+// cualquier canal; se ejecuta solo con la identidad verificada por el método
+// que acepta el derecho. Lo pedido y lo respondido van cifrados.
+model SolicitudDerecho {
+  id                         Int       @id @default(autoincrement())
+  pacienteId                 Int       @map("paciente_id")
+  derecho                    String // acceso | portabilidad | rectificacion | supresion | bloqueo | oposicion
+  estado                     String    @default("recibida") // recibida | verificada | resuelta | rechazada
+  canal                      String // presencial | telefono | correo
+  recibidaEl                 DateTime  @default(now()) @map("recibida_el")
+  venceEl                    DateTime  @map("vence_el")
+  recibidaPorId              Int       @map("recibida_por")
+  solicitanteEsRepresentante Boolean   @default(false) @map("solicitante_es_representante")
+  solicitanteRelacion        String?   @map("solicitante_relacion")
+  campo                      String? // rectificación: nombre | rut | fechaNacimiento | contacto
+  valorPropuestoCifrado      Bytes?    @map("valor_propuesto_cifrado")
+  finalidadClave             String?   @map("finalidad_clave") // oposición
+  identidadVerificada        Boolean   @default(false) @map("identidad_verificada")
+  metodoVerificacion         String?   @map("metodo_verificacion")
+  verificacionId             Int?      @map("verificacion_id")
+  verificadaPorId            Int?      @map("verificada_por")
+  entrega                    String? // acceso y portabilidad: contacto_registrado | presencial
+  respuestaCifrada           Bytes?    @map("respuesta_cifrada")
+  resueltaEl                 DateTime? @map("resuelta_el")
+  resueltaPorId              Int?      @map("resuelta_por")
+
+  paciente      Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  recibidaPor   Usuario                @relation("SolicitudRecibidaPor", fields: [recibidaPorId], references: [id], onDelete: Restrict)
+  verificadaPor Usuario?               @relation("SolicitudVerificadaPor", fields: [verificadaPorId], references: [id], onDelete: Restrict)
+  resueltaPor   Usuario?               @relation("SolicitudResueltaPor", fields: [resueltaPorId], references: [id], onDelete: Restrict)
+  verificacion  VerificacionIdentidad? @relation(fields: [verificacionId], references: [id], onDelete: Restrict)
+  cambios       HistorialCambio[]
+
+  @@index([pacienteId])
+  @@index([estado, venceEl])
+  @@map("solicitudes_derechos")
 }

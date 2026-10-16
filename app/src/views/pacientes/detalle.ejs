@@ -178,8 +178,8 @@
       </section>
     <% } %>
 
-    <% if (consentimientos) { %>
-      <%- include('_consentimientos', { paciente, consentimientos, verificacion, consentimiento, csrfToken }) %>
+    <% if (verificacion) { %>
+      <%- include('_titular', { paciente, consentimientos, solicitudes, verificacion, consentimiento, csrfToken }) %>
     <% } %>
 
     <%- include('_historial', { historial }) %>

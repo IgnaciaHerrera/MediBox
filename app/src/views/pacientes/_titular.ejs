@@ -1,0 +1,20 @@
+<%
+  // Peticiones del titular: lo que pide el propio paciente (o su
+  // representante) por cualquier canal. La verificación de identidad va una
+  // sola vez, arriba, y sirve para los consentimientos y las solicitudes.
+%>
+<section class="panel-card panel-lista" id="titular" aria-labelledby="paciente-titular-titulo">
+  <div class="panel-lista-head">
+    <h2 id="paciente-titular-titulo">Peticiones del titular</h2>
+  </div>
+
+  <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
+
+  <% if (consentimientos) { %>
+    <%- include('_consentimientos', { paciente, consentimientos, consentimiento, csrfToken }) %>
+  <% } %>
+
+  <% if (solicitudes) { %>
+    <%- include('_solicitudes', { paciente, solicitudes, consentimiento, csrfToken }) %>
+  <% } %>
+</section>
