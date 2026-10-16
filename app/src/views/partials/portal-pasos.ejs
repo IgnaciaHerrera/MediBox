@@ -1,0 +1,12 @@
+<%
+  // paso: 1 = RUT, 2 = código, 3 = datos del titular.
+  const PASOS_PORTAL = ['Tu RUT', 'El código', 'Tus datos'];
+%>
+<ol class="portal-pasos" aria-label="Pasos para ingresar">
+  <% PASOS_PORTAL.forEach(function(nombre, i) { %>
+    <li class="portal-paso<%= i + 1 < paso ? ' portal-paso--hecho' : '' %><%= i + 1 === paso ? ' portal-paso--actual' : '' %>"<%- i + 1 === paso ? ' aria-current="step"' : '' %>>
+      <span class="portal-paso-barra" aria-hidden="true"></span>
+      <span class="portal-paso-nombre"><%= nombre %></span>
+    </li>
+  <% }) %>
+</ol>

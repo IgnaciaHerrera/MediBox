@@ -1,0 +1,448 @@
+/* ---------- Portal del paciente: ingreso con RUT ---------- */
+
+.portal-body {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+/* Cuadrícula tenue de la marca, que se desvanece hacia los bordes. */
+.portal-body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(22, 63, 55, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 63, 55, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(60% 55% at 50% 38%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(60% 55% at 50% 38%, #000 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Por encima de la cuadrícula de fondo (sin tocar los avisos, que son fixed). */
+.portal-cab,
+.portal-main,
+.portal-pie {
+  position: relative;
+  z-index: 1;
+}
+
+/* ----- Cabecera ----- */
+
+.portal-cab {
+  padding: 0 1.5rem;
+}
+
+.portal-cab-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 72rem;
+  height: 3.75rem;
+  margin: 0 auto;
+}
+
+.portal-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  margin-right: -0.7rem;
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.portal-volver svg {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.portal-volver:hover {
+  background: rgba(31, 107, 92, 0.08);
+  color: var(--teal-ink);
+}
+
+.portal-volver:hover svg {
+  transform: translateX(-3px);
+}
+
+/* ----- Contenido ----- */
+
+.portal-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: clamp(0.75rem, 3.5vh, 2.25rem) 1.5rem 1.5rem;
+}
+
+/* Pasos: tres tramos finos; el actual se dibuja al cargar. */
+.portal-pasos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 clamp(1.25rem, 4vh, 2rem);
+  padding: 0;
+  list-style: none;
+}
+
+.portal-paso {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.portal-paso-barra {
+  position: relative;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.portal-paso-barra::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: var(--teal);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.portal-paso--hecho .portal-paso-barra::after {
+  transform: scaleX(1);
+}
+
+.portal-paso--actual {
+  color: var(--teal-ink);
+}
+
+.portal-paso--actual .portal-paso-barra::after {
+  animation: portal-trazo 0.9s var(--ease-out) 0.15s forwards;
+}
+
+@keyframes portal-trazo {
+  to { transform: scaleX(1); }
+}
+
+.portal-ingreso {
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-pregunta {
+  margin: 0 0 0.55rem;
+  font-size: clamp(1.7rem, 5vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--teal-ink);
+  animation: portal-aparecer 0.7s var(--ease-out) 0.1s both;
+}
+
+.portal-sub {
+  max-width: 27rem;
+  margin: 0 0 clamp(1.1rem, 3.5vh, 1.75rem);
+  font-size: 0.93rem;
+  line-height: 1.55;
+  animation: portal-aparecer 0.7s var(--ease-out) 0.2s both;
+}
+
+@keyframes portal-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ----- El campo de RUT ----- */
+
+.portal-form {
+  animation: portal-aparecer 0.7s var(--ease-out) 0.3s both;
+}
+
+.portal-rut {
+  --avance: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.2rem;
+}
+
+.portal-rut-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0.25rem 0 0.45rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 7vw, 2.4rem);
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--teal-ink);
+  caret-color: var(--teal);
+}
+
+.portal-rut-input::placeholder {
+  color: #cdc9bb;
+  opacity: 1;
+}
+
+.portal-rut-input:focus {
+  outline: none;
+}
+
+/* Línea de base: se llena de verde según el avance. */
+.portal-rut-linea {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--line-strong);
+  transition: height var(--dur-fast) var(--ease-out);
+}
+
+.portal-rut-relleno {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+  transform: scaleX(var(--avance));
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.portal-rut:focus-within .portal-rut-linea {
+  height: 3px;
+}
+
+.portal-rut:focus-within::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.55rem;
+  height: 0.55rem;
+  background: linear-gradient(to bottom, rgba(31, 107, 92, 0.12), transparent);
+  pointer-events: none;
+}
+
+/* Sello: aparece al confirmar el dígito verificador. */
+.portal-rut-sello {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--teal);
+  color: var(--paper-raised);
+  box-shadow: 0 8px 16px -8px rgba(22, 63, 55, 0.7);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--dur-fast) var(--ease-out), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.portal-rut-sello svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.portal-rut[data-estado="valido"] .portal-rut-sello,
+.portal-codigo[data-estado="completo"] .portal-rut-sello {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.portal-rut-ayuda {
+  min-height: 1.25rem;
+  margin: 0.6rem 0 1.1rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.portal-rut[data-estado="valido"] + .portal-rut-ayuda,
+.portal-codigo[data-estado="completo"] + .portal-rut-ayuda {
+  color: var(--teal);
+  font-weight: 500;
+}
+
+.portal-enviar {
+  width: 100%;
+  height: 2.9rem;
+}
+
+/* ----- El campo del código: seis tramos, uno por dígito ----- */
+
+.portal-codigo {
+  --n: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+/* Espacio del mismo ancho que el sello, a la izquierda, para que los seis
+   tramos queden centrados aunque el sello aparezca a la derecha. */
+.portal-codigo::before {
+  content: "";
+  flex-shrink: 0;
+  width: 2rem;
+}
+
+.portal-codigo + .portal-rut-ayuda {
+  text-align: center;
+}
+
+/* Un solo input (sirve el autocompletado y el pegado). Cada dígito mide 1ch y
+   el espacio entre dígitos 0.6ch, así los tramos dibujados en el fondo quedan
+   exactamente bajo cada número. */
+.portal-codigo-input {
+  --linea: var(--line-strong);
+  box-sizing: content-box;
+  width: 9.65ch;
+  min-width: 0;
+  padding: 0.25rem 0 0.6rem;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  background-image:
+    repeating-linear-gradient(to right, var(--linea) 0, var(--linea) 1ch, transparent 1ch, transparent 1.6ch),
+    repeating-linear-gradient(to right, var(--teal) 0, var(--teal) 1ch, transparent 1ch, transparent 1.6ch);
+  background-repeat: no-repeat;
+  background-position: left bottom, left bottom;
+  background-size: 100% 2px, calc(var(--n) * 1.6ch) 3px;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 8.5vw, 2.75rem);
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.6ch;
+  color: var(--teal-ink);
+  caret-color: var(--teal);
+  transition: background-size 0.3s var(--ease-out);
+}
+
+.portal-codigo-input::placeholder {
+  color: #d6d3c6;
+  opacity: 1;
+}
+
+.portal-codigo-input:focus {
+  --linea: rgba(31, 107, 92, 0.38);
+  outline: none;
+}
+
+.portal-otro {
+  margin: 0.8rem 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.portal-otro a {
+  color: var(--teal);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+/* ----- Nota de contacto ----- */
+
+.portal-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 1.4rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  animation: portal-aparecer 0.7s var(--ease-out) 0.4s both;
+}
+
+.portal-nota svg {
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.15rem;
+  color: var(--ochre);
+}
+
+/* ----- Pie ----- */
+
+.portal-pie {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  padding: 1rem 1.5rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.portal-pie a {
+  color: var(--ink-soft);
+  text-underline-offset: 3px;
+}
+
+.portal-pie a:hover {
+  color: var(--teal-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-pregunta,
+  .portal-sub,
+  .portal-form,
+  .portal-nota {
+    animation: none;
+  }
+
+  .portal-paso--actual .portal-paso-barra::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+
+  .portal-rut-sello,
+  .portal-rut-relleno,
+  .portal-codigo-input {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .portal-cab {
+    padding: 0 1rem;
+  }
+
+  .portal-cab-fila {
+    height: 3.5rem;
+  }
+
+  .portal-main {
+    padding: 0.75rem 1.25rem 1.5rem;
+  }
+}

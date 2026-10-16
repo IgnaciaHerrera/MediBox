@@ -3,29 +3,67 @@
 <head>
 <%- include('../partials/head', { titulo }) %>
 </head>
-<body>
-  <main class="page-main">
-    <div class="page-head">
-      <div>
-        <h1>Portal del paciente</h1>
-        <p class="page-sub">Vea sus datos, descárguelos, gestione sus consentimientos y presente solicitudes sobre sus datos personales.</p>
-      </div>
-    </div>
+<body class="portal-body">
+  <%- include('../partials/portal-cabecera') %>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Ingresar</h2></div>
-      <p>Escriba su RUT. Le enviaremos un código de un solo uso al teléfono o correo que tiene registrado en el hospital. No necesita una cuenta ni una contraseña.</p>
-      <form method="POST" action="/portal/ingresar">
+  <main class="portal-main">
+    <%- include('../partials/portal-pasos', { paso: 1 }) %>
+
+    <section class="portal-ingreso" aria-labelledby="portal-pregunta">
+      <h1 id="portal-pregunta" class="portal-pregunta">¿Cuál es tu RUT?</h1>
+      <p class="portal-sub">
+        Te enviaremos un código de un solo uso al contacto que tienes
+        registrado en el hospital. Sin cuenta ni contraseña.
+      </p>
+
+      <form method="POST" action="/portal/ingresar" class="portal-form" data-portal-rut>
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label for="rut">RUT</label>
-        <input id="rut" name="rut" maxlength="15" autocomplete="off" placeholder="12.345.678-5" required />
-        <button type="submit" class="btn btn-primary btn--auto btn--control">Enviarme un código</button>
-      </form>
-      <p class="ayuda">Si no tiene un contacto registrado, o lo cambió hace menos de 24 horas, no recibirá el código: puede ejercer sus derechos en admisión con su cédula, por teléfono o por correo.</p>
-    </section>
 
-    <p><a href="/privacidad">Política de privacidad</a></p>
+        <label for="rut" class="landing-sr">RUT</label>
+        <div class="portal-rut">
+          <input
+            id="rut"
+            name="rut"
+            class="portal-rut-input"
+            maxlength="15"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="12.345.678-5"
+            aria-describedby="rut-ayuda"
+            required
+            autofocus
+          />
+          <span class="portal-rut-sello" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          </span>
+          <span class="portal-rut-linea" aria-hidden="true"><span class="portal-rut-relleno"></span></span>
+        </div>
+        <p id="rut-ayuda" class="portal-rut-ayuda" aria-live="polite">Puedes escribirlo con o sin puntos y guion.</p>
+
+        <button type="submit" class="landing-btn landing-btn--primario portal-enviar">
+          Enviarme un código
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+
+      <p class="portal-nota">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span>
+          ¿Sin contacto registrado, o lo cambiaste hace menos de 24 horas? No
+          recibirás el código: ejerce tus derechos en admisión con tu cédula,
+          por teléfono o por correo.
+        </span>
+      </p>
+    </section>
   </main>
+
+  <footer class="portal-pie">
+    <a href="/privacidad">Política de privacidad</a>
+    <span>© 2026 MediBox</span>
+  </footer>
+
   <%- include('../partials/toast') %>
+  <script src="/js/portal-ingresar.js"></script>
 </body>
 </html>

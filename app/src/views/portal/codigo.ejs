@@ -3,26 +3,67 @@
 <head>
 <%- include('../partials/head', { titulo }) %>
 </head>
-<body>
-  <main class="page-main">
-    <a class="volver" href="/portal">← Volver</a>
-    <div class="page-head">
-      <div>
-        <h1>Ingrese su código</h1>
-        <p class="page-sub">El código tiene 6 dígitos, vence en 10 minutos y admite 5 intentos.</p>
-      </div>
-    </div>
+<body class="portal-body">
+  <%- include('../partials/portal-cabecera') %>
 
-    <section class="panel-card panel-lista panel-texto">
-      <form method="POST" action="/portal/confirmar">
+  <main class="portal-main">
+    <%- include('../partials/portal-pasos', { paso: 2 }) %>
+
+    <section class="portal-ingreso" aria-labelledby="portal-pregunta">
+      <h1 id="portal-pregunta" class="portal-pregunta">Escribe tu código</h1>
+      <p class="portal-sub">
+        Te lo enviamos al contacto que tienes registrado. Tiene 6 dígitos,
+        vence en 10 minutos y puedes intentarlo hasta 5 veces.
+      </p>
+
+      <form method="POST" action="/portal/confirmar" class="portal-form" data-portal-codigo>
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-        <label for="codigo">Código</label>
-        <input id="codigo" name="codigo" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required />
-        <button type="submit" class="btn btn-primary btn--auto btn--control">Ingresar</button>
+
+        <label for="codigo" class="landing-sr">Código de 6 dígitos</label>
+        <div class="portal-codigo">
+          <input
+            id="codigo"
+            name="codigo"
+            class="portal-codigo-input"
+            inputmode="numeric"
+            pattern="\d{6}"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="000000"
+            aria-describedby="codigo-ayuda"
+            required
+            autofocus
+          />
+          <span class="portal-rut-sello" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          </span>
+        </div>
+        <p id="codigo-ayuda" class="portal-rut-ayuda" aria-live="polite">Son 6 dígitos. Puedes pegarlo.</p>
+
+        <button type="submit" class="landing-btn landing-btn--primario portal-enviar">
+          Ingresar a mi portal
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
       </form>
-      <p class="ayuda">El código es solo para usted: el hospital nunca se lo pedirá. Su sesión durará 15 minutos.</p>
+
+      <p class="portal-otro">¿Te equivocaste de RUT? <a href="/portal">Usar otro RUT</a></p>
+
+      <p class="portal-nota">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/></svg>
+        <span>
+          Este código es solo para ti: el hospital nunca te lo pedirá.
+          Tu sesión durará 15 minutos.
+        </span>
+      </p>
     </section>
   </main>
+
+  <footer class="portal-pie">
+    <a href="/privacidad">Política de privacidad</a>
+    <span>© 2026 MediBox</span>
+  </footer>
+
   <%- include('../partials/toast') %>
+  <script src="/js/portal-codigo.js"></script>
 </body>
 </html>
