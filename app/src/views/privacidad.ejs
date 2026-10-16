@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('partials/head', { titulo }) %>
+<%
+  const DERECHOS = {
+    acceso: ['Acceso', 'Saber qué datos suyos se tratan, con qué finalidad y a quién se comunican, y recibir una copia.'],
+    rectificacion: ['Rectificación', 'Corregir datos erróneos, inexactos o incompletos.'],
+    supresion: ['Supresión', 'Pedir que se eliminen los datos que el hospital no está obligado a conservar. Los clínicos se conservan bloqueados, porque la ley obliga a guardar la ficha clínica.'],
+    oposicion: ['Oposición', 'Negarse a los usos opcionales de sus datos.'],
+    bloqueo: ['Bloqueo', 'Suspender el uso de sus datos mientras se aclara una duda sobre su exactitud o vigencia.'],
+    portabilidad: ['Portabilidad', 'Recibir sus datos en un formato estructurado (JSON) para llevarlos a otro responsable.'],
+  };
+%>
+</head>
+<body>
+  <main class="page-main contenedor-angosto">
+    <a class="volver" href="/auth/login-form">← Volver</a>
+    <div class="page-head">
+      <div>
+        <h1>Política de tratamiento de datos personales</h1>
+        <p class="page-sub">Cómo trata MediBox los datos de los pacientes del hospital.</p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Responsable</h2></div>
+      <p><%= tratamiento.responsable %></p>
+    </section>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Qué datos tratamos, para qué y hasta cuándo</h2></div>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Datos</th><th>Finalidad</th><th>Base legal</th><th>Plazo</th></tr></thead>
+          <tbody>
+            <% tratamiento.datos.forEach(function(d) { %>
+              <tr><td><strong><%= d.categoria %>:</strong> <%= d.datos %></td><td><%= d.finalidad %></td><td><%= d.base %></td><td><%= d.plazo %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Usos opcionales, solo con su consentimiento</h2></div>
+      <p>Su atención no depende de ninguno de ellos: puede negarse o revocarlos cuando quiera, sin que cambie su atención.</p>
+      <ul>
+        <% tratamiento.finalidades.forEach(function(f) { %><li><strong><%= f.nombre %>.</strong> <%= f.base %></li><% }) %>
+      </ul>
+    </section>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>A quién se comunican</h2></div>
+      <p><%= tratamiento.destinatarios %></p>
+    </section>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Sus derechos</h2></div>
+      <ul>
+        <% tratamiento.derechos.forEach(function(clave) { %><li><strong><%= DERECHOS[clave][0] %>:</strong> <%= DERECHOS[clave][1] %></li><% }) %>
+      </ul>
+      <p><strong>Cómo ejercerlos:</strong> <%= tratamiento.comoEjercerlos %></p>
+    </section>
+  </main>
+</body>
+</html>

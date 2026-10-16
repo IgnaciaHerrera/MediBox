@@ -12,6 +12,7 @@ const { attachUsuario } = require('./middleware/attachUsuario');
 const { dashboard } = require('./controllers/viewController');
 const { isoLocal } = require('./lib/fecha');
 const { pasarToastAVista } = require('./lib/toast');
+const { TRATAMIENTO } = require('./lib/tratamiento');
 const authRoutes = require('./routes/auth');
 const agendaViewRoutes = require('./routes/agendaViews');
 const pacienteViewRoutes = require('./routes/pacienteViews');
@@ -64,6 +65,9 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => res.redirect('/auth/login-form'));
+
+// Política de tratamiento de datos (Ley 21.719, art. 14 ter): pública.
+app.get('/privacidad', (req, res) => res.render('privacidad', { titulo: 'Política de privacidad', tratamiento: TRATAMIENTO }));
 
 // Protección CSRF de doble envío para toda mutación de la aplicación (API y
 // vistas por igual), sin importar el orden en que se monten los routers
