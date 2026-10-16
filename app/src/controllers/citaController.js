@@ -12,7 +12,7 @@ const crearSchema = Joi.object({
   motivoConsulta: Joi.string().trim().min(2).max(300).required(),
 });
 
-const estadoSchema = Joi.object({ estado: Joi.string().valid('agendada', 'atendido', 'no_atendido').required() });
+const estadoSchema = Joi.object({ estado: Joi.string().valid(...citaService.ESTADOS_CITA).required() });
 
 const conflictoSchema = Joi.object({
   medicoId: Joi.number().integer().positive().required(),

@@ -82,6 +82,12 @@ describe('Agenda: conflict prevention and soft delete', () => {
       pacienteId: pacienteRes.body.id, medicoId: medico.id, boxId: box.id, fecha: '2026-11-01', horaInicio: '09:00', horaFin: '10:00', motivoConsulta: 'Control de prueba',
     });
     expect(citaRes.status).toBe(201);
+
+    // El formulario de la vista valida el estado igual que la API.
+    const invalido = await agent.post(`/agenda/${citaRes.body.id}/estado`).type('form').send({ estado: 'inventado' });
+    expect(invalido.status).toBe(400);
+    const cita = await prisma.cita.findUnique({ where: { id: citaRes.body.id } });
+    expect(cita.estado).toBe('agendada');
   });
 
   it('GET /api/citas/conflicto reports true for an overlapping slot and false otherwise', async () => {

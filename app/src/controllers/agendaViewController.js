@@ -19,6 +19,8 @@ const crearCitaSchema = Joi.object({
   motivoConsulta: Joi.string().trim().min(2).max(300).required(),
 }).unknown(true); // el formulario HTML envía además el campo _csrf
 
+const estadoSchema = Joi.object({ estado: Joi.string().valid(...citaService.ESTADOS_CITA).required() }).unknown(true);
+
 async function index(req, res, next) {
   try {
     const fecha = req.query.fecha || hoyISO();
@@ -222,7 +224,9 @@ async function detalle(req, res, next) {
 async function cambiarEstado(req, res, next) {
   try {
     const id = Number(req.params.id);
-    await citaService.actualizarEstadoCita(id, req.body.estado, req.usuario);
+    const { error, value } = estadoSchema.validate(req.body);
+    if (error) throw new AppError(error.details[0].message, 400);
+    await citaService.actualizarEstadoCita(id, value.estado, req.usuario);
     toast(req, 'Estado de la cita actualizado');
     res.redirect(`/agenda/${id}`);
   } catch (err) {

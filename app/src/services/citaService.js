@@ -8,6 +8,9 @@ const { cifrar, descifrar } = require('../lib/cifrado');
 
 const MAX_INTENTOS_SERIALIZACION = 3;
 
+// Estados que se pueden registrar en una cita (la anulación va aparte).
+const ESTADOS_CITA = ['agendada', 'atendido', 'no_atendido'];
+
 // El motivo de consulta es un dato clínico: se guarda cifrado en la cita y las
 // consultas no lo traen salvo que lo pidan (ver src/lib/prisma.js). Las citas
 // migradas sin motivo devuelven null.
@@ -280,6 +283,7 @@ async function listarTodasParaExport(usuarioId, filtros = {}) {
 }
 
 module.exports = {
+  ESTADOS_CITA,
   verificarConflicto,
   crearCita,
   puedeCambiarEstado,
