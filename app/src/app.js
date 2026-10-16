@@ -31,6 +31,7 @@ const citaRoutes = require('./routes/citas');
 const notificacionRoutes = require('./routes/notificaciones');
 const usuarioRoutes = require('./routes/usuarios');
 const rolRoutes = require('./routes/roles');
+const verificacionRoutes = require('./routes/verificacion');
 
 const app = express();
 
@@ -83,6 +84,7 @@ app.use('/auditoria', auditoriaViewRoutes);
 app.use('/usuarios', usuarioViewRoutes);
 app.use('/roles', rolViewRoutes);
 app.use('/datos', datosViewRoutes);
+app.use('/verificacion', verificacionRoutes);
 app.use('/api/especialidades', especialidadRoutes);
 app.use('/api/medicos', medicoRoutes);
 app.use('/api', espacioRoutes);

@@ -295,6 +295,43 @@ async function listarHistorial(pacienteId) {
 }
 
 /**
+ * Exige que el paciente exista y esté en el alcance del solicitante, sin
+ * leer ni auditar sus datos (no descifra nada).
+ *
+ * @param {number} pacienteId
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {Promise<void>}
+ * @throws {AppError} 404 si no existe o está fuera de su alcance.
+ *
+ * Consumidores: verificacionService.verificarConCedula.
+ */
+async function exigirAlcance(pacienteId, solicitante) {
+  const fila = await prisma.paciente.findFirst({ where: { id: pacienteId, ...alcanceDe(solicitante) }, select: { id: true } });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
+}
+
+/**
+ * Contacto en claro del paciente, solo para enviarle un código de
+ * verificación. La lectura queda auditada con su motivo.
+ *
+ * @param {number} pacienteId
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {Promise<{contacto: (string|null), createdAt: Date}>}
+ * @throws {AppError} 404 si no existe o está fuera de su alcance.
+ *
+ * Consumidores: verificacionService.enviarCodigo.
+ */
+async function contactoParaVerificacion(pacienteId, solicitante) {
+  const fila = await prisma.paciente.findFirst({
+    where: { id: pacienteId, ...alcanceDe(solicitante) },
+    select: { contactoCifrado: true, createdAt: true },
+  });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
+  await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { motivo: 'verificacion' } });
+  return { contacto: fila.contactoCifrado ? descifrar('paciente.contacto', fila.contactoCifrado) : null, createdAt: fila.createdAt };
+}
+
+/**
  * Fecha del último cambio de un campo del paciente.
  *
  * @param {number} pacienteId
@@ -389,6 +426,8 @@ module.exports = {
   actualizarPaciente,
   listarHistorial,
   ultimoCambioDe,
+  exigirAlcance,
+  contactoParaVerificacion,
   listarPacientes,
   listarSeudonimizadoParaExport,
   seudonimo,

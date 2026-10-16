@@ -24,6 +24,7 @@ model Usuario {
   notificaciones Notificacion[]
   medico         Medico?
   cambiosHechos  HistorialCambio[]
+  verificaciones VerificacionIdentidad[]
 
   @@map("usuarios")
 }
@@ -124,8 +125,9 @@ model Paciente {
   contactoCifrado        Bytes?   @map("contacto_cifrado")
   createdAt              DateTime @default(now()) @map("created_at")
 
-  citas    Cita[]
-  cambios  HistorialCambio[]
+  citas          Cita[]
+  cambios        HistorialCambio[]
+  verificaciones VerificacionIdentidad[]
 
   @@map("pacientes")
 }
@@ -147,6 +149,27 @@ model HistorialCambio {
 
   @@index([pacienteId, campo])
   @@map("historial_cambios")
+}
+
+// Verificación de identidad del titular: con la cédula en admisión o con un
+// código de un solo uso enviado al contacto registrado (solo su hash).
+model VerificacionIdentidad {
+  id              Int       @id @default(autoincrement())
+  pacienteId      Int       @map("paciente_id")
+  metodo          String // 'cedula_presencial' | 'codigo_contacto'
+  verificadaPorId Int       @map("verificada_por")
+  creadaEl        DateTime  @default(now()) @map("creada_el")
+  verificadaEl    DateTime? @map("verificada_el")
+  codigoHash      Bytes?    @map("codigo_hash")
+  sal             Bytes?
+  expiraEl        DateTime? @map("expira_el")
+  intentos        Int       @default(0)
+
+  paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  verificadaPor Usuario  @relation(fields: [verificadaPorId], references: [id], onDelete: Restrict)
+
+  @@index([pacienteId, verificadaPorId])
+  @@map("verificaciones_identidad")
 }
 
 model Cita {

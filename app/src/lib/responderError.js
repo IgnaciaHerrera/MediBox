@@ -46,4 +46,13 @@ function responderNoAutenticado(req, res) {
   return res.status(401).json({ error: 'No autenticado' });
 }
 
-module.exports = { responderError, responderNoAutenticado };
+/**
+ * Vuelve a la página anterior (de este mismo sitio) después de un formulario.
+ *
+ * Consumidores: routes/verificacion.js y los formularios de la ficha.
+ */
+function volver(req, res) {
+  return res.redirect(paginaAnterior(req));
+}
+
+module.exports = { responderError, responderNoAutenticado, volver };

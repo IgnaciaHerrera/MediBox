@@ -34,6 +34,11 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    # Archivos que deben vivir fuera de la base y de sus respaldos: la lista de
+    # supresiones (se reaplica tras restaurar) y, en desarrollo, la bandeja
+    # simulada donde llegan los códigos de verificación.
+    volumes:
+      - ./registro:/app/registro
     logging: *logs-con-tope
 
 volumes:
