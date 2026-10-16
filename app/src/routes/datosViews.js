@@ -20,13 +20,9 @@ router.get('/', (req, res, next) => {
 
 // Cada exportación exige data.export además del permiso de lectura de la
 // entidad correspondiente: un data.export aislado no basta para leer datos
-// que el rol no podría leer por otra vía.
-router.get(
-  '/exportar/pacientes.csv',
-  requirePermission('data.export'),
-  requirePermission('paciente.read'),
-  controller.exportarPacientes,
-);
+// que el rol no podría leer por otra vía. El reporte de pacientes es la
+// excepción: está seudonimizado y no identifica a nadie.
+router.get('/exportar/pacientes.csv', requirePermission('data.export'), controller.exportarPacientes);
 router.get(
   '/exportar/citas.csv',
   requirePermission('data.export'),

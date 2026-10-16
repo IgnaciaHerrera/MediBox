@@ -31,10 +31,13 @@ const LLAVE_POR_CAMPO = {
   'cita.motivoConsulta': 'PACIENTE_CLINICO_KEY',
 };
 
-// Llave del índice ciego (HMAC). Separada de las de cifrado: quien tenga esta
-// llave puede comprobar si un RUT existe, pero no descifrar nada.
+// Llaves de HMAC. Separadas de las de cifrado: quien tenga una puede
+// comprobar si un RUT existe, o volver a identificar un seudónimo, pero no
+// descifrar nada. Son además distintas entre sí: la del seudónimo sale del
+// sistema junto con los archivos exportados que la necesitan para revertirse.
 const LLAVE_INDICE_POR_CAMPO = {
   'paciente.rut': 'PACIENTE_RUT_HMAC_KEY',
+  'paciente.seudonimo': 'PACIENTE_SEUDONIMO_KEY',
 };
 
 const VARIABLES_DE_LLAVE = [

@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
+const { seudonimo } = require('../../src/services/pacienteService');
 
 describe('Importación y exportación de datos (data.export / data.import)', () => {
   const password = 'Password123!';
@@ -10,24 +11,14 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
   let usuarioSoloExport;
   let usuarioSoloImport;
   let usuarioOperador;
-  let rolExportador;
   let rolSoloExport;
   let rolSoloImport;
   let pacienteId;
 
   beforeAll(async () => {
-    // Exporta las tres entidades e importa espacios: lo que antes hacía el
-    // admin, que ahora no lee datos de pacientes (separación de funciones).
-    rolExportador = await prisma.rol.upsert({
-      where: { nombre: 'datos-test-exportador' },
-      update: {},
-      create: { nombre: 'datos-test-exportador' },
-    });
-    const permisosExportador = await prisma.permiso.findMany({
-      where: { clave: { in: ['data.export', 'data.import', 'paciente.read', 'agenda.read', 'auditoria.read', 'box.write'] } },
-    });
-    await prisma.rolPermiso.deleteMany({ where: { rolId: rolExportador.id } });
-    await prisma.rolPermiso.createMany({ data: permisosExportador.map((pe) => ({ rolId: rolExportador.id, permisoId: pe.id })) });
+    // El gestor exporta e importa: no lee la identidad de los pacientes, y
+    // ninguna exportación la contiene.
+    const rolGestor = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'gestor' } });
     const rolConsulta = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'consulta' } });
     const rolOperador = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'operador' } });
 
@@ -55,7 +46,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     usuarioExportador = await prisma.usuario.upsert({
       where: { email: 'datos-exportador-test@medibox.local' },
       update: {},
-      create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolExportador.id },
+      create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolGestor.id },
     });
     usuarioSinPermisos = await prisma.usuario.upsert({
       where: { email: 'datos-sinpermisos-test@medibox.local' },
@@ -107,7 +98,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     await prisma.usuario.deleteMany({
       where: { id: { in: [usuarioExportador.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id] } },
     });
-    const rolesTest = [rolExportador.id, rolSoloExport.id, rolSoloImport.id];
+    const rolesTest = [rolSoloExport.id, rolSoloImport.id];
     await prisma.rolPermiso.deleteMany({ where: { rolId: { in: rolesTest } } });
     await prisma.rol.deleteMany({ where: { id: { in: rolesTest } } });
     await prisma.$disconnect();
@@ -124,7 +115,8 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     const { agent, loginRes } = await loginAgent(app, { email: 'datos-soloexport-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
     expect((await agent.get('/datos')).status).toBe(200);
-    expect((await agent.get('/datos/exportar/pacientes.csv')).status).toBe(403);
+    // El reporte de pacientes no identifica a nadie: basta data.export.
+    expect((await agent.get('/datos/exportar/pacientes.csv')).status).toBe(200);
     expect((await agent.get('/datos/exportar/citas.csv')).status).toBe(403);
     expect((await agent.get('/datos/exportar/auditoria.csv')).status).toBe(403);
   });
@@ -138,18 +130,20 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(pasillo).toBeNull();
   });
 
-  it('exports pacientes as decrypted CSV and audits the export', async () => {
+  it('exports pacientes pseudonymized, with no identity, and audits the export', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const res = await agent.get('/datos/exportar/pacientes.csv');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
-    expect(res.text).toContain('17171717-5');
-    expect(res.text).toContain('1990-05-05');
-    // El motivo de consulta vive en las citas, no en el CSV de pacientes.
-    const cabeceraPacientes = res.text.slice(0, res.text.indexOf('createdAt'));
-    expect(cabeceraPacientes).not.toMatch(/motivo/i);
+    const [cabecera, ...filas] = res.text.trim().split('\r\n');
+    expect(cabecera).toBe('paciente,tramoEtario,anioRegistro,citas');
+    // Ni nombre, ni RUT, ni fecha exacta, ni contacto: solo el seudónimo y
+    // datos generalizados (nació en 1990: hoy está en el tramo de los 30).
+    expect(res.text).not.toMatch(/Paciente Export Test|17171717|1990-05-05|56900009999/);
+    const fila = filas.find((f) => f.startsWith(`${seudonimo(pacienteId)},`));
+    expect(fila).toMatch(/^P-[0-9A-F]{16},30-39,\d{4},0$/);
 
     const auditoria = await prisma.auditLog.findFirst({
       where: { usuarioId: usuarioExportador.id, accion: 'EXPORT', entidad: 'Paciente' },
@@ -158,14 +152,14 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(auditoria).not.toBeNull();
   });
 
-  it('exports citas as CSV without patient name or clinical data, only the pacienteId reference', async () => {
+  it('exports citas as CSV without patient name or clinical data, only the patient pseudonym', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const res = await agent.get('/datos/exportar/citas.csv');
     expect(res.status).toBe(200);
     const cabecera = res.text.split('\r\n')[0];
-    expect(cabecera).toBe('id,pacienteId,medico,pasillo,box,fecha,horaInicio,horaFin,estado,anulada');
+    expect(cabecera).toBe('id,paciente,medico,pasillo,box,fecha,horaInicio,horaFin,estado,anulada');
     expect(cabecera).not.toMatch(/nombre|rut|motivo/i);
   });
 
@@ -176,6 +170,10 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     const res = await agent.get('/datos/exportar/auditoria.csv');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/text\/csv/);
+    // La creación del paciente de este archivo aparece con su seudónimo,
+    // no con su id: es la misma referencia que en el CSV de citas.
+    expect(res.text).toContain(`,CREATE,Paciente,${seudonimo(pacienteId)}`);
+    expect(res.text).not.toContain(`,CREATE,Paciente,${pacienteId}\r\n`);
 
     const auditoria = await prisma.auditLog.findFirst({
       where: { usuarioId: usuarioExportador.id, accion: 'EXPORT', entidad: 'AuditLog' },

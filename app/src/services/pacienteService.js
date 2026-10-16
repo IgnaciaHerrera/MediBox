@@ -6,6 +6,11 @@ const { cifrar, descifrar, indiceCiego } = require('../lib/cifrado');
 const { normalizarRut } = require('../lib/rut');
 const { edadEnAnios } = require('../lib/fecha');
 
+// Tramos de edad de la exportación seudonimizada. El último queda abierto
+// ("80+"): las edades extremas son pocas y por sí solas identifican.
+const TRAMO_EDAD_ANIOS = 10;
+const EDAD_TRAMO_ABIERTO = 80;
+
 // Toda lectura de datos de paciente pasa por este servicio (con su propia
 // auditoría), y es el único lugar donde se cifra y descifra.
 //
@@ -115,6 +120,39 @@ function traducirErrorPrisma(err) {
     if (err.code === 'P2025') throw new AppError('Paciente no encontrado', 404);
   }
   throw err;
+}
+
+/**
+ * Seudónimo estable de un paciente para los datos que salen del sistema:
+ * HMAC-SHA256 de su id con PACIENTE_SEUDONIMO_KEY, truncado a 64 bits. El
+ * mismo paciente tiene el mismo seudónimo en todas las exportaciones (permite
+ * seguirlo en el tiempo y cruzar citas con auditoría) y solo quien tenga la
+ * llave y la base puede volver a identificarlo. No es anonimización: el
+ * archivo sigue conteniendo datos personales.
+ *
+ * @param {number} pacienteId
+ * @returns {string} p. ej. "P-3F9A0C1D2E4B5A67".
+ *
+ * Consumidores: listarSeudonimizadoParaExport(), datosViewController
+ *   (exportaciones de citas y auditoría).
+ */
+function seudonimo(pacienteId) {
+  return `P-${indiceCiego('paciente.seudonimo', String(pacienteId)).toString('hex').slice(0, 16).toUpperCase()}`;
+}
+
+/**
+ * Generaliza una edad a su tramo de diez años ("30-39"), con un último tramo
+ * abierto ("80+").
+ *
+ * @param {number} edad - años cumplidos.
+ * @returns {string}
+ *
+ * Consumidores: listarSeudonimizadoParaExport().
+ */
+function tramoEtario(edad) {
+  if (edad >= EDAD_TRAMO_ABIERTO) return `${EDAD_TRAMO_ABIERTO}+`;
+  const desde = Math.floor(edad / TRAMO_EDAD_ANIOS) * TRAMO_EDAD_ANIOS;
+  return `${desde}-${desde + TRAMO_EDAD_ANIOS - 1}`;
 }
 
 function sinTildes(texto) {
@@ -233,11 +271,30 @@ async function listarPacientes({ page = 1, pageSize = 20, q } = {}, solicitante)
   return { items, total, page, pageSize };
 }
 
-async function listarTodosParaExport(usuarioId) {
-  const filas = await prisma.paciente.findMany({ select: SELECT_FICHA, orderBy: { createdAt: 'desc' } });
+/**
+ * Reporte de gestión de pacientes, seudonimizado: por cada paciente su
+ * seudónimo, su tramo de edad, el año en que se registró y cuántas citas
+ * (no anuladas) tiene. Sin nombre, RUT, fecha exacta ni contacto: un reporte
+ * de gestión no los necesita (Hito 1, flujo F4). Se audita.
+ *
+ * @param {number} usuarioId - quien exporta.
+ * @returns {Promise<Array<{paciente: string, tramoEtario: string, anioRegistro: number, citas: number}>>}
+ *
+ * Consumidores: datosViewController.exportarPacientes.
+ */
+async function listarSeudonimizadoParaExport(usuarioId) {
+  const filas = await prisma.paciente.findMany({
+    select: { id: true, fechaNacimientoCifrada: true, createdAt: true, _count: { select: { citas: { where: { anulada: false } } } } },
+    orderBy: { id: 'asc' },
+  });
 
   await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Paciente', entidadId: 0 });
-  return filas.map(ficha);
+  return filas.map((fila) => ({
+    paciente: seudonimo(fila.id),
+    tramoEtario: tramoEtario(edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada))),
+    anioRegistro: fila.createdAt.getFullYear(),
+    citas: fila._count.citas,
+  }));
 }
 
 // Sin auditar: es un conteo agregado, no expone la identidad de ningún
@@ -251,7 +308,9 @@ module.exports = {
   obtenerPacientePorId,
   actualizarPaciente,
   listarPacientes,
-  listarTodosParaExport,
+  listarSeudonimizadoParaExport,
+  seudonimo,
+  tramoEtario,
   contar,
   cifrarPaciente,
   puedeLeerPacientes,

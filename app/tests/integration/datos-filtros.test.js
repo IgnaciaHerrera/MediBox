@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
-const { cifrarPaciente } = require('../../src/services/pacienteService');
+const { cifrarPaciente, seudonimo } = require('../../src/services/pacienteService');
 
 // Filtros opcionales de la exportación (rango de fechas, estado de la cita y
 // acción de auditoría). Los datos propios usan fechas de 2031 para no
@@ -33,10 +33,10 @@ describe('Filtros de la exportación de datos', () => {
     return csv.trim().split('\r\n').slice(1).map((linea) => linea.split(','));
   }
 
-  // Columnas del CSV de citas: id, pacienteId, medico, pasillo, box, fecha, ...
+  // Columnas del CSV de citas: id, paciente (seudónimo), medico, pasillo, box, fecha, ...
   function fechasPropias(csv) {
     return filasDe(csv)
-      .filter((f) => Number(f[1]) === paciente.id)
+      .filter((f) => f[1] === seudonimo(paciente.id))
       .map((f) => f[5])
       .sort();
   }

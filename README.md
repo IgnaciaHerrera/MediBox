@@ -73,6 +73,13 @@ propia llave:
 | `PACIENTE_CONTACTO_KEY` | teléfono / correo |
 | `PACIENTE_CLINICO_KEY` | motivo de consulta |
 | `PACIENTE_RUT_HMAC_KEY` | índice ciego del RUT (HMAC-SHA256): búsqueda exacta y unicidad sin descifrar |
+| `PACIENTE_SEUDONIMO_KEY` | seudónimo del paciente en los CSV exportados (HMAC-SHA256): quien la tenga, junto con la base, puede volver a identificarlo |
+
+Las exportaciones de `/datos` nunca identifican a un paciente: el CSV de
+pacientes es un reporte seudonimizado (seudónimo, tramo de edad, año de
+registro y número de citas) y los de citas y auditoría lo nombran por el
+mismo seudónimo. Al agregar `PACIENTE_SEUDONIMO_KEY` a un `.env` existente,
+genérala como las demás llaves.
 
 Perder una llave significa perder los datos que protege: deben respaldarse
 fuera del servidor y separadas de los respaldos de la base.
