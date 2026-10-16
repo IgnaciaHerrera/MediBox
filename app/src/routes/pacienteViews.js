@@ -16,6 +16,8 @@ router.get('/nuevo', requirePermission('paciente.write'), controller.nuevaForm);
 router.post('/nuevo', requirePermission('paciente.write'), controller.crear);
 router.get('/:id/editar', requirePermission('paciente.write'), controller.editarForm);
 router.post('/:id/editar', requirePermission('paciente.write'), controller.editar);
+router.post('/:id/consentimientos/:clave/otorgar', requirePermission('consentimiento.write'), controller.otorgarConsentimiento);
+router.post('/:id/consentimientos/:clave/revocar', requirePermission('consentimiento.write'), controller.revocarConsentimiento);
 router.get('/:id', controller.detalle);
 
 module.exports = router;

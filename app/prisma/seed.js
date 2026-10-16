@@ -12,6 +12,7 @@ const PERMISOS = [
   'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write',
   'medicos.read',
   'paciente.read', 'paciente.read.propios', 'paciente.write',
+  'consentimiento.write',
   'notificaciones.read',
   'auditoria.read',
   'data.import', 'data.export',
@@ -24,12 +25,13 @@ const PERMISOS = [
 //   - medico: lee solo a sus pacientes y registra el estado de sus citas.
 //   - gestor: espacios, datos seudonimizados y auditoría; sin identidad de
 //     pacientes ni agendamiento.
+//   - operador: además registra consentimientos y revocaciones (Hito 3).
 //   - admin: cuentas, roles y configuración. Custodia las llaves, así que no
 //     lee los datos que protegen ni audita los accesos (separación de
 //     funciones): eso lo hace el gestor.
 const ROLES = {
   consulta: ['dashboard.read', 'agenda.read', 'box.read', 'box.detalle.read', 'medicos.read', 'notificaciones.read'],
-  operador: ['dashboard.read', 'agenda.read', 'agenda.write', 'box.read', 'box.write', 'box.detalle.read', 'medicos.read', 'paciente.read', 'paciente.write', 'notificaciones.read'],
+  operador: ['dashboard.read', 'agenda.read', 'agenda.write', 'box.read', 'box.write', 'box.detalle.read', 'medicos.read', 'paciente.read', 'paciente.write', 'consentimiento.write', 'notificaciones.read'],
   medico: ['dashboard.read', 'agenda.read', 'agenda.estado.propias', 'medicos.read', 'paciente.read.propios', 'notificaciones.read'],
   gestor: ['dashboard.read', 'dashboard.write', 'agenda.read', 'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write', 'medicos.read', 'notificaciones.read', 'auditoria.read', 'data.import', 'data.export'],
   admin: ['dashboard.read', 'medicos.read', 'notificaciones.read', 'admin.users', 'admin.roles', 'admin.system'],

@@ -138,15 +138,15 @@ async function confirmarCodigo(pacienteId, codigo, solicitante) {
  * @param {number} pacienteId
  * @param {number} usuarioId
  * @param {string[]} metodos - valores de METODOS.
- * @returns {Promise<({id: number, metodo: string}|null)>}
+ * @returns {Promise<({id: number, metodo: string, verificadaEl: Date}|null)>}
  *
- * Consumidores: exigirVerificacion(), vistas (estado de la verificación).
+ * Consumidores: exigirVerificacion(), estadoParaVista().
  */
 async function verificacionVigente(pacienteId, usuarioId, metodos) {
   return prisma.verificacionIdentidad.findFirst({
     where: { pacienteId, verificadaPorId: usuarioId, metodo: { in: metodos }, verificadaEl: { gte: minutosAntes(VIGENCIA_VERIFICACION_MIN) } },
     orderBy: { verificadaEl: 'desc' },
-    select: { id: true, metodo: true },
+    select: { id: true, metodo: true, verificadaEl: true },
   });
 }
 
@@ -169,8 +169,31 @@ async function exigirVerificacion(pacienteId, usuarioId, metodos) {
   return vigente;
 }
 
+/**
+ * Lo que muestra el parcial de verificación: si hay una vigente, con qué
+ * método y hasta cuándo, y a qué contacto (enmascarado) iría el código.
+ *
+ * @param {number} pacienteId
+ * @param {number} usuarioId
+ * @param {(string|null)} contacto - el contacto en claro que ya tiene la ficha.
+ * @returns {Promise<{vigente: ({metodo: string, nombreMetodo: string, hasta: Date}|null),
+ *   contactoEnmascarado: (string|null)}>}
+ *
+ * Consumidores: pacienteViewController.detalle, solicitudViewController.
+ */
+async function estadoParaVista(pacienteId, usuarioId, contacto) {
+  const vigente = await verificacionVigente(pacienteId, usuarioId, Object.values(METODOS));
+  return {
+    vigente: vigente
+      ? { metodo: vigente.metodo, nombreMetodo: NOMBRES_METODO[vigente.metodo], hasta: new Date(vigente.verificadaEl.getTime() + VIGENCIA_VERIFICACION_MIN * 60 * 1000) }
+      : null,
+    contactoEnmascarado: contacto ? enmascararContacto(contacto) : null,
+  };
+}
+
 module.exports = {
   METODOS,
+  estadoParaVista,
   NOMBRES_METODO,
   VIGENCIA_VERIFICACION_MIN,
   verificarConCedula,

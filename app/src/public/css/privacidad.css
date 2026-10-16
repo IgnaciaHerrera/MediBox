@@ -1,0 +1,139 @@
+/* ---------- Hito 3: verificación de identidad, consentimientos y derechos ---------- */
+
+.consentimientos-nota,
+.page-main .aviso {
+  margin: 0 0 1rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.page-main .aviso {
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--ochre);
+  background: rgba(185, 130, 47, 0.08);
+  color: var(--ink);
+}
+
+/* Verificación */
+
+.verificacion {
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.verificacion-estado {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.verificacion-estado--ok {
+  color: var(--teal-deep);
+  font-weight: 600;
+}
+
+.verificacion-metodos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.verificacion-metodo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.verificacion-codigo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.verificacion-codigo label {
+  width: 100%;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.verificacion-codigo input {
+  width: 7.5rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.15em;
+}
+
+.casilla {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-size: 0.88rem;
+}
+
+/* Consentimientos */
+
+.consentimientos-lista {
+  display: grid;
+  gap: 1rem;
+}
+
+.consentimiento-card {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-raised);
+}
+
+.consentimiento-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.consentimiento-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.consentimiento-meta {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.consentimiento-texto {
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+}
+
+.consentimiento-texto summary {
+  cursor: pointer;
+  color: var(--teal-deep);
+}
+
+.consentimiento-texto p {
+  margin: 0.5rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--line-strong);
+}
+
+.consentimiento-acciones {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.consentimiento-form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.consentimiento-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}

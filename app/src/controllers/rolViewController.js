@@ -7,7 +7,7 @@ const { toast } = require('../lib/toast');
 // primero por azar).
 const ORDEN_ROLES = ['consulta', 'operador', 'medico', 'gestor', 'admin'];
 
-const ORDEN_DOMINIOS = ['dashboard', 'agenda', 'box', 'medicos', 'paciente', 'notificaciones', 'auditoria', 'data', 'admin'];
+const ORDEN_DOMINIOS = ['dashboard', 'agenda', 'box', 'medicos', 'paciente', 'consentimiento', 'notificaciones', 'auditoria', 'data', 'admin'];
 
 const ETIQUETAS_DOMINIO = {
   dashboard: 'Panel principal',
@@ -15,6 +15,7 @@ const ETIQUETAS_DOMINIO = {
   box: 'Espacios',
   medicos: 'Médicos',
   paciente: 'Pacientes',
+  consentimiento: 'Consentimientos',
   notificaciones: 'Notificaciones',
   auditoria: 'Auditoría',
   data: 'Datos',
@@ -35,6 +36,7 @@ const ETIQUETAS_PERMISO = {
   'paciente.read': 'Ver pacientes',
   'paciente.read.propios': 'Ver solo los pacientes que atiende',
   'paciente.write': 'Crear y editar pacientes',
+  'consentimiento.write': 'Registrar consentimientos y revocaciones',
   'notificaciones.read': 'Ver notificaciones',
   'auditoria.read': 'Ver registro de auditoría',
   'data.import': 'Importar datos',

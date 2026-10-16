@@ -11,6 +11,7 @@ const DOMINIOS = {
   box: 'Espacios',
   medicos: 'Médicos',
   paciente: 'Pacientes',
+  consentimiento: 'Consentimientos',
   notificaciones: 'Notificaciones',
   auditoria: 'Auditoría',
   data: 'Datos',

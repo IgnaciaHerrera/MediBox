@@ -1,0 +1,105 @@
+<%
+  // Consentimientos del paciente, uno por finalidad. Otorgar y revocar siguen
+  // el mismo procedimiento: verificar la identidad y un clic, indicando el
+  // canal por el que llegó la petición. La casilla de aceptación nunca viene
+  // marcada.
+  const ESTADOS = {
+    vigente: { texto: 'Vigente', clase: 'badge-atendido' },
+    revocado: { texto: 'Revocado', clase: 'badge-anulada' },
+    a_renovar: { texto: 'A renovar (texto nuevo)', clase: 'badge-agendada' },
+    sin_otorgar: { texto: 'Sin otorgar', clase: '' },
+  };
+  const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo' };
+  const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro' };
+  const METODOS = { cedula_presencial: 'cédula', codigo_contacto: 'código' };
+%>
+<section class="panel-card panel-lista" id="consentimientos" aria-labelledby="paciente-consentimientos-titulo">
+  <div class="panel-lista-head">
+    <h2 id="paciente-consentimientos-titulo">Consentimientos</h2>
+  </div>
+  <p class="consentimientos-nota">
+    Son solo para usos opcionales. La atención, la agenda y los avisos de cambios en sus citas no dependen de ellos: negarse o revocar no afecta su atención.
+  </p>
+
+  <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
+
+  <% if (consentimiento.requiereRepresentante) { %>
+    <p class="aviso">El paciente tiene menos de 14 años: el consentimiento lo da quien tiene su cuidado personal, y se registran sus datos.</p>
+  <% } else if (consentimiento.esAdolescente) { %>
+    <p class="aviso">Paciente adolescente: otorga él mismo. Explícale el texto con especial cuidado, porque involucra datos de salud.</p>
+  <% } %>
+
+  <div class="consentimientos-lista">
+    <% consentimientos.forEach(function(c) { %>
+      <% const estado = ESTADOS[c.estado]; %>
+      <article class="consentimiento-card">
+        <header class="consentimiento-head">
+          <h3><%= c.finalidad.nombre %></h3>
+          <span class="badge <%= estado.clase %>"><%= estado.texto %></span>
+        </header>
+
+        <% if (c.otorgadoEl) { %>
+          <p class="consentimiento-meta">
+            Otorgado el <%= fechaDMA(isoLocal(c.otorgadoEl)) %> (texto v<%= c.version %>, <%= CANALES[c.canal] ? CANALES[c.canal].toLowerCase() : c.canal %>,
+            <%= c.otorgadoPor === 'representante' ? 'por su representante' : 'por el titular' %>, verificado con <%= METODOS[c.metodoVerificacion] %>), registrado por <%= c.registradoPor %>.
+            <% if (c.revocadoEl) { %>Revocado el <%= fechaDMA(isoLocal(c.revocadoEl)) %>.<% } %>
+          </p>
+        <% } %>
+
+        <details class="consentimiento-texto" <%= c.estado === 'vigente' ? '' : 'open' %>>
+          <summary>Texto vigente (v<%= c.textoVigente.version %>): léelo al titular antes de registrar</summary>
+          <p><%= c.textoVigente.texto %></p>
+        </details>
+
+        <div class="consentimiento-acciones">
+          <% if (c.estado !== 'vigente') { %>
+            <form method="POST" action="/pacientes/<%= paciente.id %>/consentimientos/<%= c.finalidad.clave %>/otorgar" class="consentimiento-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="textoId" value="<%= c.textoVigente.id %>" />
+              <label class="casilla">
+                <input type="checkbox" name="acepta" value="si" required />
+                El <%= consentimiento.requiereRepresentante ? 'representante' : 'titular' %> aceptó este texto
+              </label>
+              <% if (consentimiento.requiereRepresentante) { %>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="rep-nombre-<%= c.finalidad.clave %>">Nombre del representante</label>
+                    <input id="rep-nombre-<%= c.finalidad.clave %>" name="representanteNombre" required maxlength="150" />
+                  </div>
+                  <div class="field">
+                    <label for="rep-rut-<%= c.finalidad.clave %>">RUT del representante</label>
+                    <input id="rep-rut-<%= c.finalidad.clave %>" name="representanteRut" required maxlength="12" />
+                  </div>
+                  <div class="field">
+                    <label for="rep-relacion-<%= c.finalidad.clave %>">Relación</label>
+                    <select id="rep-relacion-<%= c.finalidad.clave %>" name="representanteRelacion" required>
+                      <option value="">Elige…</option>
+                      <% consentimiento.relaciones.forEach(function(r) { %><option value="<%= r %>"><%= RELACIONES[r] %></option><% }) %>
+                    </select>
+                  </div>
+                </div>
+              <% } %>
+              <div class="consentimiento-fila">
+                <select name="canal" required aria-label="Canal de la petición">
+                  <option value="">¿Por dónde llegó?</option>
+                  <% consentimiento.canales.forEach(function(canal) { %><option value="<%= canal %>"><%= CANALES[canal] %></option><% }) %>
+                </select>
+                <button type="submit" class="btn btn-primary btn--auto btn--control"><%= c.estado === 'a_renovar' ? 'Renovar' : 'Otorgar' %></button>
+              </div>
+            </form>
+          <% } %>
+          <% if (c.estado === 'vigente' || c.estado === 'a_renovar') { %>
+            <form method="POST" action="/pacientes/<%= paciente.id %>/consentimientos/<%= c.finalidad.clave %>/revocar" class="consentimiento-form consentimiento-fila">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <select name="canal" required aria-label="Canal de la petición">
+                <option value="">¿Por dónde llegó?</option>
+                <% consentimiento.canales.forEach(function(canal) { %><option value="<%= canal %>"><%= CANALES[canal] %></option><% }) %>
+              </select>
+              <button type="submit" class="btn btn-neutro btn--auto btn--control">Revocar</button>
+            </form>
+          <% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>

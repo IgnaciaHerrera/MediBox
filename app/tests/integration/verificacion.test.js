@@ -61,7 +61,7 @@ describe('Verificación de identidad', () => {
   it('verificar con cédula deja la verificación vigente con su método y quién verificó', async () => {
     const { verificacionId } = await verificacion.verificarConCedula(pacientes.a.id, solicitante(funcionario));
     const vigente = await verificacion.verificacionVigente(pacientes.a.id, funcionario.id, [CEDULA]);
-    expect(vigente).toEqual({ id: verificacionId, metodo: CEDULA });
+    expect(vigente).toMatchObject({ id: verificacionId, metodo: CEDULA });
     const fila = await prisma.verificacionIdentidad.findUnique({ where: { id: verificacionId } });
     expect(fila.verificadaPorId).toBe(funcionario.id);
   });

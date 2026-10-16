@@ -1,0 +1,43 @@
+<%
+  // Verificación de identidad del titular, antes de un consentimiento o de
+  // un derecho. Se espera: pacienteId, verificacion ({vigente, contactoEnmascarado})
+  // y csrfToken. El código nunca se muestra: llega al contacto del paciente.
+%>
+<div class="verificacion" id="verificacion">
+  <% if (verificacion.vigente) { %>
+    <p class="verificacion-estado verificacion-estado--ok">
+      Identidad verificada con <%= verificacion.vigente.nombreMetodo %> hasta las <%= isoLocal(verificacion.vigente.hasta).slice(11, 16) %>.
+    </p>
+  <% } else { %>
+    <p class="verificacion-estado">Antes de registrar, verifica la identidad de quien lo pide.</p>
+  <% } %>
+
+  <div class="verificacion-metodos">
+    <form class="verificacion-metodo" method="POST" action="/verificacion/<%= pacienteId %>/cedula">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label class="casilla">
+        <input type="checkbox" name="cedulaVista" value="si" required />
+        Vi la cédula del titular (o de su representante) en persona
+      </label>
+      <button type="submit" class="btn btn-neutro btn--auto btn--control">Verificar con cédula</button>
+    </form>
+
+    <div class="verificacion-metodo">
+      <% if (verificacion.contactoEnmascarado) { %>
+        <form method="POST" action="/verificacion/<%= pacienteId %>/enviar-codigo">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Enviar código a <%= verificacion.contactoEnmascarado %></button>
+        </form>
+        <form class="verificacion-codigo" method="POST" action="/verificacion/<%= pacienteId %>/confirmar-codigo">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <label for="codigo-<%= pacienteId %>">Código que dicta el titular</label>
+          <input id="codigo-<%= pacienteId %>" name="codigo" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required />
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Confirmar</button>
+        </form>
+        <p class="ayuda">El código solo va al contacto que el paciente ya tenía registrado, nunca a uno que entregue quien llama.</p>
+      <% } else { %>
+        <p class="ayuda">Sin contacto registrado: solo se puede verificar con la cédula. Si la petición llegó a distancia, queda pendiente hasta la próxima visita.</p>
+      <% } %>
+    </div>
+  </div>
+</div>

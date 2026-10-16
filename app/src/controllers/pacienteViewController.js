@@ -1,9 +1,12 @@
 const Joi = require('joi');
 const pacienteService = require('../services/pacienteService');
 const citaService = require('../services/citaService');
+const consentimientoService = require('../services/consentimientoService');
+const verificacionService = require('../services/verificacionService');
 const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { toast } = require('../lib/toast');
+const { volver } = require('../lib/responderError');
 const { hoyISO } = require('../lib/fecha');
 
 const pacienteSchema = Joi.object({
@@ -76,6 +79,11 @@ async function detalle(req, res, next) {
     const verCitas = req.usuario.permisos.includes('agenda.read');
     const citas = verCitas ? separarCitas(await citaService.listarPorPaciente(id), req.query.page) : null;
     const historial = await pacienteService.listarHistorial(id);
+    // Consentimientos: solo para quien los gestiona (el operador). El médico
+    // no los necesita para atender.
+    const gestionaConsentimientos = req.usuario.permisos.includes('consentimiento.write');
+    const consentimientos = gestionaConsentimientos ? await consentimientoService.estadoPorPaciente(id) : null;
+    const verificacion = gestionaConsentimientos ? await verificacionService.estadoParaVista(id, req.usuario.id, paciente.contacto) : null;
     res.render('pacientes/detalle', {
       titulo: paciente.nombre,
       usuario: req.usuario,
@@ -83,6 +91,14 @@ async function detalle(req, res, next) {
       paciente,
       citas,
       historial,
+      consentimientos,
+      verificacion,
+      consentimiento: {
+        canales: consentimientoService.CANALES,
+        relaciones: consentimientoService.RELACIONES,
+        requiereRepresentante: consentimientoService.requiereRepresentante(paciente.edad),
+        esAdolescente: paciente.edad >= consentimientoService.EDAD_CONSENTIMIENTO_PROPIO && paciente.edad < 18,
+      },
       puedeAgendar: req.usuario.permisos.includes('agenda.write'),
       puedeEditar: req.usuario.permisos.includes('paciente.write'),
     });
@@ -190,4 +206,59 @@ async function editar(req, res, next) {
   }
 }
 
-module.exports = { index, detalle, nuevaForm, crear, editarForm, editar };
+const otorgarSchema = Joi.object({
+  textoId: Joi.number().integer().positive().required(),
+  canal: Joi.string().valid(...consentimientoService.CANALES).required().messages({ 'any.only': 'Indica por qué canal llegó la petición', 'any.required': 'Indica por qué canal llegó la petición' }),
+  // Expreso: la casilla viene sin marcar y el silencio no es consentimiento.
+  acepta: Joi.string().valid('si').required().messages({ 'any.only': 'Marca que el titular aceptó el texto', 'any.required': 'Marca que el titular aceptó el texto' }),
+  representanteNombre: Joi.string().trim().allow(''),
+  representanteRut: Joi.string().trim().allow(''),
+  representanteRelacion: Joi.string().trim().allow(''),
+}).unknown(true);
+
+const revocarSchema = Joi.object({
+  canal: Joi.string().valid(...consentimientoService.CANALES).required().messages({ 'any.only': 'Indica por qué canal llegó la petición', 'any.required': 'Indica por qué canal llegó la petición' }),
+}).unknown(true);
+
+// Un formulario de la ficha vuelve a ella con un aviso; la API, JSON.
+function responderFormulario(req, res, mensaje) {
+  if (req.accepts(['json', 'html']) === 'html') {
+    toast(req, mensaje);
+    return volver(req, res);
+  }
+  return res.json({ ok: true, mensaje });
+}
+
+function validar(schema, cuerpo) {
+  const { error, value } = schema.validate(cuerpo);
+  if (error) throw new AppError(error.details[0].message, 400);
+  return value;
+}
+
+async function otorgarConsentimiento(req, res, next) {
+  try {
+    const value = validar(otorgarSchema, req.body);
+    const representante = value.representanteNombre || value.representanteRut || value.representanteRelacion
+      ? { nombre: value.representanteNombre, rut: value.representanteRut, relacion: value.representanteRelacion }
+      : undefined;
+    await consentimientoService.otorgar(
+      { pacienteId: Number(req.params.id), finalidadClave: req.params.clave, textoId: value.textoId, canal: value.canal, representante },
+      req.usuario,
+    );
+    responderFormulario(req, res, 'Consentimiento registrado');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function revocarConsentimiento(req, res, next) {
+  try {
+    const value = validar(revocarSchema, req.body);
+    await consentimientoService.revocar({ pacienteId: Number(req.params.id), finalidadClave: req.params.clave, canal: value.canal }, req.usuario);
+    responderFormulario(req, res, 'Consentimiento revocado');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { index, detalle, nuevaForm, crear, editarForm, editar, otorgarConsentimiento, revocarConsentimiento };

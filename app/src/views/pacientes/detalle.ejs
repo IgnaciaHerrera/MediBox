@@ -178,6 +178,10 @@
       </section>
     <% } %>
 
+    <% if (consentimientos) { %>
+      <%- include('_consentimientos', { paciente, consentimientos, verificacion, consentimiento, csrfToken }) %>
+    <% } %>
+
     <%- include('_historial', { historial }) %>
   </main>
   <script src="/js/pacientes-detalle.js"></script>
