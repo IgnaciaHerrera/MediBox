@@ -37,8 +37,9 @@ function puedeLeerPacientes(solicitante) {
  * Filtro de Prisma con los pacientes que un usuario puede leer. Con
  * 'paciente.read' son todos; con 'paciente.read.propios' (el médico) solo los
  * que tienen o tuvieron una cita con él: la Ley 20.584, art. 13, deja fuera
- * de la ficha a quien no participa en la atención. Un paciente fuera del
- * alcance se responde como inexistente (404), sin revelar que existe.
+ * de la ficha a quien no participa en la atención. Un paciente bloqueado
+ * queda fuera del alcance de todos. Un paciente fuera del alcance se responde
+ * como inexistente (404), sin revelar que existe.
  *
  * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
  * @returns {object} cláusula `where` para prisma.paciente.
@@ -48,8 +49,10 @@ function puedeLeerPacientes(solicitante) {
  *   buscarPorRut().
  */
 function alcanceDe(solicitante) {
-  if (solicitante.permisos.includes('paciente.read')) return {};
-  if (puedeLeerPacientes(solicitante)) return { citas: { some: { medico: { usuarioId: solicitante.id } } } };
+  // Un paciente bloqueado (bloqueo o supresión) no se usa para nada: queda
+  // fuera del alcance de todos, salvo de privacidad a través de una solicitud.
+  if (solicitante.permisos.includes('paciente.read')) return { bloqueado: false };
+  if (puedeLeerPacientes(solicitante)) return { bloqueado: false, citas: { some: { medico: { usuarioId: solicitante.id } } } };
   // Privacidad: solo los pacientes con una solicitud de derechos abierta.
   if (solicitante.permisos.includes('derechos.gestionar')) return { solicitudes: { some: { estado: { in: ['recibida', 'verificada'] } } } };
   throw new AppError('Permiso insuficiente', 403);
@@ -330,6 +333,20 @@ async function edadDe(pacienteId) {
 }
 
 /**
+ * Si un paciente está bloqueado, sin leer ninguno de sus datos. Para que el
+ * detalle de una cita diga por qué no muestra al paciente.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<boolean>}
+ *
+ * Consumidores: agendaViewController.detalle, citaService.crearCita.
+ */
+async function estaBloqueado(pacienteId) {
+  const fila = await prisma.paciente.findUnique({ where: { id: pacienteId }, select: { bloqueado: true } });
+  return Boolean(fila && fila.bloqueado);
+}
+
+/**
  * Contacto en claro del paciente, solo para enviarle un código de
  * verificación. La lectura queda auditada con su motivo.
  *
@@ -362,7 +379,7 @@ async function contactoParaVerificacion(pacienteId, solicitante) {
  */
 async function contactosParaProceso(pacienteIds) {
   const filas = await prisma.paciente.findMany({
-    where: { id: { in: pacienteIds }, contactoCifrado: { not: null } },
+    where: { id: { in: pacienteIds }, bloqueado: false, contactoCifrado: { not: null } },
     select: { id: true, contactoCifrado: true },
   });
   return new Map(filas.map((f) => [f.id, descifrar('paciente.contacto', f.contactoCifrado)]));
@@ -534,7 +551,7 @@ async function listarPacientes({ page = 1, pageSize = 20, q } = {}, solicitante)
  */
 async function listarSeudonimizadoParaExport(usuarioId, { pacienteIds, finalidad } = {}) {
   const filas = await prisma.paciente.findMany({
-    where: pacienteIds ? { id: { in: pacienteIds } } : {},
+    where: { bloqueado: false, ...(pacienteIds ? { id: { in: pacienteIds } } : {}) },
     select: { id: true, fechaNacimientoCifrada: true, createdAt: true, _count: { select: { citas: { where: { anulada: false } } } } },
     orderBy: { id: 'asc' },
   });
@@ -568,6 +585,7 @@ module.exports = {
   ultimoCambioDe,
   exigirAlcance,
   edadDe,
+  estaBloqueado,
   obtenerFichaParaGestion,
   datosParaTitular,
   nombresDe,

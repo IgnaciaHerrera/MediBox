@@ -3,7 +3,13 @@ const { verificarConflicto, crearCita } = require('../../src/services/citaServic
 const { prisma } = require('../../src/lib/prisma');
 
 jest.mock('../../src/lib/prisma', () => ({
-  prisma: { cita: { findFirst: jest.fn() }, $transaction: jest.fn(), auditLog: { create: jest.fn() } },
+  prisma: {
+    cita: { findFirst: jest.fn() },
+    // crearCita comprueba primero que el paciente no esté bloqueado.
+    paciente: { findUnique: jest.fn(async () => ({ bloqueado: false })) },
+    $transaction: jest.fn(),
+    auditLog: { create: jest.fn() },
+  },
 }));
 
 function fallaSerializacion() {

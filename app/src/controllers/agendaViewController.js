@@ -191,12 +191,15 @@ async function detalle(req, res, next) {
     // la agenda completa, pero la identidad solo de sus propios pacientes.
     let paciente = null;
     let motivoConsulta = null;
+    let pacienteRestringido = false;
     if (pacienteService.puedeLeerPacientes(req.usuario)) {
       try {
         paciente = await pacienteService.obtenerPacientePorId(cita.pacienteId, req.usuario);
         motivoConsulta = await citaService.obtenerMotivo(id);
       } catch (err) {
         if (!(err instanceof AppError && err.statusCode === 404)) throw err;
+        // Bloqueado por un derecho del titular: se dice, sin mostrar quién es.
+        pacienteRestringido = await pacienteService.estaBloqueado(cita.pacienteId);
       }
     }
 
@@ -211,6 +214,7 @@ async function detalle(req, res, next) {
       csrfToken: res.locals.csrfToken,
       cita,
       paciente,
+      pacienteRestringido,
       motivoConsulta,
       historial,
       puedeAnular: req.usuario.permisos.includes('agenda.write'),

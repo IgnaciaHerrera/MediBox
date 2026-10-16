@@ -55,6 +55,10 @@ async function verificarConflicto({ boxId, medicoId, fecha, horaInicio, horaFin 
 
 async function crearCita(datos, usuarioId) {
   const { pacienteId, medicoId, boxId, fecha, horaInicio, horaFin, motivoConsulta } = datos;
+  // Un paciente bloqueado (o inexistente) no se agenda, venga de la vista o
+  // directo por la API con su id.
+  const paciente = await prisma.paciente.findUnique({ where: { id: pacienteId }, select: { bloqueado: true } });
+  if (!paciente || paciente.bloqueado) throw new AppError('Paciente no disponible para agendar', 400);
 
   for (let intento = 1; intento <= MAX_INTENTOS_SERIALIZACION; intento += 1) {
     try {
@@ -328,7 +332,8 @@ function construirWhereExport({ desde, hasta, estado } = {}) {
 
 async function listarTodasParaExport(usuarioId, filtros = {}) {
   const items = await prisma.cita.findMany({
-    where: construirWhereExport(filtros),
+    // Las citas de un paciente bloqueado salen de los reportes.
+    where: { ...construirWhereExport(filtros), paciente: { bloqueado: false } },
     orderBy: [{ fecha: 'asc' }, { horaInicio: 'asc' }],
     include: { medico: true, box: { include: { pasillo: true } } },
   });

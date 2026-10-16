@@ -45,7 +45,9 @@
       <span class="badge badge-<%= estadoClase %>"><%= estadoTexto %></span>
     </div>
 
-    <% if (!paciente) { %>
+    <% if (pacienteRestringido) { %>
+      <p class="aviso">Datos del paciente restringidos: están bloqueados por una solicitud del titular y no se pueden usar.</p>
+    <% } else if (!paciente) { %>
       <p class="aviso">Tu rol no tiene acceso a la identidad del paciente de esta cita.</p>
     <% } %>
 

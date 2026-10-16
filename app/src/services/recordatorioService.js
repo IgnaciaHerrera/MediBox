@@ -31,7 +31,7 @@ const fechaDMA = (iso) => iso.split('-').reverse().join('-');
 async function enviarRecordatorios({ fecha = mananaISO() } = {}) {
   const autorizados = new Set(await pacientesConVigente('recordatorios'));
   const citas = await prisma.cita.findMany({
-    where: { fecha: new Date(fecha), anulada: false, estado: 'agendada', pacienteId: { in: [...autorizados] } },
+    where: { fecha: new Date(fecha), anulada: false, estado: 'agendada', pacienteId: { in: [...autorizados] }, paciente: { bloqueado: false } },
     select: { pacienteId: true, horaInicio: true },
     orderBy: { horaInicio: 'asc' },
   });
