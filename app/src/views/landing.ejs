@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('partials/head', { titulo }) %>
+</head>
+<body class="landing-body">
+  <header class="landing-header">
+    <div class="landing-contenedor landing-header-fila">
+      <a class="landing-logo" href="/" aria-label="MediBox, inicio">
+        <span class="landing-logo-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+        </span>
+        <span class="landing-logo-texto">MediBox</span>
+      </a>
+
+      <nav class="landing-nav" aria-label="Secciones">
+        <a href="#accesos">Ingresar</a>
+        <a href="#servicios">Servicios</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="/privacidad">Privacidad</a>
+      </nav>
+
+      <div class="landing-header-acciones">
+        <a class="landing-btn landing-btn--primario landing-btn--sm landing-header-paciente" href="/portal">Portal del paciente</a>
+        <a class="landing-btn landing-btn--borde landing-btn--sm" href="/auth/login-form">Acceso personal</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="landing-hero">
+      <div class="landing-contenedor landing-hero-grilla">
+        <div class="landing-hero-texto">
+          <p class="landing-eyebrow">Atención y datos del paciente</p>
+          <h1>Tu información de salud, <span>clara y bajo tu control.</span></h1>
+          <p class="landing-hero-sub">
+            Consulta tus datos y tus citas, descárgalos y decide cómo se usan.
+            Ingresas con tu RUT y un código de un solo uso: sin cuentas ni contraseñas.
+          </p>
+          <ul class="landing-hero-puntos">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              Tus datos viajan cifrados
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              Solo tú puedes entrar a tu portal
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+              Todo acceso queda registrado
+            </li>
+          </ul>
+        </div>
+
+        <div class="landing-hero-visual" aria-hidden="true">
+          <div class="landing-visual-panel">
+            <div class="landing-chip landing-chip--a">
+              <span class="landing-chip-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/></svg>
+              </span>
+              <span><strong>Tus datos</strong>Siempre a tu alcance</span>
+            </div>
+            <div class="landing-chip landing-chip--b">
+              <span class="landing-chip-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>
+              </span>
+              <span><strong>Tus citas</strong>Con médico y box</span>
+            </div>
+            <div class="landing-chip landing-chip--c">
+              <span class="landing-chip-icono">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+              </span>
+              <span><strong>Tus permisos</strong>Tú decides el uso</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-accesos" id="accesos" aria-labelledby="accesos-titulo">
+      <div class="landing-contenedor">
+        <h2 id="accesos-titulo" class="landing-sr">¿Cómo quieres ingresar?</h2>
+        <div class="landing-accesos-grilla">
+          <article class="landing-acceso landing-acceso--paciente">
+            <span class="landing-acceso-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20.5c1.2-4.2 4-6.3 7-6.3s5.8 2.1 7 6.3"/></svg>
+            </span>
+            <p class="landing-acceso-etiqueta">Pacientes</p>
+            <h3>Portal del paciente</h3>
+            <p>Revisa tus datos y tus citas, descárgalos en Excel o PDF y gestiona tus consentimientos y solicitudes. Ingresas con tu RUT y un código.</p>
+            <a class="landing-btn landing-btn--primario" href="/portal">
+              Ir al portal del paciente
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </article>
+
+          <article class="landing-acceso landing-acceso--personal">
+            <span class="landing-acceso-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5M3.5 13h17"/></svg>
+            </span>
+            <p class="landing-acceso-etiqueta">Personal del hospital</p>
+            <h3>Acceso para funcionarios</h3>
+            <p>Agenda médica, espacios clínicos y gestión de pacientes. Acceso restringido al personal autorizado, con tu correo institucional.</p>
+            <a class="landing-btn landing-btn--borde" href="/auth/login-form">
+              Iniciar sesión
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-seccion" id="servicios" aria-labelledby="servicios-titulo">
+      <div class="landing-contenedor">
+        <div class="landing-seccion-cabecera">
+          <p class="landing-eyebrow landing-eyebrow--claro">Para pacientes</p>
+          <h2 id="servicios-titulo">Todo lo que puedes hacer en el portal</h2>
+          <p>Tus datos son tuyos. Desde el portal puedes verlos, llevártelos y decidir qué se hace con ellos.</p>
+        </div>
+
+        <div class="landing-servicios">
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.5 1.7-2.3 3-2.3s2.4.8 3 2.3M14.5 10h4M14.5 13.5h3"/></svg>
+            </span>
+            <h3>Mis datos y mis citas</h3>
+            <p>Mira qué información tiene el hospital sobre ti, para qué se usa y con quién se comparte, junto con tus citas.</p>
+          </article>
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 11 12 15.5 16.5 11"/><path d="M5 19.5h14"/></svg>
+            </span>
+            <h3>Descargar mis datos</h3>
+            <p>Llévate toda tu información en Excel, para usarla en otro lugar, o en PDF, para leerla con calma.</p>
+          </article>
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <h3>Mis consentimientos</h3>
+            <p>Acepta o revoca con un clic los usos opcionales de tus datos. Tu atención no depende de ellos.</p>
+          </article>
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+            </span>
+            <h3>Corregir, bloquear o suprimir</h3>
+            <p>Pide la rectificación de un dato, o su bloqueo o supresión. Cada solicitud queda registrada y recibe respuesta.</p>
+          </article>
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <h3>Historial de cambios</h3>
+            <p>Revisa cada cambio que se hizo a tus datos, con el valor que tenían antes.</p>
+          </article>
+          <article class="landing-servicio">
+            <span class="landing-servicio-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></svg>
+            </span>
+            <h3>Quién vio mis datos</h3>
+            <p>Conoce qué funciones del hospital accedieron a tu información y cuándo lo hicieron.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-seccion landing-seccion--alt" id="como-funciona" aria-labelledby="pasos-titulo">
+      <div class="landing-contenedor">
+        <div class="landing-seccion-cabecera">
+          <p class="landing-eyebrow landing-eyebrow--claro">Ingreso seguro</p>
+          <h2 id="pasos-titulo">Así de simple es ingresar</h2>
+          <p>Sin crear una cuenta y sin recordar contraseñas.</p>
+        </div>
+
+        <ol class="landing-pasos">
+          <li>
+            <span class="landing-paso-numero" aria-hidden="true">1</span>
+            <h3>Escribe tu RUT</h3>
+            <p>Entra al portal del paciente e indica tu RUT.</p>
+          </li>
+          <li>
+            <span class="landing-paso-numero" aria-hidden="true">2</span>
+            <h3>Recibe tu código</h3>
+            <p>Te lo enviamos al contacto que ya tienes registrado en el hospital. Vence en 10 minutos y sirve una sola vez.</p>
+          </li>
+          <li>
+            <span class="landing-paso-numero" aria-hidden="true">3</span>
+            <h3>Accede a tu información</h3>
+            <p>Tu sesión dura 15 minutos y se cierra sola, para proteger tus datos.</p>
+          </li>
+        </ol>
+
+        <p class="landing-pasos-nota">
+          ¿No tienes un contacto registrado o no te llega el código? Acércate a admisión con tu cédula de identidad.
+        </p>
+      </div>
+    </section>
+
+    <section class="landing-confianza" id="privacidad" aria-labelledby="confianza-titulo">
+      <div class="landing-contenedor landing-confianza-grilla">
+        <div class="landing-confianza-texto">
+          <p class="landing-eyebrow">Tus datos, protegidos</p>
+          <h2 id="confianza-titulo">Tratamos tu información con el cuidado que merece</h2>
+          <p>Tu información clínica y de identidad se guarda cifrada, solo se accede a ella con un motivo y cada acceso queda registrado.</p>
+          <a class="landing-btn landing-btn--claro" href="/privacidad">
+            Leer la política de tratamiento de datos
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+        <ul class="landing-garantias">
+          <li>
+            <span class="landing-garantia-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <span><strong>Datos cifrados</strong>Nombre, RUT, contacto y motivo de consulta se guardan cifrados.</span>
+          </li>
+          <li>
+            <span class="landing-garantia-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/><path d="m16.5 6.5 1.3 1.3 2.4-2.6"/></svg>
+            </span>
+            <span><strong>Identidad verificada</strong>Solo tú entras a tu portal, con un código de un solo uso.</span>
+          </li>
+          <li>
+            <span class="landing-garantia-icono" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h5"/></svg>
+            </span>
+            <span><strong>Todo queda registrado</strong>Cada acceso a tu información se anota y se puede revisar.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="landing-contenedor landing-footer-fila">
+      <div class="landing-footer-marca">
+        <a class="landing-logo landing-logo--claro" href="/" aria-label="MediBox, inicio">
+          <span class="landing-logo-icono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>
+          </span>
+          <span class="landing-logo-texto">MediBox</span>
+        </a>
+        <p>Gestión de espacios clínicos y agenda médica.</p>
+      </div>
+      <nav class="landing-footer-links" aria-label="Enlaces del pie">
+        <a href="/portal">Portal del paciente</a>
+        <a href="/auth/login-form">Acceso personal</a>
+        <a href="/privacidad">Política de privacidad</a>
+      </nav>
+    </div>
+    <div class="landing-contenedor landing-footer-pie">
+      <span>© 2026 MediBox</span>
+      <span>Sistema interno del hospital. El acceso del personal es restringido.</span>
+    </div>
+  </footer>
+</body>
+</html>

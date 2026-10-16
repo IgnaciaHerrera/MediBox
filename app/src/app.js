@@ -73,7 +73,9 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-app.get('/', (req, res) => res.redirect('/auth/login-form'));
+// Página de inicio pública: una entrada para pacientes (/portal) y otra para
+// el personal (/auth/login-form).
+app.get('/', (req, res) => res.render('landing', { titulo: 'Inicio' }));
 
 // Política de tratamiento de datos (Ley 21.719, art. 14 ter): pública.
 app.get('/privacidad', (req, res) => res.render('privacidad', { titulo: 'Política de privacidad', tratamiento: TRATAMIENTO }));
