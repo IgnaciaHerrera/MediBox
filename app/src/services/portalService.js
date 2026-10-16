@@ -3,7 +3,6 @@ const { AppError } = require('../lib/AppError');
 const { logger } = require('../lib/logger');
 const { descifrar, indiceCiego } = require('../lib/cifrado');
 const { normalizarRut } = require('../lib/rut');
-const { enmascararContacto } = require('../lib/contacto');
 const canalEnvio = require('../lib/canalEnvio');
 const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
@@ -156,7 +155,6 @@ async function misDatos({ pacienteId }) {
   await registrar({ actor: 'titular', accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { motivo: 'portal' } });
   return {
     ...archivo,
-    contactoEnmascarado: archivo.titular.contacto ? enmascararContacto(archivo.titular.contacto) : null,
     estadoConsentimientos: consentimientos.map((c) => ({
       finalidad: c.finalidad,
       estado: c.estado,
