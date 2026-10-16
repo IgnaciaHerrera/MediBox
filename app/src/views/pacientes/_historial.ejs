@@ -1,0 +1,30 @@
+<%
+  // Historial de rectificaciones: qué campo cambió, cuándo y quién. Nunca el
+  // valor anterior: ese solo se le entrega al propio titular.
+  const NOMBRES_CAMPO = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
+%>
+<section class="panel-card panel-lista" aria-labelledby="paciente-historial-titulo">
+  <div class="panel-lista-head">
+    <h2 id="paciente-historial-titulo">Historial de cambios</h2>
+  </div>
+  <% if (historial.length === 0) { %>
+    <p class="panel-lista-vacio">Los datos de este paciente no se han modificado desde su registro.</p>
+  <% } else { %>
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+          <tr><th>Fecha</th><th>Campo</th><th>Modificado por</th></tr>
+        </thead>
+        <tbody>
+          <% historial.forEach(function(h) { %>
+            <tr>
+              <td class="tiempo"><%= fechaDMA(isoLocal(h.cambiadoEl)) %></td>
+              <td><%= NOMBRES_CAMPO[h.campo] || h.campo %></td>
+              <td><%= h.cambiadoPor %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>

@@ -28,6 +28,7 @@ describe('Paciente encryption and access control', () => {
     // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
     // upsert: tienen filas en la auditoría, que es de solo inserción.
     if (pacienteIds.length > 0) {
+      await prisma.historialCambio.deleteMany({ where: { pacienteId: { in: pacienteIds } } });
       await prisma.$executeRaw`DELETE FROM pacientes WHERE id IN (${Prisma.join(pacienteIds)})`;
     }
     await prisma.$disconnect();

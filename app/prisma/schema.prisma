@@ -23,6 +23,7 @@ model Usuario {
   auditLogs      AuditLog[]
   notificaciones Notificacion[]
   medico         Medico?
+  cambiosHechos  HistorialCambio[]
 
   @@map("usuarios")
 }
@@ -123,9 +124,29 @@ model Paciente {
   contactoCifrado        Bytes?   @map("contacto_cifrado")
   createdAt              DateTime @default(now()) @map("created_at")
 
-  citas Cita[]
+  citas    Cita[]
+  cambios  HistorialCambio[]
 
   @@map("pacientes")
+}
+
+// Rectificación: por cada campo que cambió, su valor anterior cifrado con la
+// llave de su categoría ('historial.<campo>'). El valor nuevo ya está en el
+// paciente.
+model HistorialCambio {
+  id                   Int      @id @default(autoincrement())
+  pacienteId           Int      @map("paciente_id")
+  campo                String // 'nombre' | 'rut' | 'fechaNacimiento' | 'contacto'
+  valorAnteriorCifrado Bytes?   @map("valor_anterior_cifrado")
+  cambiadoEl           DateTime @default(now()) @map("cambiado_el")
+  cambiadoPorId        Int      @map("cambiado_por")
+  solicitudId          Int?     @map("solicitud_id")
+
+  paciente    Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  cambiadoPor Usuario  @relation(fields: [cambiadoPorId], references: [id], onDelete: Restrict)
+
+  @@index([pacienteId, campo])
+  @@map("historial_cambios")
 }
 
 model Cita {

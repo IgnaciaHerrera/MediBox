@@ -75,12 +75,14 @@ async function detalle(req, res, next) {
     // Las citas solo se muestran a quien puede ver la agenda.
     const verCitas = req.usuario.permisos.includes('agenda.read');
     const citas = verCitas ? separarCitas(await citaService.listarPorPaciente(id), req.query.page) : null;
+    const historial = await pacienteService.listarHistorial(id);
     res.render('pacientes/detalle', {
       titulo: paciente.nombre,
       usuario: req.usuario,
       csrfToken: res.locals.csrfToken,
       paciente,
       citas,
+      historial,
       puedeAgendar: req.usuario.permisos.includes('agenda.write'),
       puedeEditar: req.usuario.permisos.includes('paciente.write'),
     });

@@ -222,18 +222,91 @@ async function obtenerPacientePorId(id, solicitante) {
   return ficha(fila);
 }
 
-async function actualizarPaciente(id, datos, usuarioId) {
+// Campos rectificables, en la forma en que se comparan: el RUT normalizado,
+// la fecha como AAAA-MM-DD y el contacto vacío como null.
+const CAMPOS_RECTIFICABLES = ['nombre', 'rut', 'fechaNacimiento', 'contacto'];
+
+function valoresComparables({ nombre, rut, fechaNacimiento, contacto }) {
+  return {
+    nombre,
+    rut: normalizarRut(rut),
+    fechaNacimiento: new Date(fechaNacimiento).toISOString().slice(0, 10),
+    contacto: contacto || null,
+  };
+}
+
+/**
+ * Actualiza un paciente y deja en historial_cambios, por cada campo que
+ * cambió, el valor anterior cifrado con la llave de su categoría, quién y
+ * cuándo. Todo en una transacción: si falla el historial, no cambia nada.
+ *
+ * @param {number} id - id del paciente.
+ * @param {{nombre: string, rut: string, fechaNacimiento: (Date|string), contacto?: string}} datos
+ * @param {number} usuarioId - quien edita.
+ * @param {{solicitudId?: number}} [opciones] - la solicitud de rectificación
+ *   que origina el cambio, si la hay.
+ * @returns {Promise<object>} resumen del paciente.
+ * @throws {AppError} 404 si no existe; 409 si el RUT ya es de otro paciente.
+ *
+ * Consumidores: pacienteController.update, pacienteViewController.editar,
+ *   derechosService.ejecutar (rectificación).
+ */
+async function actualizarPaciente(id, datos, usuarioId, { solicitudId } = {}) {
   return prisma
     .$transaction(async (tx) => {
-      const fila = await tx.paciente.update({
-        where: { id },
-        data: cifrarPaciente(datos),
-        select: SELECT_RESUMEN,
-      });
-      await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id }, tx);
+      const actual = await tx.paciente.findUnique({ where: { id }, select: SELECT_FICHA });
+      if (!actual) throw new AppError('Paciente no encontrado', 404);
+
+      const antes = valoresComparables(ficha(actual));
+      const despues = valoresComparables(datos);
+      const cambios = CAMPOS_RECTIFICABLES.filter((campo) => antes[campo] !== despues[campo]).map((campo) => ({
+        pacienteId: id,
+        campo,
+        valorAnteriorCifrado: antes[campo] === null ? null : cifrar(`historial.${campo}`, antes[campo]),
+        cambiadoPorId: usuarioId,
+        solicitudId: solicitudId || null,
+      }));
+
+      const fila = await tx.paciente.update({ where: { id }, data: cifrarPaciente(datos), select: SELECT_RESUMEN });
+      if (cambios.length > 0) await tx.historialCambio.createMany({ data: cambios });
+      await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id, detalle: { campos: cambios.map((c) => c.campo) } }, tx);
       return resumen(fila);
     })
     .catch(traducirErrorPrisma);
+}
+
+/**
+ * Historial de cambios de un paciente, sin los valores: qué campo, cuándo y
+ * quién. Lo muestra la ficha; los valores anteriores solo los entrega la
+ * exportación al propio titular.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<Array<{campo: string, cambiadoEl: Date, cambiadoPor: string}>>}
+ *
+ * Consumidores: pacienteViewController.detalle, derechosService.
+ */
+async function listarHistorial(pacienteId) {
+  const filas = await prisma.historialCambio.findMany({
+    where: { pacienteId },
+    select: { campo: true, cambiadoEl: true, cambiadoPor: { select: { nombre: true } } },
+    orderBy: { cambiadoEl: 'desc' },
+  });
+  return filas.map((f) => ({ campo: f.campo, cambiadoEl: f.cambiadoEl, cambiadoPor: f.cambiadoPor.nombre }));
+}
+
+/**
+ * Fecha del último cambio de un campo del paciente.
+ *
+ * @param {number} pacienteId
+ * @param {string} campo - 'nombre' | 'rut' | 'fechaNacimiento' | 'contacto'.
+ * @returns {Promise<(Date|null)>} null si nunca cambió.
+ *
+ * Consumidores: verificacionService.enviarCodigo (el código solo va a un
+ *   contacto que no cambió recientemente).
+ */
+async function ultimoCambioDe(pacienteId, campo) {
+  const fila = await prisma.historialCambio.findFirst({ where: { pacienteId, campo }, orderBy: { cambiadoEl: 'desc' }, select: { cambiadoEl: true } });
+  return fila ? fila.cambiadoEl : null;
 }
 
 /**
@@ -314,6 +387,8 @@ module.exports = {
   crearPaciente,
   obtenerPacientePorId,
   actualizarPaciente,
+  listarHistorial,
+  ultimoCambioDe,
   listarPacientes,
   listarSeudonimizadoParaExport,
   seudonimo,

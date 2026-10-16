@@ -29,6 +29,11 @@ const LLAVE_POR_CAMPO = {
   'paciente.contacto': 'PACIENTE_CONTACTO_KEY',
   'paciente.motivoConsulta': 'PACIENTE_CLINICO_KEY',
   'cita.motivoConsulta': 'PACIENTE_CLINICO_KEY',
+  // Valor anterior de un campo rectificado: la misma llave que el campo.
+  'historial.nombre': 'PACIENTE_IDENTIDAD_KEY',
+  'historial.rut': 'PACIENTE_IDENTIDAD_KEY',
+  'historial.fechaNacimiento': 'PACIENTE_IDENTIDAD_KEY',
+  'historial.contacto': 'PACIENTE_CONTACTO_KEY',
 };
 
 // Llaves de HMAC. Separadas de las de cifrado: quien tenga una puede
