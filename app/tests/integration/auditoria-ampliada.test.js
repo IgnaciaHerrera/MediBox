@@ -80,6 +80,29 @@ describe('Auditoría ampliada: actor, resultado e IP', () => {
     expect(cabecera.split(',')).toEqual(expect.arrayContaining(['actor', 'resultado', 'ip']));
   });
 
+  // Cada intento corre en una transacción que se revierte siempre: si el
+  // trigger faltara, la sentencia no alcanza a modificar el rastro.
+  async function intentarEnTransaccion(sentencia) {
+    const SIN_TRIGGER = 'la sentencia se ejecutó sin error';
+    try {
+      await prisma.$transaction(async (tx) => {
+        await sentencia(tx);
+        throw new Error(SIN_TRIGGER);
+      });
+    } catch (err) {
+      return err.message;
+    }
+    return SIN_TRIGGER;
+  }
+
+  it.each([
+    ['UPDATE', (tx) => tx.$executeRaw`UPDATE audit_log SET accion = 'ALTERADA' WHERE id = (SELECT max(id) FROM audit_log)`],
+    ['DELETE', (tx) => tx.$executeRaw`DELETE FROM audit_log WHERE id = (SELECT max(id) FROM audit_log)`],
+    ['TRUNCATE', (tx) => tx.$executeRaw`TRUNCATE audit_log`],
+  ])('%s sobre audit_log falla en la base', async (_, sentencia) => {
+    expect(await intentarEnTransaccion(sentencia)).toMatch(/solo inserción/);
+  });
+
   it('pasado el límite de intentos responde 429 y deja LOGIN_LIMITADO', async () => {
     let res;
     for (let i = 0; i < 12; i += 1) {
