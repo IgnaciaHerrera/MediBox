@@ -1,4 +1,9 @@
 const { responderError } = require('../lib/responderError');
+const { registrar } = require('../services/auditService');
+
+// Permisos que protegen datos de pacientes: un intento negado sobre ellos se
+// audita (es la señal de alguien buscando datos ajenos a su función).
+const PREFIJOS_DATOS_PACIENTE = ['paciente.', 'consentimiento.', 'derechos.'];
 
 /**
  * Exige que el usuario autenticado tenga un permiso.
@@ -20,16 +25,31 @@ function requirePermission(clave) {
  *
  * @param {...string} claves - permisos aceptados.
  * @returns {Function} middleware de Express que responde 403 si no tiene ninguno.
+ *   Si los permisos protegen datos de pacientes, el intento negado queda en la
+ *   auditoría como READ 'denegado' sobre el paciente de la ruta (o 0).
  *
  * Consumidores: requirePermission(), routes/pacientes.js,
  *   routes/pacienteViews.js, routes/citas.js, routes/agendaViews.js.
  */
 function requireAnyPermission(...claves) {
-  return (req, res, next) => {
-    if (!req.usuario || !claves.some((clave) => req.usuario.permisos.includes(clave))) {
-      return responderError(req, res, 403, 'Permiso insuficiente');
+  const protegePacientes = claves.some((clave) => PREFIJOS_DATOS_PACIENTE.some((prefijo) => clave.startsWith(prefijo)));
+  return async (req, res, next) => {
+    if (req.usuario && claves.some((clave) => req.usuario.permisos.includes(clave))) return next();
+    try {
+      if (protegePacientes && req.usuario) {
+        const pacienteId = Number(req.params.id ?? req.params.pacienteId);
+        await registrar({
+          usuarioId: req.usuario.id,
+          accion: 'READ',
+          entidad: 'Paciente',
+          entidadId: Number.isInteger(pacienteId) ? pacienteId : 0,
+          resultado: 'denegado',
+        });
+      }
+    } catch (err) {
+      return next(err);
     }
-    return next();
+    return responderError(req, res, 403, 'Permiso insuficiente');
   };
 }
 

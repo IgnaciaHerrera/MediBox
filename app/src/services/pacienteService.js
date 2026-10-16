@@ -202,14 +202,21 @@ async function crearPaciente(datos, usuarioId) {
  * @param {number} id - id del paciente.
  * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
  * @returns {Promise<object>} ficha con rut, fecha de nacimiento y contacto.
- * @throws {AppError} 404 si no existe o está fuera de su alcance.
+ * @throws {AppError} 404 si no existe o está fuera de su alcance. Si existe
+ *   pero está fuera del alcance, el intento queda auditado como 'denegado'
+ *   (solo internamente: la respuesta sigue sin revelar que existe).
  *
  * Consumidores: pacienteController.show, pacienteViewController.detalle y
  *   editarForm, agendaViewController.detalle.
  */
 async function obtenerPacientePorId(id, solicitante) {
   const fila = await prisma.paciente.findFirst({ where: { id, ...alcanceDe(solicitante) }, select: SELECT_FICHA });
-  if (!fila) throw new AppError('Paciente no encontrado', 404);
+  if (!fila) {
+    if (await prisma.paciente.findUnique({ where: { id }, select: { id: true } })) {
+      await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: id, resultado: 'denegado' });
+    }
+    throw new AppError('Paciente no encontrado', 404);
+  }
 
   await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: id });
   return ficha(fila);
