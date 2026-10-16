@@ -94,7 +94,9 @@ async function detectar({ desde, hasta }) {
   const fallidos = filas.filter((f) => f.accion === 'LOGIN_FALLIDO');
   for (const grupo of agrupar(fallidos, (f) => (f.emailIndice ? Buffer.from(f.emailIndice).toString('hex') : `u${f.usuarioId}`))) {
     const max = maximoEnVentana(grupo, VENTANA_FALLIDOS_MIN);
-    if (max.cantidad >= UMBRAL_FALLIDOS) alerta('FALLIDOS', grupo, max);
+    // La alerta nombra a la cuenta atacada (la entidad), si existe.
+    const atacada = (grupo.find((f) => f.entidadId) || {}).entidadId || null;
+    if (max.cantidad >= UMBRAL_FALLIDOS) alerta('FALLIDOS', grupo, { ...max, usuarioId: atacada });
   }
 
   const codigos = filas.filter((f) => f.accion === 'VERIFICAR_IDENTIDAD' && f.resultado === 'fallido');

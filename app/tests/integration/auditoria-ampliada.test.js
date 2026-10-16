@@ -51,10 +51,10 @@ describe('Auditoría ampliada: actor, resultado e IP', () => {
     expect(texto).not.toContain('Incorrecta123');
   });
 
-  it('login fallido de una cuenta existente guarda su usuarioId y resultado fallido', async () => {
+  it('login fallido de una cuenta existente la registra como la cuenta atacada, no como quien actuó', async () => {
     expect((await login({ email, password: 'Incorrecta123' })).status).toBe(401);
-    const fila = await ultimaFila({ accion: 'LOGIN_FALLIDO', usuarioId: usuario.id });
-    expect(fila).toMatchObject({ resultado: 'fallido', entidad: 'Usuario', entidadId: usuario.id });
+    const fila = await ultimaFila({ accion: 'LOGIN_FALLIDO', entidadId: usuario.id });
+    expect(fila).toMatchObject({ resultado: 'fallido', entidad: 'Usuario', entidadId: usuario.id, usuarioId: null });
   });
 
   it('login exitoso deja LOGIN con la ip de la petición', async () => {

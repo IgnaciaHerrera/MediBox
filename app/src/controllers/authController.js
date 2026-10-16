@@ -20,13 +20,13 @@ async function login(req, res, next) {
     const usuario = await autenticar(value.email, value.password);
     if (!usuario) {
       // Se audita sin el correo en claro: con su HMAC se cuentan los intentos
-      // sobre una misma cuenta, exista o no (alertasService).
-      const usuarioId = await buscarIdPorEmail(value.email);
+      // sobre una misma cuenta, exista o no (alertasService). La cuenta
+      // atacada va como entidad, no como quien actuó: no se sabe quién fue.
+      const cuentaAtacada = await buscarIdPorEmail(value.email);
       await registrar({
-        usuarioId,
         accion: 'LOGIN_FALLIDO',
         entidad: 'Usuario',
-        entidadId: usuarioId || 0,
+        entidadId: cuentaAtacada || 0,
         resultado: 'fallido',
         emailIndice: indiceEmail(value.email),
       });
