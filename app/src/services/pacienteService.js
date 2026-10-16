@@ -311,6 +311,23 @@ async function exigirAlcance(pacienteId, solicitante) {
 }
 
 /**
+ * Edad del paciente, para decidir si un consentimiento lo da su
+ * representante. No se audita: es una validación interna que no muestra el
+ * dato a nadie (como contar()).
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<number>} años cumplidos.
+ * @throws {AppError} 404 si no existe.
+ *
+ * Consumidores: consentimientoService.otorgar, derechosService.
+ */
+async function edadDe(pacienteId) {
+  const fila = await prisma.paciente.findUnique({ where: { id: pacienteId }, select: { fechaNacimientoCifrada: true } });
+  if (!fila) throw new AppError('Paciente no encontrado', 404);
+  return edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada));
+}
+
+/**
  * Contacto en claro del paciente, solo para enviarle un código de
  * verificación. La lectura queda auditada con su motivo.
  *
@@ -427,6 +444,7 @@ module.exports = {
   listarHistorial,
   ultimoCambioDe,
   exigirAlcance,
+  edadDe,
   contactoParaVerificacion,
   listarPacientes,
   listarSeudonimizadoParaExport,

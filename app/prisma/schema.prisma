@@ -18,13 +18,15 @@ model Usuario {
   rolId        Int      @map("rol_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  rol            Rol            @relation(fields: [rolId], references: [id])
-  citasEditadas  Cita[]         @relation("CitaUpdatedBy")
-  auditLogs      AuditLog[]
-  notificaciones Notificacion[]
-  medico         Medico?
-  cambiosHechos  HistorialCambio[]
-  verificaciones VerificacionIdentidad[]
+  rol                        Rol                     @relation(fields: [rolId], references: [id])
+  citasEditadas              Cita[]                  @relation("CitaUpdatedBy")
+  auditLogs                  AuditLog[]
+  notificaciones             Notificacion[]
+  medico                     Medico?
+  cambiosHechos              HistorialCambio[]
+  verificaciones             VerificacionIdentidad[]
+  consentimientosRegistrados Consentimiento[]        @relation("ConsentimientoRegistradoPor")
+  revocacionesRegistradas    Consentimiento[]        @relation("ConsentimientoRevocadoPor")
 
   @@map("usuarios")
 }
@@ -125,9 +127,10 @@ model Paciente {
   contactoCifrado        Bytes?   @map("contacto_cifrado")
   createdAt              DateTime @default(now()) @map("created_at")
 
-  citas          Cita[]
-  cambios        HistorialCambio[]
-  verificaciones VerificacionIdentidad[]
+  citas           Cita[]
+  cambios         HistorialCambio[]
+  verificaciones  VerificacionIdentidad[]
+  consentimientos Consentimiento[]
 
   @@map("pacientes")
 }
@@ -168,25 +171,85 @@ model VerificacionIdentidad {
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
   verificadaPor Usuario  @relation(fields: [verificadaPorId], references: [id], onDelete: Restrict)
 
+  consentimientosOtorgados Consentimiento[] @relation("ConsentimientoVerificacion")
+  consentimientosRevocados Consentimiento[] @relation("ConsentimientoRevocacionVerificacion")
+
   @@index([pacienteId, verificadaPorId])
   @@map("verificaciones_identidad")
 }
 
+// Finalidades secundarias que requieren consentimiento (D1). La atención no
+// está aquí: no depende de él.
+model Finalidad {
+  id              Int                   @id @default(autoincrement())
+  clave           String                @unique // 'recordatorios' | 'investigacion' | 'encuestas'
+  nombre          String
+  descripcion     String
+  activa          Boolean               @default(true)
+  textos          TextoConsentimiento[]
+  consentimientos Consentimiento[]
+
+  @@map("finalidades")
+}
+
+// Versiones del texto informativo. Un texto nuevo es una versión nueva.
+model TextoConsentimiento {
+  id              Int              @id @default(autoincrement())
+  finalidadId     Int              @map("finalidad_id")
+  version         Int
+  texto           String
+  vigenteDesde    DateTime         @default(now()) @map("vigente_desde")
+  finalidad       Finalidad        @relation(fields: [finalidadId], references: [id], onDelete: Restrict)
+  consentimientos Consentimiento[]
+
+  @@unique([finalidadId, version])
+  @@map("textos_consentimiento")
+}
+
+// Un registro por otorgamiento. Revocar llena revocadoEl: nunca se borra.
+model Consentimiento {
+  id                        Int       @id @default(autoincrement())
+  pacienteId                Int       @map("paciente_id")
+  finalidadId               Int       @map("finalidad_id")
+  textoId                   Int       @map("texto_id")
+  otorgadoEl                DateTime  @default(now()) @map("otorgado_el")
+  canal                     String // 'presencial' | 'telefono' | 'correo'
+  otorgadoPor               String    @map("otorgado_por") // 'titular' | 'representante'
+  representanteCifrado      Bytes?    @map("representante_cifrado")
+  registradoPorId           Int       @map("registrado_por")
+  verificacionId            Int       @map("verificacion_id")
+  revocadoEl                DateTime? @map("revocado_el")
+  revocacionCanal           String?   @map("revocacion_canal")
+  revocacionRegistradaPorId Int?      @map("revocacion_registrada_por")
+  revocacionVerificacionId  Int?      @map("revocacion_verificacion_id")
+
+  paciente                Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
+  finalidad               Finalidad              @relation(fields: [finalidadId], references: [id], onDelete: Restrict)
+  texto                   TextoConsentimiento    @relation(fields: [textoId], references: [id], onDelete: Restrict)
+  registradoPor           Usuario                @relation("ConsentimientoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: Restrict)
+  revocacionRegistradaPor Usuario?               @relation("ConsentimientoRevocadoPor", fields: [revocacionRegistradaPorId], references: [id], onDelete: Restrict)
+  verificacion            VerificacionIdentidad  @relation("ConsentimientoVerificacion", fields: [verificacionId], references: [id], onDelete: Restrict)
+  revocacionVerificacion  VerificacionIdentidad? @relation("ConsentimientoRevocacionVerificacion", fields: [revocacionVerificacionId], references: [id], onDelete: Restrict)
+
+  @@index([pacienteId, finalidadId])
+  @@map("consentimientos")
+}
+
 model Cita {
-  id          Int      @id @default(autoincrement())
-  pacienteId  Int      @map("paciente_id")
-  medicoId    Int      @map("medico_id")
-  boxId       Int      @map("box_id")
-  fecha       DateTime @db.Date
-  horaInicio  String   @map("hora_inicio")
-  horaFin     String   @map("hora_fin")
-  estado      String   @default("agendada")
-  anulada     Boolean  @default(false)
+  id                    Int      @id @default(autoincrement())
+  pacienteId            Int      @map("paciente_id")
+  medicoId              Int      @map("medico_id")
+  boxId                 Int      @map("box_id")
+  fecha                 DateTime @db.Date
+  horaInicio            String   @map("hora_inicio")
+  horaFin               String   @map("hora_fin")
+  estado                String   @default("agendada")
+  anulada               Boolean  @default(false)
   // Motivo de consulta de esta cita, cifrado con PACIENTE_CLINICO_KEY.
-  motivoConsultaCifrado Bytes? @map("motivo_consulta_cifrado")
-  updatedById Int?     @map("updated_by")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  motivoConsultaCifrado Bytes?   @map("motivo_consulta_cifrado")
+  updatedById           Int?     @map("updated_by")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdAt             DateTime @default(now()) @map("created_at")
 
   paciente  Paciente @relation(fields: [pacienteId], references: [id])
   medico    Medico   @relation(fields: [medicoId], references: [id])
@@ -200,21 +263,21 @@ model Cita {
 
 // Rastro de auditoría: solo ids y metadatos, nunca el dato personal mismo.
 model AuditLog {
-  id        Int      @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   // Null cuando actúa el sistema o cuando falla un login con un correo que no
   // existe (en ese caso queda emailIndice).
-  usuarioId Int?     @map("usuario_id")
-  actor     String   @default("usuario") // 'usuario' | 'sistema'
-  accion    String
-  entidad   String
-  entidadId Int      @map("entidad_id")
-  resultado String   @default("exito") // 'exito' | 'denegado' | 'fallido'
-  ip        String?
+  usuarioId   Int?     @map("usuario_id")
+  actor       String   @default("usuario") // 'usuario' | 'sistema'
+  accion      String
+  entidad     String
+  entidadId   Int      @map("entidad_id")
+  resultado   String   @default("exito") // 'exito' | 'denegado' | 'fallido'
+  ip          String?
   // HMAC del correo de un login fallido (AUDITORIA_HMAC_KEY).
-  emailIndice Bytes? @map("email_indice")
+  emailIndice Bytes?   @map("email_indice")
   // Conteos o referencias internas, sin datos personales.
-  detalle   Json?
-  timestamp DateTime @default(now())
+  detalle     Json?
+  timestamp   DateTime @default(now())
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
 
