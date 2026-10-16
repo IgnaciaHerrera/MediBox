@@ -14,12 +14,25 @@ describe('seed script', () => {
     await prisma.$disconnect();
   });
 
-  it('creates the admin role with every permission', async () => {
+  it('separates duties: admin manages accounts and roles but cannot read patients or the audit log', async () => {
     const admin = await prisma.rol.findUnique({
       where: { nombre: 'admin' },
-      include: { permisos: true },
+      include: { permisos: { include: { permiso: true } } },
     });
-    expect(admin.permisos.length).toBeGreaterThanOrEqual(18);
+    const claves = admin.permisos.map((rp) => rp.permiso.clave);
+    expect(claves).toEqual(expect.arrayContaining(['admin.users', 'admin.roles', 'admin.system']));
+    claves.forEach((clave) => expect(clave).not.toMatch(/^(paciente|auditoria|data)\./));
+  });
+
+  it('limits the medico role to its own patients and its own citas', async () => {
+    const medico = await prisma.rol.findUnique({
+      where: { nombre: 'medico' },
+      include: { permisos: { include: { permiso: true } } },
+    });
+    const claves = medico.permisos.map((rp) => rp.permiso.clave);
+    expect(claves).toEqual(expect.arrayContaining(['paciente.read.propios', 'agenda.estado.propias']));
+    expect(claves).not.toContain('paciente.read');
+    expect(claves).not.toContain('agenda.write');
   });
 
   it('creates the admin user with a hashed password', async () => {

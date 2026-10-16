@@ -97,11 +97,10 @@ describe('POST /api/medicos', () => {
       },
     });
 
-    const citaRes = await agent.post('/api/citas').send({
-      pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: '2027-06-01', horaInicio: '09:00', horaFin: '10:00', motivoConsulta: 'Control de prueba',
+    // El admin no agenda: la cita (ya anulada) se crea directo en la base.
+    await prisma.cita.create({
+      data: { pacienteId: paciente.id, medicoId: conCitasRes.body.id, boxId: box.id, fecha: new Date('2027-06-01'), horaInicio: '09:00', horaFin: '10:00', anulada: true },
     });
-    expect(citaRes.status).toBe(201);
-    await agent.delete(`/api/citas/${citaRes.body.id}`);
 
     const bloqueado = await agent.delete(`/api/medicos/${conCitasRes.body.id}`);
     expect(bloqueado.status).toBe(400);

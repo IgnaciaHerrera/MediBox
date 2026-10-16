@@ -120,18 +120,46 @@ async function crearCita(datos, usuarioId) {
   throw new AppError('No se pudo agendar la cita por alta contención, intente nuevamente', 500);
 }
 
-async function actualizarEstadoCita(citaId, nuevoEstado, usuarioId) {
-  const cita = await prisma.cita.findUnique({ where: { id: citaId } });
-  if (!cita || cita.anulada) throw new AppError('Cita no encontrada', 404);
+/**
+ * Indica si un usuario puede registrar el estado (atendido / no atendido) de
+ * una cita: con 'agenda.write' cualquiera; con 'agenda.estado.propias' (el
+ * médico) solo las suyas.
+ *
+ * @param {{medico: {usuarioId: (number|null)}}} cita - con su médico.
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {boolean}
+ *
+ * Consumidores: actualizarEstadoCita(), agendaViewController.detalle.
+ */
+function puedeCambiarEstado(cita, solicitante) {
+  if (solicitante.permisos.includes('agenda.write')) return true;
+  return solicitante.permisos.includes('agenda.estado.propias') && cita.medico.usuarioId === solicitante.id;
+}
+
+/**
+ * Registra el estado de una cita y lo audita.
+ *
+ * @param {number} citaId
+ * @param {string} nuevoEstado - 'agendada', 'atendido' o 'no_atendido'.
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {Promise<object>} la cita con la forma de SELECT_CITA.
+ * @throws {AppError} 404 si no existe, está anulada o no es del médico que
+ *   la pide (no se revela que existe).
+ *
+ * Consumidores: citaController.actualizarEstado, agendaViewController.cambiarEstado.
+ */
+async function actualizarEstadoCita(citaId, nuevoEstado, solicitante) {
+  const cita = await prisma.cita.findUnique({ where: { id: citaId }, include: { medico: { select: { usuarioId: true } } } });
+  if (!cita || cita.anulada || !puedeCambiarEstado(cita, solicitante)) throw new AppError('Cita no encontrada', 404);
 
   return prisma.$transaction(async (tx) => {
     const actualizada = await tx.cita.update({
       where: { id: citaId },
-      data: { estado: nuevoEstado, updatedById: usuarioId },
+      data: { estado: nuevoEstado, updatedById: solicitante.id },
       select: SELECT_CITA,
     });
 
-    await registrar({ usuarioId, accion: 'UPDATE_ESTADO', entidad: 'Cita', entidadId: citaId }, tx);
+    await registrar({ usuarioId: solicitante.id, accion: 'UPDATE_ESTADO', entidad: 'Cita', entidadId: citaId }, tx);
     return actualizada;
   });
 }
@@ -254,6 +282,7 @@ async function listarTodasParaExport(usuarioId, filtros = {}) {
 module.exports = {
   verificarConflicto,
   crearCita,
+  puedeCambiarEstado,
   actualizarEstadoCita,
   anularCita,
   listarCitas,

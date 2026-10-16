@@ -8,22 +8,31 @@ const prisma = new PrismaClient();
 
 const PERMISOS = [
   'dashboard.read', 'dashboard.write',
-  'agenda.read', 'agenda.write',
+  'agenda.read', 'agenda.write', 'agenda.estado.propias',
   'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write',
   'medicos.read',
-  'paciente.read', 'paciente.write',
+  'paciente.read', 'paciente.read.propios', 'paciente.write',
   'notificaciones.read',
   'auditoria.read',
   'data.import', 'data.export',
   'admin.users', 'admin.roles', 'admin.system',
 ];
 
+// Modelo de mínimo privilegio (Hito 2). Cada rol tiene solo lo que su
+// función requiere; las bases anteriores se ajustan con la migración
+// 20261016120200_roles_minimo_privilegio.
+//   - medico: lee solo a sus pacientes y registra el estado de sus citas.
+//   - gestor: espacios, datos seudonimizados y auditoría; sin identidad de
+//     pacientes ni agendamiento.
+//   - admin: cuentas, roles y configuración. Custodia las llaves, así que no
+//     lee los datos que protegen ni audita los accesos (separación de
+//     funciones): eso lo hace el gestor.
 const ROLES = {
   consulta: ['dashboard.read', 'agenda.read', 'box.read', 'box.detalle.read', 'medicos.read', 'notificaciones.read'],
   operador: ['dashboard.read', 'agenda.read', 'agenda.write', 'box.read', 'box.write', 'box.detalle.read', 'medicos.read', 'paciente.read', 'paciente.write', 'notificaciones.read'],
-  medico: ['dashboard.read', 'agenda.read', 'medicos.read', 'paciente.read', 'notificaciones.read'],
-  gestor: ['dashboard.read', 'dashboard.write', 'agenda.read', 'agenda.write', 'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write', 'medicos.read', 'paciente.read', 'notificaciones.read', 'auditoria.read', 'data.import', 'data.export'],
-  admin: PERMISOS,
+  medico: ['dashboard.read', 'agenda.read', 'agenda.estado.propias', 'medicos.read', 'paciente.read.propios', 'notificaciones.read'],
+  gestor: ['dashboard.read', 'dashboard.write', 'agenda.read', 'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write', 'medicos.read', 'notificaciones.read', 'auditoria.read', 'data.import', 'data.export'],
+  admin: ['dashboard.read', 'medicos.read', 'notificaciones.read', 'admin.users', 'admin.roles', 'admin.system'],
 };
 
 const ESPECIALIDADES = ['Cardiología', 'Pediatría', 'Ginecología', 'Traumatología', 'Dermatología', 'Neurología'];

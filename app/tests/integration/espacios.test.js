@@ -143,11 +143,11 @@ describe('Espacios físicos', () => {
     });
 
     const boxConCitasRes = await agent.post('/api/boxes').send({ nombre: 'Box Con Citas Test', pasilloId: pasillo.id });
-    const citaRes = await agent.post('/api/citas').send({
-      pacienteId: paciente.id, medicoId: medico.id, boxId: boxConCitasRes.body.id, fecha: '2027-05-01', horaInicio: '09:00', horaFin: '10:00', motivoConsulta: 'Control de prueba',
+    // El gestor no agenda: la cita (ya anulada) se crea directo en la base.
+    // Anulada, la fila de historial sigue existiendo.
+    await prisma.cita.create({
+      data: { pacienteId: paciente.id, medicoId: medico.id, boxId: boxConCitasRes.body.id, fecha: new Date('2027-05-01'), horaInicio: '09:00', horaFin: '10:00', anulada: true },
     });
-    expect(citaRes.status).toBe(201);
-    await agent.delete(`/api/citas/${citaRes.body.id}`); // se anula, pero la fila de historial sigue existiendo
 
     const bloqueado = await agent.delete(`/api/boxes/${boxConCitasRes.body.id}`);
     expect(bloqueado.status).toBe(400);

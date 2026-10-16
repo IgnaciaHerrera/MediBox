@@ -69,7 +69,7 @@
     <% if (usuario.rolNombre === 'medico') { %>
       <a href="/agenda/mia" <%- navAttrs('mia') %>><%- icono('mia') %>Mi agenda</a>
     <% } %>
-    <% if (usuario.permisos.includes('paciente.read')) { %>
+    <% if (usuario.permisos.includes('paciente.read') || usuario.permisos.includes('paciente.read.propios')) { %>
       <a href="/pacientes" <%- navAttrs('pacientes') %>><%- icono('pacientes') %>Pacientes</a>
     <% } %>
     <% if (usuario.permisos.includes('box.read')) { %>

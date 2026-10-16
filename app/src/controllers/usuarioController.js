@@ -34,7 +34,7 @@ async function store(req, res, next) {
   try {
     const { error, value } = crearSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    res.status(201).json(await usuarioService.crear(value));
+    res.status(201).json(await usuarioService.crear(value, req.usuario.id));
   } catch (err) {
     next(err);
   }

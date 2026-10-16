@@ -45,7 +45,7 @@ async function actualizarEstado(req, res, next) {
   try {
     const { error, value } = estadoSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    res.json(await citaService.actualizarEstadoCita(Number(req.params.id), value.estado, req.usuario.id));
+    res.json(await citaService.actualizarEstadoCita(Number(req.params.id), value.estado, req.usuario));
   } catch (err) {
     next(err);
   }

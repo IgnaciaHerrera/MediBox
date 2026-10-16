@@ -42,7 +42,7 @@ describe('Filtros de la exportación de datos', () => {
   }
 
   beforeAll(async () => {
-    const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
+    const rolGestor = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'gestor' } });
     usuario = await prisma.usuario.upsert({
       where: { email: 'datos-filtros-test@medibox.local' },
       update: {},
@@ -50,7 +50,7 @@ describe('Filtros de la exportación de datos', () => {
         nombre: 'Filtros Datos Test',
         email: 'datos-filtros-test@medibox.local',
         passwordHash: await bcrypt.hash(password, 12),
-        rolId: rolAdmin.id,
+        rolId: rolGestor.id,
       },
     });
 

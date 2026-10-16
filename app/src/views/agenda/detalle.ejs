@@ -97,14 +97,14 @@
       </section>
     </div>
 
-    <% if (puedeGestionar && !cita.anulada) { %>
+    <% if ((puedeCambiarEstado || puedeAnular) && !cita.anulada) { %>
       <section class="panel-card cita-acciones-panel" aria-labelledby="cita-acciones-titulo">
         <div>
           <h2 id="cita-acciones-titulo">Gestionar cita</h2>
-          <p class="cita-acciones-ayuda">Registra si el paciente fue atendido o anula la cita.</p>
+          <p class="cita-acciones-ayuda"><%= puedeAnular ? 'Registra si el paciente fue atendido o anula la cita.' : 'Registra si el paciente fue atendido.' %></p>
         </div>
         <div class="acciones-cita">
-          <% if (cita.estado === 'agendada') { %>
+          <% if (puedeCambiarEstado && cita.estado === 'agendada') { %>
             <form method="POST" action="/agenda/<%= cita.id %>/estado">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <input type="hidden" name="estado" value="atendido" />
@@ -116,10 +116,12 @@
               <button type="submit" class="btn btn-neutro">Marcar no atendido</button>
             </form>
           <% } %>
-          <form class="accion-peligro" method="POST" action="/agenda/<%= cita.id %>/anular" data-confirmar="¿Anular esta cita? Esta acción no se puede deshacer.">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-            <button type="submit" class="btn btn-secondary">Anular cita</button>
-          </form>
+          <% if (puedeAnular) { %>
+            <form class="accion-peligro" method="POST" action="/agenda/<%= cita.id %>/anular" data-confirmar="¿Anular esta cita? Esta acción no se puede deshacer.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="btn btn-secondary">Anular cita</button>
+            </form>
+          <% } %>
         </div>
       </section>
     <% } %>

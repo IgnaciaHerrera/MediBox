@@ -21,7 +21,7 @@ async function index(req, res, next) {
     const page = Number(req.query.page) || 1;
     const pageSize = Number(req.query.pageSize) || 20;
     const q = req.query.q;
-    res.json(await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario.id));
+    res.json(await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario));
   } catch (err) {
     next(err);
   }
@@ -31,7 +31,7 @@ async function show(req, res, next) {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) throw new AppError('Id inválido', 400);
-    res.json(await pacienteService.obtenerPacientePorId(id, req.usuario.id));
+    res.json(await pacienteService.obtenerPacientePorId(id, req.usuario));
   } catch (err) {
     next(err);
   }

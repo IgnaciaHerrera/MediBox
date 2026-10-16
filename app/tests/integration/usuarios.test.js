@@ -26,6 +26,7 @@ describe('Gestión de usuarios (admin.users)', () => {
   });
 
   afterAll(async () => {
+    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: [usuarioAdmin.id, usuarioNoAdmin.id] } } });
     if (usuarioIdsCreados.length > 0) {
       await prisma.usuario.deleteMany({ where: { id: { in: usuarioIdsCreados } } });
     }
@@ -53,6 +54,12 @@ describe('Gestión de usuarios (admin.users)', () => {
 
     const stored = await prisma.usuario.findUnique({ where: { id: res.body.id } });
     expect(stored.passwordHash).not.toBe('Password123!');
+
+    // Crear una cuenta es dar acceso: queda en la auditoría.
+    const auditoria = await prisma.auditLog.count({
+      where: { usuarioId: usuarioAdmin.id, accion: 'CREATE', entidad: 'Usuario', entidadId: res.body.id },
+    });
+    expect(auditoria).toBe(1);
   });
 
   it('rejects a password longer than the 72 bytes bcrypt can use', async () => {

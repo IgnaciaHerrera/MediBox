@@ -5,7 +5,7 @@
 <%
   const CATEGORIA_ACCION = {
     CREATE: 'crear', IMPORT: 'crear',
-    UPDATE: 'editar', UPDATE_ESTADO: 'editar',
+    UPDATE: 'editar', UPDATE_ESTADO: 'editar', UPDATE_ROL: 'editar', UPDATE_PERMISOS: 'editar', UPDATE_PASSWORD: 'editar',
     ANULAR: 'eliminar', DELETE: 'eliminar',
     READ: 'leer', LIST: 'leer',
     EXPORT: 'exportar',
@@ -24,7 +24,8 @@
   function urlEntidad(entidad, id) {
     if (!id) return null;
     if (entidad === 'Cita') return '/agenda/' + id;
-    if (entidad === 'Paciente') return '/pacientes/' + id;
+    // Quien audita no necesariamente puede abrir la ficha del paciente.
+    if (entidad === 'Paciente') return usuario.permisos.includes('paciente.read') ? '/pacientes/' + id : null;
     return null;
   }
 

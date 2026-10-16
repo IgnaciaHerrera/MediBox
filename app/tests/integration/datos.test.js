@@ -5,17 +5,29 @@ const { loginAgent } = require('../helpers/csrf');
 
 describe('Importación y exportación de datos (data.export / data.import)', () => {
   const password = 'Password123!';
-  let usuarioAdmin;
+  let usuarioExportador;
   let usuarioSinPermisos;
   let usuarioSoloExport;
   let usuarioSoloImport;
   let usuarioOperador;
+  let rolExportador;
   let rolSoloExport;
   let rolSoloImport;
   let pacienteId;
 
   beforeAll(async () => {
-    const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
+    // Exporta las tres entidades e importa espacios: lo que antes hacía el
+    // admin, que ahora no lee datos de pacientes (separación de funciones).
+    rolExportador = await prisma.rol.upsert({
+      where: { nombre: 'datos-test-exportador' },
+      update: {},
+      create: { nombre: 'datos-test-exportador' },
+    });
+    const permisosExportador = await prisma.permiso.findMany({
+      where: { clave: { in: ['data.export', 'data.import', 'paciente.read', 'agenda.read', 'auditoria.read', 'box.write'] } },
+    });
+    await prisma.rolPermiso.deleteMany({ where: { rolId: rolExportador.id } });
+    await prisma.rolPermiso.createMany({ data: permisosExportador.map((pe) => ({ rolId: rolExportador.id, permisoId: pe.id })) });
     const rolConsulta = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'consulta' } });
     const rolOperador = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'operador' } });
 
@@ -40,10 +52,10 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     await prisma.rolPermiso.deleteMany({ where: { rolId: rolSoloImport.id } });
     await prisma.rolPermiso.create({ data: { rolId: rolSoloImport.id, permisoId: permisoImport.id } });
 
-    usuarioAdmin = await prisma.usuario.upsert({
-      where: { email: 'datos-admin-test@medibox.local' },
+    usuarioExportador = await prisma.usuario.upsert({
+      where: { email: 'datos-exportador-test@medibox.local' },
       update: {},
-      create: { nombre: 'Admin Datos Test', email: 'datos-admin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolAdmin.id },
+      create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolExportador.id },
     });
     usuarioSinPermisos = await prisma.usuario.upsert({
       where: { email: 'datos-sinpermisos-test@medibox.local' },
@@ -88,15 +100,16 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     await prisma.auditLog.deleteMany({
       where: {
         usuarioId: {
-          in: [usuarioAdmin.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id],
+          in: [usuarioExportador.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id],
         },
       },
     });
     await prisma.usuario.deleteMany({
-      where: { id: { in: [usuarioAdmin.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id] } },
+      where: { id: { in: [usuarioExportador.id, usuarioSinPermisos.id, usuarioSoloExport.id, usuarioSoloImport.id, usuarioOperador.id] } },
     });
-    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: [rolSoloExport.id, rolSoloImport.id] } } });
-    await prisma.rol.deleteMany({ where: { id: { in: [rolSoloExport.id, rolSoloImport.id] } } });
+    const rolesTest = [rolExportador.id, rolSoloExport.id, rolSoloImport.id];
+    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: rolesTest } } });
+    await prisma.rol.deleteMany({ where: { id: { in: rolesTest } } });
     await prisma.$disconnect();
   });
 
@@ -126,7 +139,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
   });
 
   it('exports pacientes as decrypted CSV and audits the export', async () => {
-    const { agent, loginRes } = await loginAgent(app, { email: 'datos-admin-test@medibox.local', password });
+    const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const res = await agent.get('/datos/exportar/pacientes.csv');
@@ -139,14 +152,14 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(cabeceraPacientes).not.toMatch(/motivo/i);
 
     const auditoria = await prisma.auditLog.findFirst({
-      where: { usuarioId: usuarioAdmin.id, accion: 'EXPORT', entidad: 'Paciente' },
+      where: { usuarioId: usuarioExportador.id, accion: 'EXPORT', entidad: 'Paciente' },
       orderBy: { id: 'desc' },
     });
     expect(auditoria).not.toBeNull();
   });
 
   it('exports citas as CSV without patient name or clinical data, only the pacienteId reference', async () => {
-    const { agent, loginRes } = await loginAgent(app, { email: 'datos-admin-test@medibox.local', password });
+    const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const res = await agent.get('/datos/exportar/citas.csv');
@@ -157,7 +170,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
   });
 
   it('exports the audit log as CSV and audits that export too', async () => {
-    const { agent, loginRes } = await loginAgent(app, { email: 'datos-admin-test@medibox.local', password });
+    const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const res = await agent.get('/datos/exportar/auditoria.csv');
@@ -165,14 +178,14 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     expect(res.headers['content-type']).toMatch(/text\/csv/);
 
     const auditoria = await prisma.auditLog.findFirst({
-      where: { usuarioId: usuarioAdmin.id, accion: 'EXPORT', entidad: 'AuditLog' },
+      where: { usuarioId: usuarioExportador.id, accion: 'EXPORT', entidad: 'AuditLog' },
       orderBy: { id: 'desc' },
     });
     expect(auditoria).not.toBeNull();
   });
 
   it('imports espacios from CSV, is idempotent on re-import, and rejects malformed rows atomically', async () => {
-    const { agent, loginRes } = await loginAgent(app, { email: 'datos-admin-test@medibox.local', password });
+    const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
     const csv = 'pasillo,box\nPasillo Import Test,Box A\nPasillo Import Test,Box B';

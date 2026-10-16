@@ -1,6 +1,7 @@
 const { prisma } = require('../lib/prisma');
 const { hashPassword } = require('./authService');
 const { AppError } = require('../lib/AppError');
+const { registrar } = require('./auditService');
 
 const SELECT_SEGURO = { id: true, nombre: true, email: true, rolId: true, createdAt: true, rol: true };
 
@@ -34,7 +35,18 @@ async function vincularMedico(tx, usuarioId, rolId, medicoId) {
   }
 }
 
-async function crear({ nombre, email, password, rolId, medicoId }) {
+/**
+ * Crea una cuenta y la audita: crear una cuenta con un rol es otra forma de
+ * dar acceso, y el gestor debe poder verla en la auditoría.
+ *
+ * @param {{nombre: string, email: string, password: string, rolId: number, medicoId?: number}} datos
+ * @param {number} solicitanteId - quien crea la cuenta.
+ * @returns {Promise<object>} la cuenta sin su hash.
+ * @throws {AppError} 409 si el correo ya existe.
+ *
+ * Consumidores: usuarioController.store, usuarioViewController.crear.
+ */
+async function crear({ nombre, email, password, rolId, medicoId }, solicitanteId) {
   const existente = await prisma.usuario.findUnique({ where: { email } });
   if (existente) throw new AppError('Ya existe una cuenta con ese correo', 409);
 
@@ -45,6 +57,7 @@ async function crear({ nombre, email, password, rolId, medicoId }) {
       select: SELECT_SEGURO,
     });
     await vincularMedico(tx, usuarioNuevo.id, rolId, medicoId);
+    await registrar({ usuarioId: solicitanteId, accion: 'CREATE', entidad: 'Usuario', entidadId: usuarioNuevo.id }, tx);
     return usuarioNuevo;
   });
 }
@@ -64,14 +77,30 @@ async function actualizar(id, opciones, solicitanteId) {
   return prisma.$transaction(async (tx) => {
     const usuarioActualizado = await tx.usuario.update({ where: { id }, data: { nombre, rolId }, select: SELECT_SEGURO });
     if (gestionaVinculo) await vincularMedico(tx, id, rolId, opciones.medicoId);
+    // Un cambio de rol se distingue en la auditoría: es un cambio de acceso.
+    const accion = Number(rolId) === actual.rolId ? 'UPDATE' : 'UPDATE_ROL';
+    await registrar({ usuarioId: solicitanteId, accion, entidad: 'Usuario', entidadId: id }, tx);
     return usuarioActualizado;
   });
 }
 
-async function cambiarPassword(id, nuevaPassword) {
+/**
+ * Cambia la contraseña de una cuenta y lo audita (sin la contraseña).
+ *
+ * @param {number} id - cuenta a cambiar.
+ * @param {string} nuevaPassword
+ * @param {number} solicitanteId - quien hace el cambio.
+ * @returns {Promise<void>}
+ *
+ * Consumidores: usuarioViewController.editar.
+ */
+async function cambiarPassword(id, nuevaPassword, solicitanteId) {
   await obtenerPorId(id);
   const passwordHash = await hashPassword(nuevaPassword);
-  await prisma.usuario.update({ where: { id }, data: { passwordHash } });
+  await prisma.$transaction(async (tx) => {
+    await tx.usuario.update({ where: { id }, data: { passwordHash } });
+    await registrar({ usuarioId: solicitanteId, accion: 'UPDATE_PASSWORD', entidad: 'Usuario', entidadId: id }, tx);
+  });
 }
 
 async function listarPorRolNombre(rolNombre) {

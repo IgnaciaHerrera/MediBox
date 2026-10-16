@@ -22,6 +22,8 @@ const ACCIONES = {
   write: 'gestionar',
   'detalle.read': 'ver detalle',
   'detalle.write': 'gestionar detalle',
+  'read.propios': 'ver los propios',
+  'estado.propias': 'atender las propias',
   historial: 'ver historial',
   import: 'importar',
   export: 'exportar',

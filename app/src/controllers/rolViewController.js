@@ -26,12 +26,14 @@ const ETIQUETAS_PERMISO = {
   'dashboard.write': 'Editar panel principal',
   'agenda.read': 'Ver agenda',
   'agenda.write': 'Crear, editar y anular citas',
+  'agenda.estado.propias': 'Registrar la atención de sus propias citas',
   'box.read': 'Ver espacios (pasillos y boxes)',
   'box.write': 'Crear, editar y eliminar espacios',
   'box.detalle.read': 'Ver detalle e instrumental de un box',
   'box.detalle.write': 'Editar instrumental de un box',
   'medicos.read': 'Ver médicos y especialidades',
   'paciente.read': 'Ver pacientes',
+  'paciente.read.propios': 'Ver solo los pacientes que atiende',
   'paciente.write': 'Crear y editar pacientes',
   'notificaciones.read': 'Ver notificaciones',
   'auditoria.read': 'Ver registro de auditoría',
@@ -103,7 +105,7 @@ async function actualizarTodo(req, res, next) {
     for (const rolId of idsRoles) {
       const permisos = normalizarLista(req.body[`permisos_${rolId}`]);
       // eslint-disable-next-line no-await-in-loop
-      await rolService.actualizarPermisos(rolId, permisos);
+      await rolService.actualizarPermisos(rolId, permisos, req.usuario);
     }
 
     if (req.accepts('html') && !req.is('json')) {

@@ -19,7 +19,7 @@ async function update(req, res, next) {
     const id = Number(req.params.id);
     const { error, value } = actualizarSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    res.json(await rolService.actualizarPermisos(id, value.permisos));
+    res.json(await rolService.actualizarPermisos(id, value.permisos, req.usuario));
   } catch (err) {
     next(err);
   }

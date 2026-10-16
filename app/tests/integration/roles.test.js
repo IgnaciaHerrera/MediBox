@@ -6,8 +6,10 @@ const { loginAgent } = require('../helpers/csrf');
 describe('Gestión de roles y permisos (admin.roles)', () => {
   let usuarioAdmin;
   let usuarioNoAdmin;
+  let usuarioOtroAdmin;
   let rolConsulta;
   let rolPrueba;
+  let rolOtroAdmin;
   const password = 'Password123!';
 
   beforeAll(async () => {
@@ -28,12 +30,29 @@ describe('Gestión de roles y permisos (admin.roles)', () => {
     // los usan otros archivos de test que Jest corre en paralelo, así que
     // modificarlos aquí hacía fallar esos tests al azar.
     rolPrueba = await prisma.rol.upsert({ where: { nombre: 'roles-test' }, update: {}, create: { nombre: 'roles-test' } });
+
+    // Otro rol con admin.roles: el admin no puede editar su propio rol, así
+    // que la salvaguarda del rol admin se prueba desde uno distinto.
+    rolOtroAdmin = await prisma.rol.upsert({ where: { nombre: 'roles-test-otro-admin' }, update: {}, create: { nombre: 'roles-test-otro-admin' } });
+    const permisoRoles = await prisma.permiso.findUniqueOrThrow({ where: { clave: 'admin.roles' } });
+    await prisma.rolPermiso.upsert({
+      where: { rolId_permisoId: { rolId: rolOtroAdmin.id, permisoId: permisoRoles.id } },
+      update: {},
+      create: { rolId: rolOtroAdmin.id, permisoId: permisoRoles.id },
+    });
+    usuarioOtroAdmin = await prisma.usuario.upsert({
+      where: { email: 'roles-otroadmin-test@medibox.local' },
+      update: {},
+      create: { nombre: 'Otro Admin Roles Test', email: 'roles-otroadmin-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolOtroAdmin.id },
+    });
   });
 
   afterAll(async () => {
-    await prisma.rolPermiso.deleteMany({ where: { rolId: rolPrueba.id } });
-    await prisma.rol.delete({ where: { id: rolPrueba.id } });
-    await prisma.usuario.deleteMany({ where: { id: { in: [usuarioAdmin.id, usuarioNoAdmin.id] } } });
+    const usuarios = [usuarioAdmin.id, usuarioNoAdmin.id, usuarioOtroAdmin.id];
+    await prisma.auditLog.deleteMany({ where: { usuarioId: { in: usuarios } } });
+    await prisma.usuario.deleteMany({ where: { id: { in: usuarios } } });
+    await prisma.rolPermiso.deleteMany({ where: { rolId: { in: [rolPrueba.id, rolOtroAdmin.id] } } });
+    await prisma.rol.deleteMany({ where: { id: { in: [rolPrueba.id, rolOtroAdmin.id] } } });
     await prisma.$disconnect();
   });
 
@@ -52,23 +71,42 @@ describe('Gestión de roles y permisos (admin.roles)', () => {
     expect(res.status).toBe(200);
     const claves = res.body.permisos.map((rp) => rp.permiso.clave).sort();
     expect(claves).toEqual(['agenda.read', 'dashboard.read']);
+
+    // El cambio de acceso queda en la auditoría, a nombre de quien lo hizo.
+    const auditoria = await prisma.auditLog.findMany({
+      where: { usuarioId: usuarioAdmin.id, accion: 'UPDATE_PERMISOS', entidad: 'Rol', entidadId: rolPrueba.id },
+    });
+    expect(auditoria.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('never lets the admin change the permissions of their own role, but accepts resending them unchanged', async () => {
+    const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' }, include: { permisos: { include: { permiso: true } } } });
+    const actuales = rolAdmin.permisos.map((rp) => rp.permiso.clave);
+    const { agent } = await loginAgent(app, { email: 'roles-admin-test@medibox.local', password });
+
+    const ampliar = await agent.patch(`/api/roles/${rolAdmin.id}`).send({ permisos: [...actuales, 'paciente.read'] });
+    expect(ampliar.status).toBe(403);
+    const despues = await prisma.rolPermiso.count({ where: { rolId: rolAdmin.id } });
+    expect(despues).toBe(actuales.length);
+
+    // La matriz de roles reenvía todos los roles, incluido el propio.
+    const igual = await agent.patch(`/api/roles/${rolAdmin.id}`).send({ permisos: actuales });
+    expect(igual.status).toBe(200);
   });
 
   it('never lets the admin role lose admin.roles, even if the request omits it', async () => {
-    const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' } });
-    const { agent, loginRes } = await loginAgent(app, { email: 'roles-admin-test@medibox.local', password });
+    const rolAdmin = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'admin' }, include: { permisos: { include: { permiso: true } } } });
+    const actuales = rolAdmin.permisos.map((rp) => rp.permiso.clave);
+    const { agent, loginRes } = await loginAgent(app, { email: 'roles-otroadmin-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
-    // Se envían todos los permisos menos admin.roles: así se prueba la
+    // Se envían los permisos actuales menos admin.roles: así se prueba la
     // salvaguarda sin quitarle nada real al rol admin, que otros archivos de
     // test usan al mismo tiempo.
-    const todosLosPermisos = (await prisma.permiso.findMany()).map((p) => p.clave);
-    const sinAdminRoles = todosLosPermisos.filter((clave) => clave !== 'admin.roles');
-
-    const res = await agent.patch(`/api/roles/${rolAdmin.id}`).send({ permisos: sinAdminRoles });
+    const res = await agent.patch(`/api/roles/${rolAdmin.id}`).send({ permisos: actuales.filter((c) => c !== 'admin.roles') });
     expect(res.status).toBe(200);
     const claves = res.body.permisos.map((rp) => rp.permiso.clave);
     expect(claves).toContain('admin.roles');
-    expect(claves).toHaveLength(todosLosPermisos.length);
+    expect(claves).toHaveLength(actuales.length);
   });
 });

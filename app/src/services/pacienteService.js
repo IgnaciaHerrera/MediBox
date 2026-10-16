@@ -17,6 +17,38 @@ const SELECT_RESUMEN = { id: true, nombreCifrado: true, fechaNacimientoCifrada: 
 const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true, contactoCifrado: true };
 
 /**
+ * Indica si un usuario puede leer pacientes, sea a todos o solo a los suyos.
+ *
+ * @param {{permisos: string[]}} solicitante - req.usuario.
+ * @returns {boolean}
+ *
+ * Consumidores: alcanceDe(), agendaViewController.detalle, topbar.
+ */
+function puedeLeerPacientes(solicitante) {
+  return solicitante.permisos.includes('paciente.read') || solicitante.permisos.includes('paciente.read.propios');
+}
+
+/**
+ * Filtro de Prisma con los pacientes que un usuario puede leer. Con
+ * 'paciente.read' son todos; con 'paciente.read.propios' (el médico) solo los
+ * que tienen o tuvieron una cita con él: la Ley 20.584, art. 13, deja fuera
+ * de la ficha a quien no participa en la atención. Un paciente fuera del
+ * alcance se responde como inexistente (404), sin revelar que existe.
+ *
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {object} cláusula `where` para prisma.paciente.
+ * @throws {AppError} 403 si no tiene ninguno de los dos permisos.
+ *
+ * Consumidores: listarPacientes(), obtenerPacientePorId(), buscarPorNombre(),
+ *   buscarPorRut().
+ */
+function alcanceDe(solicitante) {
+  if (solicitante.permisos.includes('paciente.read')) return {};
+  if (puedeLeerPacientes(solicitante)) return { citas: { some: { medico: { usuarioId: solicitante.id } } } };
+  throw new AppError('Permiso insuficiente', 403);
+}
+
+/**
  * Índice ciego del RUT: HMAC-SHA256 de su forma canónica.
  *
  * @param {string} rut - RUT en cualquier formato.
@@ -93,9 +125,9 @@ function sinTildes(texto) {
 // admite LIKE en la base. Con miles de pacientes son milisegundos; si el
 // padrón llega a cientos de miles, el upgrade es un índice ciego por tokens
 // del nombre normalizado. Solo se descifra la fecha de las coincidencias.
-async function buscarPorNombre(texto) {
+async function buscarPorNombre(texto, alcance) {
   const aguja = sinTildes(texto);
-  const filas = await prisma.paciente.findMany({ select: SELECT_RESUMEN, orderBy: { createdAt: 'desc' } });
+  const filas = await prisma.paciente.findMany({ where: alcance, select: SELECT_RESUMEN, orderBy: { createdAt: 'desc' } });
   return filas.filter((fila) => sinTildes(descifrar('paciente.nombre', fila.nombreCifrado)).includes(aguja)).map(resumen);
 }
 
@@ -107,8 +139,8 @@ const FORMA_DE_RUT = /^[\d.\s]+-?[\dkK]$/;
 
 // Búsqueda exacta por el índice ciego: la base compara HMACs y nunca ve el
 // RUT. Usa el índice único, así que no recorre la tabla.
-async function buscarPorRut(rut) {
-  const fila = await prisma.paciente.findUnique({ where: { rutIndice: indiceRut(rut) }, select: SELECT_RESUMEN });
+async function buscarPorRut(rut, alcance) {
+  const fila = await prisma.paciente.findFirst({ where: { rutIndice: indiceRut(rut), ...alcance }, select: SELECT_RESUMEN });
   return fila ? [resumen(fila)] : [];
 }
 
@@ -125,11 +157,23 @@ async function crearPaciente(datos, usuarioId) {
     .catch(traducirErrorPrisma);
 }
 
-async function obtenerPacientePorId(id, usuarioId) {
-  const fila = await prisma.paciente.findUnique({ where: { id }, select: SELECT_FICHA });
+/**
+ * Ficha completa de un paciente (descifrada), dentro del alcance de quien la
+ * pide. Cada lectura queda auditada.
+ *
+ * @param {number} id - id del paciente.
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {Promise<object>} ficha con rut, fecha de nacimiento y contacto.
+ * @throws {AppError} 404 si no existe o está fuera de su alcance.
+ *
+ * Consumidores: pacienteController.show, pacienteViewController.detalle y
+ *   editarForm, agendaViewController.detalle.
+ */
+async function obtenerPacientePorId(id, solicitante) {
+  const fila = await prisma.paciente.findFirst({ where: { id, ...alcanceDe(solicitante) }, select: SELECT_FICHA });
   if (!fila) throw new AppError('Paciente no encontrado', 404);
 
-  await registrar({ usuarioId, accion: 'READ', entidad: 'Paciente', entidadId: id });
+  await registrar({ usuarioId: solicitante.id, accion: 'READ', entidad: 'Paciente', entidadId: id });
   return ficha(fila);
 }
 
@@ -147,30 +191,45 @@ async function actualizarPaciente(id, datos, usuarioId) {
     .catch(traducirErrorPrisma);
 }
 
-async function listarPacientes({ page = 1, pageSize = 20, q } = {}, usuarioId) {
+/**
+ * Lista paginada (resumen: nombre y edad) de los pacientes que el usuario
+ * puede leer, con búsqueda opcional por nombre o RUT completo. Se audita.
+ *
+ * @param {{page?: number, pageSize?: number, q?: string}} opciones
+ * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @returns {Promise<{items: object[], total: number, page: number, pageSize: number}>}
+ *
+ * Consumidores: pacienteController.index, pacienteViewController.index,
+ *   agendaViewController (selector de paciente al agendar).
+ */
+async function listarPacientes({ page = 1, pageSize = 20, q } = {}, solicitante) {
+  const alcance = alcanceDe(solicitante);
   const busqueda = (q || '').trim();
   let items;
   let total;
 
   if (busqueda) {
-    const coincidencias = FORMA_DE_RUT.test(busqueda) ? await buscarPorRut(busqueda) : await buscarPorNombre(busqueda);
+    const coincidencias = FORMA_DE_RUT.test(busqueda)
+      ? await buscarPorRut(busqueda, alcance)
+      : await buscarPorNombre(busqueda, alcance);
     total = coincidencias.length;
     items = coincidencias.slice((page - 1) * pageSize, page * pageSize);
   } else {
     const [filas, cantidad] = await Promise.all([
       prisma.paciente.findMany({
+        where: alcance,
         select: SELECT_RESUMEN,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.paciente.count(),
+      prisma.paciente.count({ where: alcance }),
     ]);
     items = filas.map(resumen);
     total = cantidad;
   }
 
-  await registrar({ usuarioId, accion: 'LIST', entidad: 'Paciente', entidadId: 0 });
+  await registrar({ usuarioId: solicitante.id, accion: 'LIST', entidad: 'Paciente', entidadId: 0 });
   return { items, total, page, pageSize };
 }
 
@@ -195,4 +254,5 @@ module.exports = {
   listarTodosParaExport,
   contar,
   cifrarPaciente,
+  puedeLeerPacientes,
 };

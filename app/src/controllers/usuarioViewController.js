@@ -54,7 +54,7 @@ async function crear(req, res, next) {
   try {
     const { error, value } = crearSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    await usuarioService.crear(value);
+    await usuarioService.crear(value, req.usuario.id);
     toast(req, 'Usuario creado');
     return res.redirect('/usuarios');
   } catch (err) {
@@ -106,7 +106,7 @@ async function editar(req, res, next) {
 
     await usuarioService.actualizar(id, { nombre: value.nombre, rolId: value.rolId, medicoId: value.medicoId }, req.usuario.id);
     if (value.nuevaPassword) {
-      await usuarioService.cambiarPassword(id, value.nuevaPassword);
+      await usuarioService.cambiarPassword(id, value.nuevaPassword, req.usuario.id);
     }
     toast(req, 'Usuario actualizado');
     return res.redirect('/usuarios');

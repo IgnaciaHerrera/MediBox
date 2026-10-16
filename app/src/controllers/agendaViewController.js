@@ -113,7 +113,7 @@ async function mia(req, res, next) {
 async function nuevaForm(req, res, next) {
   try {
     const [{ items: pacientes }, medicos, boxes] = await Promise.all([
-      pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario.id),
+      pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario),
       medicoService.listar(),
       boxService.listar(),
     ]);
@@ -138,7 +138,7 @@ async function crear(req, res, next) {
     const { error, value } = crearCitaSchema.validate(req.body);
     if (error) {
       const [{ items: pacientes }, medicos, boxes] = await Promise.all([
-        pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario.id),
+        pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario),
         medicoService.listar(),
         boxService.listar(),
       ]);
@@ -160,7 +160,7 @@ async function crear(req, res, next) {
   } catch (err) {
     if (err instanceof AppError) {
       const [{ items: pacientes }, medicos, boxes] = await Promise.all([
-        pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario.id),
+        pacienteService.listarPacientes({ page: 1, pageSize: 200 }, req.usuario),
         medicoService.listar(),
         boxService.listar(),
       ]);
@@ -185,12 +185,17 @@ async function detalle(req, res, next) {
     const cita = await citaService.obtenerCitaPorId(id);
 
     // El motivo es un dato clínico del paciente: se muestra solo a quien
-    // puede leer al paciente, junto con esa lectura auditada.
+    // puede leer a ese paciente, junto con esa lectura auditada. Un médico ve
+    // la agenda completa, pero la identidad solo de sus propios pacientes.
     let paciente = null;
     let motivoConsulta = null;
-    if (req.usuario.permisos.includes('paciente.read')) {
-      paciente = await pacienteService.obtenerPacientePorId(cita.pacienteId, req.usuario.id);
-      motivoConsulta = await citaService.obtenerMotivo(id);
+    if (pacienteService.puedeLeerPacientes(req.usuario)) {
+      try {
+        paciente = await pacienteService.obtenerPacientePorId(cita.pacienteId, req.usuario);
+        motivoConsulta = await citaService.obtenerMotivo(id);
+      } catch (err) {
+        if (!(err instanceof AppError && err.statusCode === 404)) throw err;
+      }
     }
 
     let historial = null;
@@ -206,7 +211,8 @@ async function detalle(req, res, next) {
       paciente,
       motivoConsulta,
       historial,
-      puedeGestionar: req.usuario.permisos.includes('agenda.write'),
+      puedeAnular: req.usuario.permisos.includes('agenda.write'),
+      puedeCambiarEstado: citaService.puedeCambiarEstado(cita, req.usuario),
     });
   } catch (err) {
     next(err);
@@ -216,7 +222,7 @@ async function detalle(req, res, next) {
 async function cambiarEstado(req, res, next) {
   try {
     const id = Number(req.params.id);
-    await citaService.actualizarEstadoCita(id, req.body.estado, req.usuario.id);
+    await citaService.actualizarEstadoCita(id, req.body.estado, req.usuario);
     toast(req, 'Estado de la cita actualizado');
     res.redirect(`/agenda/${id}`);
   } catch (err) {

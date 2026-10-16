@@ -24,7 +24,7 @@ async function index(req, res, next) {
     const page = Number(req.query.page) || 1;
     const q = req.query.q || '';
     const pageSize = 20;
-    const { items: pacientes, total } = await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario.id);
+    const { items: pacientes, total } = await pacienteService.listarPacientes({ page, pageSize, q }, req.usuario);
     res.render('pacientes/index', {
       titulo: 'Pacientes',
       usuario: req.usuario,
@@ -71,7 +71,7 @@ function separarCitas(citas, paginaPedida) {
 async function detalle(req, res, next) {
   try {
     const id = Number(req.params.id);
-    const paciente = await pacienteService.obtenerPacientePorId(id, req.usuario.id);
+    const paciente = await pacienteService.obtenerPacientePorId(id, req.usuario);
     // Las citas solo se muestran a quien puede ver la agenda.
     const verCitas = req.usuario.permisos.includes('agenda.read');
     const citas = verCitas ? separarCitas(await citaService.listarPorPaciente(id), req.query.page) : null;
@@ -138,7 +138,7 @@ async function crear(req, res, next) {
 async function editarForm(req, res, next) {
   try {
     const id = Number(req.params.id);
-    const paciente = await pacienteService.obtenerPacientePorId(id, req.usuario.id);
+    const paciente = await pacienteService.obtenerPacientePorId(id, req.usuario);
     res.render('pacientes/formulario', {
       titulo: `Editar ${paciente.nombre}`,
       usuario: req.usuario,
