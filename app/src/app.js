@@ -48,6 +48,14 @@ app.locals.fechaDMA = (iso) => iso.slice(0, 10).split('-').reverse().join('-') +
 // Marcas de tiempo (createdAt, timestamp) en hora local: "2026-10-03 14:05:09".
 app.locals.isoLocal = isoLocal;
 
+// Solo con un proxy inverso con TLS delante: TRUST_PROXY nombra el proxy de
+// confianza (p. ej. "loopback" o su IP; un número es la cantidad de saltos).
+// Así req.ip, que va a la auditoría, es la del cliente y no la del proxy, y
+// nadie más puede falsificarla con X-Forwarded-For.
+if (process.env.TRUST_PROXY) {
+  app.set('trust proxy', /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
+}
+
 app.use(helmet());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(pinoHttp({ logger, serializers: serializadoresHttp }));

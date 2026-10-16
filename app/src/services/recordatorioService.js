@@ -43,7 +43,7 @@ async function enviarRecordatorios({ fecha = mananaISO() } = {}) {
     const contacto = contactos.get(cita.pacienteId);
     if (!contacto) continue;
     try {
-      canalEnvio.enviar(contacto, `Recordatorio de MediBox: tiene una cita el ${fechaDMA(fecha)} a las ${cita.horaInicio}.`);
+      await canalEnvio.enviar(contacto, `Recordatorio de MediBox: tiene una cita el ${fechaDMA(fecha)} a las ${cita.horaInicio}.`);
       enviados += 1;
     } catch {
       sinCanal += 1;
