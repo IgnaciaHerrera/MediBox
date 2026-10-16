@@ -1,5 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
+const { borrarContactosAnteriores } = require('./pacienteService');
 
 // Plazos de conservación del inventario del Hito 1 que vencen antes que el
 // registro clínico. Los que fija la ley no se tocan aquí: pacientes, citas y
@@ -38,13 +39,20 @@ async function aplicarRetencion(ahora = new Date()) {
   });
 
   const limiteContacto = mesesAntes(ahora, MESES_CONTACTO_SIN_CITAS);
-  const { count: contactosEliminados } = await prisma.paciente.updateMany({
+  const vencidos = await prisma.paciente.findMany({
     where: {
       contactoCifrado: { not: null },
       createdAt: { lt: limiteContacto },
       citas: { none: { fecha: { gte: limiteContacto } } },
     },
-    data: { contactoCifrado: null },
+    select: { id: true },
+  });
+  const ids = vencidos.map((p) => p.id);
+  // Junto con el contacto vigente se van los anteriores (historial y
+  // rectificaciones propuestas): el plazo vale para el dato, no solo la columna.
+  const { count: contactosEliminados } = await prisma.$transaction(async (tx) => {
+    await borrarContactosAnteriores(ids, tx);
+    return tx.paciente.updateMany({ where: { id: { in: ids } }, data: { contactoCifrado: null } });
   });
 
   const resumen = { notificacionesEliminadas, contactosEliminados };

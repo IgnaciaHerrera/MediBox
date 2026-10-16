@@ -249,9 +249,11 @@ function valoresComparables({ nombre, rut, fechaNacimiento, contacto }) {
  * @param {{nombre: string, rut: string, fechaNacimiento: (Date|string), contacto?: string}} datos
  * @param {number} usuarioId - quien edita.
  * @param {{solicitudId?: number}} [opciones] - la solicitud de rectificación
- *   que origina el cambio, si la hay.
+ *   que origina el cambio, si la hay. Solo con ella se puede rectificar a un
+ *   paciente bloqueado: nadie más lo edita.
  * @returns {Promise<object>} resumen del paciente.
- * @throws {AppError} 404 si no existe; 409 si el RUT ya es de otro paciente.
+ * @throws {AppError} 404 si no existe o está bloqueado; 409 si el RUT ya es
+ *   de otro paciente.
  *
  * Consumidores: pacienteController.update, pacienteViewController.editar,
  *   derechosService.ejecutar (rectificación).
@@ -259,8 +261,10 @@ function valoresComparables({ nombre, rut, fechaNacimiento, contacto }) {
 async function actualizarPaciente(id, datos, usuarioId, { solicitudId } = {}) {
   return prisma
     .$transaction(async (tx) => {
-      const actual = await tx.paciente.findUnique({ where: { id }, select: SELECT_FICHA });
-      if (!actual) throw new AppError('Paciente no encontrado', 404);
+      const actual = await tx.paciente.findUnique({ where: { id }, select: { ...SELECT_FICHA, bloqueado: true } });
+      // Un paciente bloqueado (o suprimido) no se edita por id directo: un
+      // formulario abierto antes de la supresión no puede devolverle el contacto.
+      if (!actual || (actual.bloqueado && !solicitudId)) throw new AppError('Paciente no encontrado', 404);
 
       const antes = valoresComparables(ficha(actual));
       const despues = valoresComparables(datos);
@@ -442,9 +446,9 @@ async function nombresDe(pacienteIds, usuarioId) {
 }
 
 /**
- * Supresión del contacto por un derecho del titular: lo deja en NULL y deja
- * constancia en el historial del cambio, pero SIN el valor anterior (guardarlo
- * anularía la supresión).
+ * Supresión del contacto por un derecho del titular: lo deja en NULL, borra
+ * los contactos anteriores que guardaba el historial y deja constancia del
+ * cambio, pero SIN el valor (guardarlo anularía la supresión).
  *
  * @param {number} pacienteId
  * @param {{usuarioId: number, solicitudId: number}} datos
@@ -454,10 +458,29 @@ async function nombresDe(pacienteIds, usuarioId) {
  * Consumidores: derechosService.ejecutar (supresión).
  */
 async function suprimirContacto(pacienteId, { usuarioId, solicitudId }, client) {
+  await borrarContactosAnteriores([pacienteId], client);
   const fila = await client.paciente.findUnique({ where: { id: pacienteId }, select: { contactoCifrado: true } });
   if (!fila || !fila.contactoCifrado) return;
   await client.paciente.update({ where: { id: pacienteId }, data: { contactoCifrado: null } });
   await client.historialCambio.create({ data: { pacienteId, campo: 'contacto', valorAnteriorCifrado: null, cambiadoPorId: usuarioId, solicitudId } });
+}
+
+/**
+ * Borra los contactos anteriores de unos pacientes: los que guarda el
+ * historial de rectificaciones y los propuestos en solicitudes de
+ * rectificación. Se usa cuando el contacto vigente se elimina (supresión o
+ * plazo de conservación): si no, el dato seguiría en la base por otra vía.
+ *
+ * @param {number[]} pacienteIds
+ * @param {object} [client] - prisma o la transacción en curso.
+ * @returns {Promise<void>}
+ *
+ * Consumidores: suprimirContacto(), retencionService, supresionService.reaplicar.
+ */
+async function borrarContactosAnteriores(pacienteIds, client = prisma) {
+  const where = { pacienteId: { in: pacienteIds }, campo: 'contacto' };
+  await client.historialCambio.updateMany({ where: { ...where, valorAnteriorCifrado: { not: null } }, data: { valorAnteriorCifrado: null } });
+  await client.solicitudDerecho.updateMany({ where: { ...where, valorPropuestoCifrado: { not: null } }, data: { valorPropuestoCifrado: null } });
 }
 
 /**
@@ -590,6 +613,7 @@ module.exports = {
   datosParaTitular,
   nombresDe,
   suprimirContacto,
+  borrarContactosAnteriores,
   cambiarBloqueo,
   contactosParaProceso,
   contactoParaVerificacion,

@@ -86,6 +86,15 @@ async function desbloquear(req, res, next) {
   }
 }
 
+async function nueva(req, res, next) {
+  try {
+    const { id } = await derechosService.registrarSolicitud(req.body, req.usuario, { origenSolicitudId: idDe(req) });
+    responderAccion(req, res, 'Solicitud registrada: verifica la identidad del titular para resolverla', { id });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function reautenticar(req, res, next) {
   try {
     const valida = await verificarContrasena(req.usuario.id, req.body.password);
@@ -114,4 +123,4 @@ async function descargar(req, res, next) {
   }
 }
 
-module.exports = { index, detalle, verificar, ejecutar, rechazar, desbloquear, reautenticar, descargar };
+module.exports = { index, detalle, verificar, ejecutar, rechazar, desbloquear, nueva, reautenticar, descargar };

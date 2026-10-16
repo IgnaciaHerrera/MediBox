@@ -110,7 +110,7 @@
       </section>
     <% } %>
 
-    <% if (s.derecho === 'bloqueo' && s.estado === 'resuelta' && paciente.bloqueado) { %>
+    <% if (s.derecho === 'bloqueo' && s.estado === 'resuelta' && paciente.bloqueado && !paciente.suprimido) { %>
       <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Levantar el bloqueo</h2></div>
         <form method="POST" action="/solicitudes/<%= s.id %>/desbloquear">
@@ -119,6 +119,29 @@
         </form>
       </section>
     <% } %>
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Registrar otra solicitud del titular</h2></div>
+      <p class="ayuda">Para cuando el titular presenta una nueva petición. Sirve también si está bloqueado y el operador ya no lo ve en la ficha.</p>
+      <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/nueva">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <div class="consentimiento-fila">
+          <select name="derecho" required aria-label="Derecho">
+            <option value="">Derecho…</option>
+            <% Object.keys(DERECHOS).forEach(function(d) { %><option value="<%= d %>"><%= DERECHOS[d] %></option><% }) %>
+          </select>
+          <select name="canal" required aria-label="Canal">
+            <option value="">¿Por dónde llegó?</option>
+            <% Object.keys(CANALES).forEach(function(c) { %><option value="<%= c %>"><%= CANALES[c] %></option><% }) %>
+          </select>
+          <select name="campo" aria-label="Dato a corregir (rectificación)">
+            <option value="">Dato a corregir…</option>
+            <% Object.keys(CAMPOS).forEach(function(c) { %><option value="<%= c %>"><%= CAMPOS[c] %></option><% }) %>
+          </select>
+          <input name="valorPropuesto" maxlength="150" autocomplete="off" placeholder="Valor correcto (rectificación)" aria-label="Valor correcto" />
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Registrar</button>
+        </div>
+      </form>
+    </section>
   </main>
 </body>
 </html>

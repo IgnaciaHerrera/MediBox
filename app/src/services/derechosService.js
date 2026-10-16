@@ -81,16 +81,28 @@ function sumarDias(fecha, dias) {
  *   campo y valorPropuesto (rectificación) o finalidadClave (oposición);
  *   solicitanteEsRepresentante y solicitanteRelacion.
  * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
+ * @param {{origenSolicitudId?: number}} [opciones] - para privacidad: el
+ *   titular es el de esa solicitud anterior (también si está bloqueado).
  * @returns {Promise<{id: number, venceEl: Date}>}
  * @throws {AppError} 400 si faltan datos o son inválidos; 404 si el
  *   paciente está fuera de su alcance.
  *
- * Consumidores: pacienteViewController.registrarSolicitud.
+ * Consumidores: pacienteViewController.registrarSolicitud,
+ *   solicitudViewController.nueva.
  */
-async function registrarSolicitud({ pacienteId, ...cuerpo }, solicitante) {
+async function registrarSolicitud({ pacienteId: idPedido, ...cuerpo }, solicitante, { origenSolicitudId } = {}) {
   const { error, value } = solicitudSchema.validate(cuerpo, { stripUnknown: true });
   if (error) throw new AppError(error.details[0].message, 400);
-  await pacienteService.exigirAlcance(pacienteId, solicitante);
+  let pacienteId = idPedido;
+  if (origenSolicitudId) {
+    // Privacidad registra una solicitud nueva de un titular que ya conoce por
+    // una anterior: así un paciente bloqueado, que el operador ya no ve,
+    // puede seguir ejerciendo sus derechos.
+    if (!solicitante.permisos.includes('derechos.gestionar')) throw new AppError('Permiso insuficiente', 403);
+    pacienteId = (await solicitudOError(origenSolicitudId)).pacienteId;
+  } else {
+    await pacienteService.exigirAlcance(pacienteId, solicitante);
+  }
 
   let valorPropuestoCifrado = null;
   if (value.derecho === 'rectificacion') {
@@ -202,6 +214,10 @@ const MOTIVOS_BLOQUEO = {
   bloqueo: 'Bloqueo a pedido del titular: los datos se conservan, pero no se usan mientras se aclara la situación.',
 };
 
+function supresionResueltaDe(pacienteId) {
+  return prisma.solicitudDerecho.findFirst({ where: { pacienteId, derecho: 'supresion', estado: 'resuelta' }, select: { id: true } });
+}
+
 async function motivoBloqueoDe(pacienteId) {
   const origen = await prisma.solicitudDerecho.findFirst({
     where: { pacienteId, estado: 'resuelta', derecho: { in: ['supresion', 'bloqueo'] } },
@@ -296,7 +312,11 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       respuesta: solicitud.respuestaCifrada ? descifrar('solicitud.respuesta', solicitud.respuestaCifrada) : null,
       metodosAceptados: METODOS_POR_DERECHO[solicitud.derecho],
     },
-    paciente: { ...paciente, motivoBloqueo: paciente.bloqueado ? await motivoBloqueoDe(solicitud.pacienteId) : null },
+    paciente: {
+      ...paciente,
+      motivoBloqueo: paciente.bloqueado ? await motivoBloqueoDe(solicitud.pacienteId) : null,
+      suprimido: Boolean(await supresionResueltaDe(solicitud.pacienteId)),
+    },
     consentimientos: await consentimientoService.estadoPorPaciente(solicitud.pacienteId),
     historial: await pacienteService.listarHistorial(solicitud.pacienteId),
   };
@@ -384,12 +404,14 @@ async function rechazar(solicitudId, solicitante, datos) {
 
 /**
  * Levanta el bloqueo que originó una solicitud de bloqueo ya resuelta,
- * cuando se aclaró la situación. Un bloqueo por supresión no se levanta.
+ * cuando se aclaró la situación. Un bloqueo por supresión no se levanta,
+ * aunque el titular haya pedido antes un bloqueo.
  *
  * @param {number} solicitudId - la solicitud de bloqueo.
  * @param {{id: number}} solicitante - req.usuario.
  * @returns {Promise<void>}
- * @throws {AppError} 409 si la solicitud no es un bloqueo resuelto.
+ * @throws {AppError} 409 si la solicitud no es un bloqueo resuelto o si el
+ *   titular tiene una supresión resuelta.
  *
  * Consumidores: solicitudViewController.desbloquear.
  */
@@ -397,6 +419,9 @@ async function desbloquear(solicitudId, solicitante) {
   const solicitud = await solicitudOError(solicitudId);
   if (solicitud.derecho !== 'bloqueo' || solicitud.estado !== 'resuelta') {
     throw new AppError('Solo se levanta un bloqueo que se pidió como bloqueo y ya se resolvió', 409);
+  }
+  if (await supresionResueltaDe(solicitud.pacienteId)) {
+    throw new AppError('El titular ejerció la supresión: su bloqueo es permanente', 409);
   }
   await pacienteService.cambiarBloqueo(solicitud.pacienteId, false, { usuarioId: solicitante.id, solicitudId });
 }

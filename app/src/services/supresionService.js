@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
+const { borrarContactosAnteriores } = require('./pacienteService');
 
 // Supresiones que sobreviven a una restauración (Hito 3).
 //
@@ -60,8 +61,13 @@ async function reaplicar() {
       // El respaldo puede ser anterior al registro del paciente.
       if (!paciente) return false;
 
+      const anteriores =
+        (await tx.historialCambio.count({ where: { pacienteId, campo: 'contacto', valorAnteriorCifrado: { not: null } } })) +
+        (await tx.solicitudDerecho.count({ where: { pacienteId, campo: 'contacto', valorPropuestoCifrado: { not: null } } }));
+      await borrarContactosAnteriores([pacienteId], tx);
       const cambios = {
         contacto: paciente.contactoCifrado ? 1 : 0,
+        contactosAnteriores: anteriores,
         bloqueo: paciente.bloqueado ? 0 : 1,
         consentimientos: (await tx.consentimiento.updateMany({ where: { pacienteId, revocadoEl: null }, data: { revocadoEl: new Date() } })).count,
         representantes: (await tx.consentimiento.updateMany({ where: { pacienteId, representanteCifrado: { not: null } }, data: { representanteCifrado: null } })).count,

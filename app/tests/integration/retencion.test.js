@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const { prisma } = require('../../src/lib/prisma');
 const { cifrarPaciente } = require('../../src/services/pacienteService');
+const { cifrar } = require('../../src/lib/cifrado');
 const { aplicarRetencion } = require('../../src/services/retencionService');
 
 // Fechas relativas a hoy: la prueba aplica la política real, así que una
@@ -45,6 +46,10 @@ describe('Plazos de conservación', () => {
     await prisma.cita.create({ data: { ...cita, pacienteId: pacientes.inactivo.id, fecha: haceMeses(36) } });
     await prisma.cita.create({ data: { ...cita, pacienteId: pacientes.conCitaReciente.id, fecha: haceMeses(6) } });
 
+    // Un contacto anterior del paciente inactivo, guardado en su historial.
+    await prisma.historialCambio.create({
+      data: { pacienteId: pacientes.inactivo.id, campo: 'contacto', valorAnteriorCifrado: cifrar('historial.contacto', '+56900000000'), cambiadoPorId: usuario.id, cambiadoEl: haceMeses(40) },
+    });
     await prisma.notificacion.create({ data: { usuarioId: usuario.id, mensaje: 'vieja', createdAt: haceMeses(13) } });
     await prisma.notificacion.create({ data: { usuarioId: usuario.id, mensaje: 'reciente', createdAt: haceMeses(1) } });
   });
@@ -54,6 +59,7 @@ describe('Plazos de conservación', () => {
     // upsert: tienen filas en la auditoría, que es de solo inserción.
     const ids = Object.values(pacientes).map((p) => p.id);
     await prisma.cita.deleteMany({ where: { pacienteId: { in: ids } } });
+    await prisma.historialCambio.deleteMany({ where: { pacienteId: { in: ids } } });
     await prisma.paciente.deleteMany({ where: { id: { in: ids } } });
     await prisma.notificacion.deleteMany({ where: { usuarioId: usuario.id } });
     await prisma.medico.delete({ where: { id: medico.id } });
@@ -71,6 +77,8 @@ describe('Plazos de conservación', () => {
 
     const contacto = async (clave) => (await prisma.paciente.findUnique({ where: { id: pacientes[clave].id } })).contactoCifrado;
     expect(await contacto('inactivo')).toBeNull();
+    // Tampoco quedan sus contactos anteriores en el historial.
+    expect(await prisma.historialCambio.count({ where: { pacienteId: pacientes.inactivo.id, valorAnteriorCifrado: { not: null } } })).toBe(0);
     // Con una cita en los últimos dos años, o recién registrado, se conserva.
     expect(await contacto('conCitaReciente')).not.toBeNull();
     expect(await contacto('nuevo')).not.toBeNull();
