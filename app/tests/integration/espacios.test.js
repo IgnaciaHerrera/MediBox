@@ -138,8 +138,7 @@ describe('Espacios físicos', () => {
     const medico = await prisma.medico.create({ data: { nombre: 'Dr. Espacios Test', especialidadId: especialidad.id } });
     const paciente = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Espacios Test', rut: '13131313-6', contacto: '+56900000000' }),
-        fechaNacimiento: new Date('1990-01-01'),
+        ...cifrarPaciente({ nombre: 'Paciente Espacios Test', rut: '13131313-6', contacto: '+56900000000', fechaNacimiento: '1990-01-01' }),
       },
     });
 

@@ -13,18 +13,6 @@
     const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
     return (primera + ultima).toUpperCase();
   }
-
-  function calcularEdad(fechaNacimiento) {
-    const hoy = new Date();
-    const nacimiento = new Date(fechaNacimiento);
-    let edad = hoy.getFullYear() - nacimiento.getFullYear();
-    const noHaCumplidoAnios = hoy.getMonth() < nacimiento.getMonth()
-      || (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
-    if (noHaCumplidoAnios) edad -= 1;
-    return edad;
-  }
-
-  const edad = calcularEdad(paciente.fechaNacimiento);
 %>
 </head>
 <body>
@@ -38,7 +26,7 @@
         <span class="avatar avatar--grande"><%= iniciales(paciente.nombre) %></span>
         <div>
           <h1><%= paciente.nombre %></h1>
-          <p class="paciente-subtitulo"><%= edad %> años · paciente desde <%= fechaDMA(isoLocal(paciente.createdAt).slice(0, 10)) %></p>
+          <p class="paciente-subtitulo"><%= paciente.edad %> año<%= paciente.edad === 1 ? '' : 's' %> · paciente desde <%= fechaDMA(isoLocal(paciente.createdAt).slice(0, 10)) %></p>
         </div>
       </div>
       <div class="page-head-acciones">
@@ -69,11 +57,11 @@
           </div>
           <div class="detalle-item">
             <span class="etiqueta">Fecha de nacimiento</span>
-            <span class="valor tiempo"><%= fechaDMA(new Date(paciente.fechaNacimiento).toISOString().slice(0, 10)) %></span>
+            <span class="valor tiempo"><%= fechaDMA(paciente.fechaNacimiento) %></span>
           </div>
           <div class="detalle-item">
             <span class="etiqueta">Contacto</span>
-            <span class="valor"><%= paciente.contacto %></span>
+            <span class="valor"><%= paciente.contacto || 'Sin contacto registrado' %></span>
           </div>
         </div>
       </section>

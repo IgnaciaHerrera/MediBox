@@ -111,17 +111,17 @@ model Instrumento {
 // Los datos personales se cifran en la aplicación con AES-256-GCM
 // (src/lib/cifrado.js); la base de datos solo ve blobs cifrados.
 model Paciente {
-  id                    Int      @id @default(autoincrement())
-  nombreCifrado         Bytes    @map("nombre_cifrado")
-  rutCifrado            Bytes    @map("rut_cifrado")
+  id                     Int      @id @default(autoincrement())
+  nombreCifrado          Bytes    @map("nombre_cifrado")
+  rutCifrado             Bytes    @map("rut_cifrado")
   // HMAC-SHA256 del RUT normalizado: búsqueda exacta y unicidad sin descifrar.
-  rutIndice             Bytes    @unique @map("rut_indice")
-  fechaNacimiento       DateTime @map("fecha_nacimiento") @db.Date
-  contactoCifrado       Bytes    @map("contacto_cifrado")
-  // Legado: el motivo ahora vive en cada cita. Se mantiene solo hasta que
-  // `npm run motivo:migrar` lo copie a las citas (ver README).
-  motivoConsultaCifrado Bytes?   @map("motivo_consulta_cifrado")
-  createdAt             DateTime @default(now()) @map("created_at")
+  rutIndice              Bytes    @unique @map("rut_indice")
+  // AAAA-MM-DD cifrada con la llave de identidad: es un cuasi identificador
+  // y la que revela si el paciente es menor de edad.
+  fechaNacimientoCifrada Bytes    @map("fecha_nacimiento_cifrada")
+  // Opcional: solo sirve para avisar al paciente de cambios en sus citas.
+  contactoCifrado        Bytes?   @map("contacto_cifrado")
+  createdAt              DateTime @default(now()) @map("created_at")
 
   citas Cita[]
 

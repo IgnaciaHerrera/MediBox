@@ -70,8 +70,8 @@ describe('Citas en la ficha del paciente', () => {
           nombre: 'Paciente Citas Test',
           rut: rutConDv(32000000 + Math.floor(Math.random() * 900000)),
           contacto: '+56900000001',
+          fechaNacimiento: '1990-01-01',
         }),
-        fechaNacimiento: new Date('1990-01-01'),
       },
     });
 

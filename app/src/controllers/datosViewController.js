@@ -87,7 +87,6 @@ async function exportarPacientes(req, res, next) {
     // nacimiento podía salir un día antes.
     const filas = pacientes.map((p) => ({
       ...p,
-      fechaNacimiento: p.fechaNacimiento.toISOString().slice(0, 10),
       createdAt: p.createdAt.toISOString(),
     }));
     const csv = toCsv(['id', 'nombre', 'rut', 'fechaNacimiento', 'contacto', 'createdAt'], filas);

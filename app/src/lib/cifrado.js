@@ -25,6 +25,7 @@ const LLAVE_BYTES = 32;
 const LLAVE_POR_CAMPO = {
   'paciente.nombre': 'PACIENTE_IDENTIDAD_KEY',
   'paciente.rut': 'PACIENTE_IDENTIDAD_KEY',
+  'paciente.fechaNacimiento': 'PACIENTE_IDENTIDAD_KEY',
   'paciente.contacto': 'PACIENTE_CONTACTO_KEY',
   'paciente.motivoConsulta': 'PACIENTE_CLINICO_KEY',
   'cita.motivoConsulta': 'PACIENTE_CLINICO_KEY',

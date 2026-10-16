@@ -93,8 +93,7 @@ describe('POST /api/medicos', () => {
     });
     const paciente = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Medicos Test', rut: '14141414-3', contacto: '+56900000001' }),
-        fechaNacimiento: new Date('1990-01-01'),
+        ...cifrarPaciente({ nombre: 'Paciente Medicos Test', rut: '14141414-3', contacto: '+56900000001', fechaNacimiento: '1990-01-01' }),
       },
     });
 

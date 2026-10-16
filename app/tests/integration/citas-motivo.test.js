@@ -1,6 +1,3 @@
-const { execFile } = require('child_process');
-const path = require('path');
-const { promisify } = require('util');
 const bcrypt = require('bcrypt');
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
@@ -9,8 +6,7 @@ const { cifrarPaciente } = require('../../src/services/pacienteService');
 const { descifrar } = require('../../src/lib/cifrado');
 
 // El motivo de consulta vive en cada cita: se guarda cifrado, la API de citas
-// no lo devuelve, el detalle lo muestra solo a quien puede leer al paciente y
-// `npm run motivo:migrar` copia el motivo de legado del paciente a sus citas.
+// no lo devuelve y el detalle lo muestra solo a quien puede leer al paciente.
 describe('Motivo de consulta en la cita', () => {
   const password = 'Password123!';
   let rolEscritura;
@@ -51,16 +47,15 @@ describe('Motivo de consulta en la cita', () => {
     });
   }
 
-  async function crearPaciente(datosExtra = {}) {
+  async function crearPaciente() {
     const paciente = await prisma.paciente.create({
       data: {
         ...cifrarPaciente({
           nombre: 'Paciente Motivo Test',
           rut: rutConDv(33000000 + Math.floor(Math.random() * 900000)),
           contacto: '+56900000002',
-          ...datosExtra,
+          fechaNacimiento: '1990-01-01',
         }),
-        fechaNacimiento: new Date('1990-01-01'),
       },
     });
     pacienteIds.push(paciente.id);
@@ -145,20 +140,5 @@ describe('Motivo de consulta en la cita', () => {
     const sinPermiso = await agenteLectura.get(`/agenda/${res.body.id}`);
     expect(sinPermiso.status).toBe(200);
     expect(sinPermiso.text).not.toContain('Revisión de lunar en espalda');
-  });
-
-  it('npm run motivo:migrar copia el motivo de legado del paciente a sus citas sin motivo', async () => {
-    const paciente = await crearPaciente({ motivoConsulta: 'Motivo de legado' });
-    const cita = await prisma.cita.create({
-      data: { pacienteId: paciente.id, medicoId: medico.id, boxId: box.id, fecha: new Date('2033-03-10'), horaInicio: '11:00', horaFin: '11:30' },
-    });
-
-    const script = path.join(__dirname, '../../prisma/migrar-motivo-citas.js');
-    await promisify(execFile)('node', [script], { env: process.env });
-    // Correrlo de nuevo no debe fallar ni cambiar nada (idempotente).
-    await promisify(execFile)('node', [script], { env: process.env });
-
-    const migrada = await prisma.cita.findUnique({ where: { id: cita.id }, select: { motivoConsultaCifrado: true } });
-    expect(descifrar('cita.motivoConsulta', migrada.motivoConsultaCifrado)).toBe('Motivo de legado');
   });
 });

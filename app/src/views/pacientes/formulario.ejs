@@ -46,8 +46,9 @@
 
         <fieldset class="form-seccion">
           <div class="field">
-            <label for="contacto">Contacto</label>
-            <input type="text" id="contacto" name="contacto" value="<%= valores.contacto || '' %>" placeholder="+56 9 1234 5678" required />
+            <label for="contacto">Contacto (opcional)</label>
+            <input type="text" id="contacto" name="contacto" value="<%= valores.contacto || '' %>" placeholder="+56 9 1234 5678" aria-describedby="contacto-ayuda" />
+            <span id="contacto-ayuda" class="ayuda">Teléfono o correo, solo para avisarle de cambios en sus citas.</span>
           </div>
         </fieldset>
 

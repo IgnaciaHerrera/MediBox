@@ -4,15 +4,17 @@ const { registrar } = require('./auditService');
 const { AppError } = require('../lib/AppError');
 const { cifrar, descifrar, indiceCiego } = require('../lib/cifrado');
 const { normalizarRut } = require('../lib/rut');
+const { edadEnAnios } = require('../lib/fecha');
 
 // Toda lectura de datos de paciente pasa por este servicio (con su propia
 // auditoría), y es el único lugar donde se cifra y descifra.
 //
-// El resumen (listados, combobox de agenda) no incluye el RUT: quien solo
-// navega la lista no necesita descifrar datos de identidad. El motivo de
-// consulta vive en cada cita (citaService), no en el paciente.
-const SELECT_RESUMEN = { id: true, nombreCifrado: true, contactoCifrado: true, fechaNacimiento: true, createdAt: true };
-const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true };
+// El resumen (listados, combobox de agenda) trae solo lo necesario para
+// reconocer al paciente: nombre y edad. El RUT, la fecha exacta y el contacto
+// se descifran únicamente al abrir la ficha. El motivo de consulta vive en
+// cada cita (citaService), no en el paciente.
+const SELECT_RESUMEN = { id: true, nombreCifrado: true, fechaNacimientoCifrada: true, createdAt: true };
+const SELECT_FICHA = { ...SELECT_RESUMEN, rutCifrado: true, contactoCifrado: true };
 
 /**
  * Índice ciego del RUT: HMAC-SHA256 de su forma canónica.
@@ -29,21 +31,28 @@ function indiceRut(rut) {
 /**
  * Convierte los datos en claro de un paciente en las columnas cifradas.
  *
- * @param {{nombre: string, rut: string, contacto: string, motivoConsulta?: string}} datos
- *   motivoConsulta solo lo pasa prisma/migrar-cifrado.js, que llena la columna
- *   de legado del paciente; la aplicación guarda el motivo en cada cita.
+ * @param {{nombre: string, rut: string, fechaNacimiento?: (Date|string),
+ *   contacto?: string, motivoConsulta?: string}} datos
+ *   fechaNacimiento es obligatoria para la aplicación; solo
+ *   prisma/migrar-cifrado.js la omite, porque recifra una base anterior que
+ *   aún la guardaba en claro. contacto es opcional. motivoConsulta solo lo
+ *   pasa ese mismo script, que llena la columna de legado del paciente.
  * @returns {{nombreCifrado: Buffer, rutCifrado: Buffer, rutIndice: Buffer,
- *   contactoCifrado: Buffer, motivoConsultaCifrado?: Buffer}}
+ *   contactoCifrado: (Buffer|null), fechaNacimientoCifrada?: Buffer,
+ *   motivoConsultaCifrado?: Buffer}}
  *
  * Consumidores: crearPaciente(), actualizarPaciente(), prisma/seed.js,
- *   prisma/migrar-cifrado.js.
+ *   prisma/migrar-cifrado.js, tests de integración.
  */
-function cifrarPaciente({ nombre, rut, contacto, motivoConsulta }) {
+function cifrarPaciente({ nombre, rut, fechaNacimiento, contacto, motivoConsulta }) {
   return {
     nombreCifrado: cifrar('paciente.nombre', nombre),
     rutCifrado: cifrar('paciente.rut', normalizarRut(rut)),
     rutIndice: indiceRut(rut),
-    contactoCifrado: cifrar('paciente.contacto', contacto),
+    contactoCifrado: contacto ? cifrar('paciente.contacto', contacto) : null,
+    ...(fechaNacimiento === undefined
+      ? {}
+      : { fechaNacimientoCifrada: cifrar('paciente.fechaNacimiento', new Date(fechaNacimiento).toISOString().slice(0, 10)) }),
     ...(motivoConsulta === undefined ? {} : { motivoConsultaCifrado: cifrar('paciente.motivoConsulta', motivoConsulta) }),
   };
 }
@@ -52,8 +61,7 @@ function resumen(fila) {
   return {
     id: fila.id,
     nombre: descifrar('paciente.nombre', fila.nombreCifrado),
-    contacto: descifrar('paciente.contacto', fila.contactoCifrado),
-    fechaNacimiento: fila.fechaNacimiento,
+    edad: edadEnAnios(descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada)),
     createdAt: fila.createdAt,
   };
 }
@@ -62,6 +70,8 @@ function ficha(fila) {
   return {
     ...resumen(fila),
     rut: descifrar('paciente.rut', fila.rutCifrado),
+    fechaNacimiento: descifrar('paciente.fechaNacimiento', fila.fechaNacimientoCifrada),
+    contacto: fila.contactoCifrado ? descifrar('paciente.contacto', fila.contactoCifrado) : null,
   };
 }
 
@@ -82,7 +92,7 @@ function sinTildes(texto) {
 // ponytail: descifra los nombres en memoria para buscar, porque AES-GCM no
 // admite LIKE en la base. Con miles de pacientes son milisegundos; si el
 // padrón llega a cientos de miles, el upgrade es un índice ciego por tokens
-// del nombre normalizado. Solo se descifra el contacto de las coincidencias.
+// del nombre normalizado. Solo se descifra la fecha de las coincidencias.
 async function buscarPorNombre(texto) {
   const aguja = sinTildes(texto);
   const filas = await prisma.paciente.findMany({ select: SELECT_RESUMEN, orderBy: { createdAt: 'desc' } });
@@ -106,7 +116,7 @@ async function crearPaciente(datos, usuarioId) {
   return prisma
     .$transaction(async (tx) => {
       const fila = await tx.paciente.create({
-        data: { ...cifrarPaciente(datos), fechaNacimiento: new Date(datos.fechaNacimiento) },
+        data: cifrarPaciente(datos),
         select: SELECT_RESUMEN,
       });
       await registrar({ usuarioId, accion: 'CREATE', entidad: 'Paciente', entidadId: fila.id }, tx);
@@ -128,7 +138,7 @@ async function actualizarPaciente(id, datos, usuarioId) {
     .$transaction(async (tx) => {
       const fila = await tx.paciente.update({
         where: { id },
-        data: { ...cifrarPaciente(datos), fechaNacimiento: new Date(datos.fechaNacimiento) },
+        data: cifrarPaciente(datos),
         select: SELECT_RESUMEN,
       });
       await registrar({ usuarioId, accion: 'UPDATE', entidad: 'Paciente', entidadId: id }, tx);

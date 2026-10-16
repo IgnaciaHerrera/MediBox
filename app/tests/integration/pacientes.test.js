@@ -35,7 +35,7 @@ describe('Paciente encryption and access control', () => {
     await prisma.$disconnect();
   });
 
-  it('stores nombre, rut and contacto encrypted at rest, with no plaintext column left', async () => {
+  it('stores nombre, rut, birth date and contacto encrypted at rest, with no plaintext column left', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
 
@@ -50,12 +50,13 @@ describe('Paciente encryption and access control', () => {
     pacienteIds.push(createRes.body.id);
 
     const [fila] = await prisma.$queryRaw`
-      SELECT nombre_cifrado, rut_cifrado, contacto_cifrado
+      SELECT nombre_cifrado, rut_cifrado, fecha_nacimiento_cifrada, contacto_cifrado
       FROM pacientes WHERE id = ${createRes.body.id}
     `;
     const columnas = [
       [fila.nombre_cifrado, datos.nombre],
       [fila.rut_cifrado, datos.rut],
+      [fila.fecha_nacimiento_cifrada, datos.fechaNacimiento],
       [fila.contacto_cifrado, datos.contacto],
     ];
     columnas.forEach(([blob, enClaro]) => {
@@ -67,8 +68,28 @@ describe('Paciente encryption and access control', () => {
     const columnasTabla = await prisma.$queryRaw`
       SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'pacientes'
     `;
-    const textoPlano = columnasTabla.filter((c) => c.data_type === 'text').map((c) => c.column_name);
+    const textoPlano = columnasTabla.filter((c) => ['text', 'date'].includes(c.data_type)).map((c) => c.column_name);
     expect(textoPlano).toEqual([]);
+  });
+
+  it('registers a patient without contacto, since it is optional, but never with a future birth date', async () => {
+    const { agent } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
+    const futuro = await agent
+      .post('/api/pacientes')
+      .send({ nombre: 'Futuro Test', rut: '17171717-5', fechaNacimiento: '2999-01-01' });
+    expect(futuro.status).toBe(400);
+
+    const createRes = await agent
+      .post('/api/pacientes')
+      .send({ nombre: 'Sin Contacto Test', rut: '15151515-0', fechaNacimiento: '2001-09-09', contacto: '' });
+    expect(createRes.status).toBe(201);
+    pacienteIds.push(createRes.body.id);
+
+    const [fila] = await prisma.$queryRaw`SELECT contacto_cifrado FROM pacientes WHERE id = ${createRes.body.id}`;
+    expect(fila.contacto_cifrado).toBeNull();
+    const readRes = await agent.get(`/api/pacientes/${createRes.body.id}`);
+    expect(readRes.body.contacto).toBeNull();
+    expect(readRes.body.fechaNacimiento).toBe('2001-09-09');
   });
 
   it('rejects a second patient with the same RUT even when written differently', async () => {
@@ -101,7 +122,8 @@ describe('Paciente encryption and access control', () => {
     const conCoincidencia = await agent.get('/api/pacientes').query({ q: 'Zoraida Buscable' });
     expect(conCoincidencia.status).toBe(200);
     expect(conCoincidencia.body.items.some((p) => p.id === createRes.body.id)).toBe(true);
-    expect(conCoincidencia.body.items[0].rut).toBeUndefined();
+    // El listado trae solo lo necesario para reconocer al paciente.
+    expect(Object.keys(conCoincidencia.body.items[0]).sort()).toEqual(['createdAt', 'edad', 'id', 'nombre']);
 
     const sinCoincidencia = await agent.get('/api/pacientes').query({ q: 'NombreQueNoExisteEnNadie' });
     expect(sinCoincidencia.status).toBe(200);
@@ -133,8 +155,7 @@ describe('Paciente encryption and access control', () => {
     // dígito verificador; igual debe poder encontrarse por él.
     const migrado = await prisma.paciente.create({
       data: {
-        ...cifrarPaciente({ nombre: 'Paciente Migrado Test', rut: '11111111-2', contacto: '+56912121212' }),
-        fechaNacimiento: new Date('1950-01-01'),
+        ...cifrarPaciente({ nombre: 'Paciente Migrado Test', rut: '11111111-2', contacto: '+56912121212', fechaNacimiento: '1950-01-01' }),
       },
     });
     pacienteIds.push(migrado.id);

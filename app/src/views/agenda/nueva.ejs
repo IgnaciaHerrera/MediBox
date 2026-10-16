@@ -3,7 +3,7 @@
 <head>
 <%- include('../partials/head', { titulo }) %>
 <%
-  const pacientesOpciones = pacientes.map((p) => ({ id: p.id, etiqueta: `${p.nombre} — ${p.contacto}` }));
+  const pacientesOpciones = pacientes.map((p) => ({ id: p.id, etiqueta: `${p.nombre} — ${p.edad} año${p.edad === 1 ? '' : 's'}` }));
   const pacienteSeleccionado = pacientesOpciones.find((p) => String(p.id) === String(valores.pacienteId));
 %>
 </head>

@@ -11,8 +11,9 @@ const crearSchema = Joi.object({
     .custom((valor, helpers) =>
       rutValido(valor) ? normalizarRut(valor) : helpers.message('El RUT no es válido: revisa el dígito verificador'),
     ),
-  fechaNacimiento: Joi.date().iso().required(),
-  contacto: Joi.string().min(5).max(100).required(),
+  fechaNacimiento: Joi.date().iso().max('now').required(),
+  // Opcional: un campo vacío del formulario cuenta como "sin contacto".
+  contacto: Joi.string().trim().min(5).max(100).empty(''),
 });
 
 async function index(req, res, next) {

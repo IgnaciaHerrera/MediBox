@@ -14,8 +14,9 @@ const pacienteSchema = Joi.object({
     .custom((valor, helpers) =>
       rutValido(valor) ? normalizarRut(valor) : helpers.message('El RUT no es válido: revisa el dígito verificador'),
     ),
-  fechaNacimiento: Joi.date().iso().required(),
-  contacto: Joi.string().min(5).max(100).required(),
+  fechaNacimiento: Joi.date().iso().max('now').required(),
+  // Opcional: un campo vacío del formulario cuenta como "sin contacto".
+  contacto: Joi.string().trim().min(5).max(100).empty(''),
 }).unknown(true); // el formulario HTML envía además el campo _csrf
 
 async function index(req, res, next) {
@@ -143,7 +144,7 @@ async function editarForm(req, res, next) {
       usuario: req.usuario,
       csrfToken: res.locals.csrfToken,
       accion: `/pacientes/${id}/editar`,
-      valores: { ...paciente, fechaNacimiento: paciente.fechaNacimiento.toISOString().slice(0, 10) },
+      valores: paciente,
       error: null,
       esEdicion: true,
     });

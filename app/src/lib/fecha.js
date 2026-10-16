@@ -16,4 +16,20 @@ function hoyISO() {
   return isoLocal().slice(0, 10);
 }
 
-module.exports = { isoLocal, hoyISO };
+/**
+ * Edad en años cumplidos a una fecha dada. Compara las fechas como texto
+ * AAAA-MM-DD, así que no depende de la zona horaria.
+ *
+ * @param {string} nacimientoISO - fecha de nacimiento, "AAAA-MM-DD".
+ * @param {string} [alISO] - fecha de referencia; por omisión, hoy.
+ * @returns {number} años cumplidos.
+ *
+ * Consumidores: services/pacienteService.js (edad del resumen, rango etario
+ *   de la exportación seudonimizada).
+ */
+function edadEnAnios(nacimientoISO, alISO = hoyISO()) {
+  const anios = Number(alISO.slice(0, 4)) - Number(nacimientoISO.slice(0, 4));
+  return alISO.slice(5) < nacimientoISO.slice(5) ? anios - 1 : anios;
+}
+
+module.exports = { isoLocal, hoyISO, edadEnAnios };

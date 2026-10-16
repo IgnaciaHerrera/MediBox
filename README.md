@@ -62,14 +62,14 @@ Tras ejecutar `npm run seed`, se crea un usuario admin de desarrollo:
 
 ## Cifrado de datos de pacientes
 
-Nombre, RUT, contacto y motivo de consulta se cifran en la aplicación con
-AES-256-GCM (`app/src/lib/cifrado.js`) antes de llegar a PostgreSQL; la base
+Nombre, RUT, fecha de nacimiento, contacto y motivo de consulta se cifran en
+la aplicación con AES-256-GCM (`app/src/lib/cifrado.js`) antes de llegar a PostgreSQL; la base
 solo guarda blobs cifrados y nunca recibe las llaves. Cada categoría tiene su
 propia llave:
 
 | Variable | Protege |
 |---|---|
-| `PACIENTE_IDENTIDAD_KEY` | nombre y RUT |
+| `PACIENTE_IDENTIDAD_KEY` | nombre, RUT y fecha de nacimiento |
 | `PACIENTE_CONTACTO_KEY` | teléfono / correo |
 | `PACIENTE_CLINICO_KEY` | motivo de consulta |
 | `PACIENTE_RUT_HMAC_KEY` | índice ciego del RUT (HMAC-SHA256): búsqueda exacta y unicidad sin descifrar |
@@ -106,20 +106,30 @@ Con Docker, cada comando se ejecuta dentro del contenedor de la app, por
 ejemplo `docker compose run --rm app npm run cifrado:migrar`. Una base nueva
 (o la de CI) aplica ambos pasos de corrido, sin intervención.
 
-### Motivo de consulta por cita
+### Minimización de datos del paciente
 
 El motivo de consulta pasó del paciente a cada cita
-(`20261003180000_motivo_en_citas_expandir`). En una base que ya tiene citas,
-después de aplicar las migraciones hay que copiar el motivo de cada paciente
-a sus citas:
+(`20261003180000_motivo_en_citas_expandir`), la fecha de nacimiento se cifra
+y el contacto es opcional (`20261016120000_minimizacion_pacientes_expandir`).
+El paso `20261016120100_minimizacion_pacientes_contraer` elimina la fecha en
+claro y el motivo de legado del paciente, y se detiene a propósito mientras
+queden datos sin migrar. En una base que ya tiene pacientes:
 
 ```bash
-docker compose exec app npm run motivo:migrar
+# 1. Aplica los pasos "expandir"; el paso "contraer" se detiene.
+docker compose exec app npx prisma migrate deploy
+
+# 2. Copia el motivo de legado a las citas y cifra las fechas de nacimiento.
+docker compose exec app npm run minimizacion:migrar
+
+# 3. Marca el paso "contraer" como revertido y vuelve a aplicarlo.
+docker compose exec app npx prisma migrate resolve --rolled-back 20261016120100_minimizacion_pacientes_contraer
+docker compose exec app npx prisma migrate deploy
 ```
 
-El script es idempotente y no borra nada: el motivo del paciente queda como
-legado hasta un paso posterior que elimine esa columna. Una base nueva no
-necesita correrlo.
+El script es idempotente y no borra nada. El paso "contraer" descarta el
+motivo de legado de los pacientes que no tienen ninguna cita: no orienta
+ninguna atención. Una base nueva aplica todo de corrido, sin intervención.
 
 ## Respaldos cifrados
 

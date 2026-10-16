@@ -178,7 +178,7 @@ async function seedPacientes() {
   for (const paciente of PACIENTES_DEMO) {
     if (!existentes.has(paciente.nombre)) {
       await prisma.paciente.create({
-        data: { ...cifrarPaciente(paciente), fechaNacimiento: new Date(paciente.fechaNacimiento) },
+        data: cifrarPaciente(paciente),
       });
     }
   }
