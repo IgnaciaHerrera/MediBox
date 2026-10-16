@@ -23,6 +23,10 @@ const UMBRAL_LECTURAS_HORA = 30;
 const UMBRAL_EXPORTACIONES_DIA = 3;
 // Ventana máxima consultable: acota el costo de las consultas.
 const DIAS_MAXIMOS = 31;
+// "Ubicación inusual": un inicio de sesión desde una IP que la cuenta no usó
+// en los 30 días anteriores (y que sí inició sesión en ese período: la
+// primera vez de una cuenta nueva no es inusual).
+const DIAS_HISTORIAL_IP = 30;
 
 const REGLAS = {
   FALLIDOS: { nombre: 'Inicios de sesión fallidos', descripcion: `${UMBRAL_FALLIDOS} o más intentos fallidos sobre una misma cuenta en ${VENTANA_FALLIDOS_MIN} minutos.` },
@@ -32,9 +36,11 @@ const REGLAS = {
   VOLUMEN_EXPORTACIONES: { nombre: 'Volumen de exportaciones', descripcion: `Más de ${UMBRAL_EXPORTACIONES_DIA} exportaciones en un mismo día.` },
   FUERA_DE_FUNCION: { nombre: 'Acceso negado', descripcion: 'Intentos de ver datos de pacientes fuera de la función o el alcance del usuario.' },
   CAMBIO_DE_ACCESO: { nombre: 'Cambio de accesos (informativa)', descripcion: 'Creación de cuentas y cambios de rol o de permisos: confirmar que respondan a un proceso autorizado.' },
+  IP_NUEVA: { nombre: 'Ubicación inusual', descripcion: `Inicio de sesión desde una IP que la cuenta no usó en los ${DIAS_HISTORIAL_IP} días anteriores.` },
+  PORTAL_ABUSO: { nombre: 'Abuso del portal del paciente', descripcion: 'Pedidos de código bloqueados por el límite por IP o por el tope de envíos a un mismo paciente.' },
 };
 
-const ACCIONES = ['LOGIN_FALLIDO', 'VERIFICAR_IDENTIDAD', 'READ', 'LIST', 'EXPORT', 'EXPORT_TITULAR', 'UPDATE_PERMISOS', 'UPDATE_ROL', 'CREATE'];
+const ACCIONES = ['LOGIN_FALLIDO', 'VERIFICAR_IDENTIDAD', 'READ', 'LIST', 'EXPORT', 'EXPORT_TITULAR', 'UPDATE_PERMISOS', 'UPDATE_ROL', 'CREATE', 'LOGIN', 'PORTAL_LIMITADO', 'PORTAL_CODIGO'];
 
 const formatoHora = new Intl.DateTimeFormat('en-GB', { timeZone: ZONA_HORARIA, hour: '2-digit', hourCycle: 'h23' });
 const formatoDia = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA_HORARIA, year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -85,7 +91,7 @@ async function detectar({ desde, hasta }) {
 
   const filas = await prisma.auditLog.findMany({
     where: { timestamp: { gte: desde, lte: hasta }, accion: { in: ACCIONES } },
-    select: { usuarioId: true, accion: true, entidad: true, entidadId: true, resultado: true, emailIndice: true, timestamp: true },
+    select: { usuarioId: true, accion: true, entidad: true, entidadId: true, resultado: true, emailIndice: true, ip: true, timestamp: true },
   });
   const delPaciente = (f) => f.entidad === 'Paciente' || f.entidad === 'Investigacion';
   const encontradas = [];
@@ -125,6 +131,29 @@ async function detectar({ desde, hasta }) {
 
   const cambios = filas.filter((f) => f.usuarioId && (f.accion === 'UPDATE_PERMISOS' || f.accion === 'UPDATE_ROL' || (f.accion === 'CREATE' && f.entidad === 'Usuario')));
   for (const grupo of agrupar(cambios, (f) => f.usuarioId)) alerta('CAMBIO_DE_ACCESO', grupo, { cantidad: grupo.length, ...extremos(grupo) });
+
+  const logins = filas.filter((f) => f.accion === 'LOGIN' && f.usuarioId && f.resultado === 'exito' && f.ip);
+  if (logins.length > 0) {
+    const historial = await prisma.auditLog.findMany({
+      where: {
+        accion: 'LOGIN',
+        resultado: 'exito',
+        usuarioId: { in: [...new Set(logins.map((f) => f.usuarioId))] },
+        timestamp: { gte: new Date(desde.getTime() - DIAS_HISTORIAL_IP * 24 * 60 * 60 * 1000), lte: hasta },
+      },
+      select: { usuarioId: true, ip: true, timestamp: true },
+    });
+    const nuevas = logins.filter((login) => {
+      const anteriores = historial.filter(
+        (h) => h.usuarioId === login.usuarioId && h.timestamp < login.timestamp && login.timestamp - h.timestamp <= DIAS_HISTORIAL_IP * 24 * 60 * 60 * 1000,
+      );
+      return anteriores.length > 0 && !anteriores.some((h) => h.ip === login.ip);
+    });
+    for (const grupo of agrupar(nuevas, (f) => f.usuarioId)) alerta('IP_NUEVA', grupo, { cantidad: grupo.length, ...extremos(grupo) });
+  }
+
+  const abusoPortal = filas.filter((f) => f.accion === 'PORTAL_LIMITADO' || (f.accion === 'PORTAL_CODIGO' && f.resultado === 'denegado'));
+  if (abusoPortal.length > 0) alerta('PORTAL_ABUSO', abusoPortal, { cantidad: abusoPortal.length, ...extremos(abusoPortal.sort((a, b) => a.timestamp - b.timestamp)) });
 
   const ids = [...new Set(encontradas.map((a) => a.usuarioId).filter(Boolean))];
   const nombres = new Map((await prisma.usuario.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true } })).map((u) => [u.id, u.nombre]));

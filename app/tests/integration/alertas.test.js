@@ -24,7 +24,7 @@ describe('Alertas de accesos anómalos', () => {
   }
 
   beforeAll(async () => {
-    for (const clave of ['nocturno', 'diurno', 'masivo', 'normal', 'exportador', 'moderado', 'curioso', 'admin', 'probador']) {
+    for (const clave of ['nocturno', 'diurno', 'masivo', 'normal', 'exportador', 'moderado', 'curioso', 'admin', 'probador', 'viajero', 'habitual', 'nuevo']) {
       usuarios[clave] = await usuarioDePrueba(`alertas-${clave}@medibox.local`, 'consulta', password);
     }
     const emailAtacado = crypto.randomBytes(32);
@@ -44,6 +44,18 @@ describe('Alertas de accesos anómalos', () => {
 
     await fila({ usuarioId: usuarios.curioso.id, accion: 'READ', resultado: 'denegado', entidadId: 99, timestamp: enUtc(15) });
     await fila({ usuarioId: usuarios.admin.id, accion: 'UPDATE_PERMISOS', entidad: 'Rol', entidadId: 3, timestamp: enUtc(15) });
+
+    // Inicios de sesión: el viajero entró hace 5 días desde otra IP; el
+    // habitual, desde la misma; el nuevo no tiene historial.
+    const login = (usuario, ip, timestamp) => fila({ usuarioId: usuario.id, accion: 'LOGIN', entidad: 'Usuario', entidadId: usuario.id, ip, timestamp });
+    await login(usuarios.viajero, '10.0.0.1', enUtc(-24 * 5));
+    await login(usuarios.viajero, '203.0.113.9', enUtc(12));
+    await login(usuarios.habitual, '10.0.0.2', enUtc(-24 * 5));
+    await login(usuarios.habitual, '10.0.0.2', enUtc(12));
+    await login(usuarios.nuevo, '10.0.0.3', enUtc(12));
+
+    await fila({ actor: 'portal', accion: 'PORTAL_LIMITADO', entidad: 'Sistema', entidadId: 0, resultado: 'denegado', timestamp: enUtc(17) });
+    await fila({ actor: 'portal', accion: 'PORTAL_CODIGO', entidadId: 55, resultado: 'denegado', timestamp: enUtc(17, 5) });
   });
 
   afterAll(() => prisma.$disconnect());
@@ -76,6 +88,18 @@ describe('Alertas de accesos anómalos', () => {
     const lista = await alertas.detectar(ventana);
     expect(de('FUERA_DE_FUNCION', usuarios.curioso, lista)).toHaveLength(1);
     expect(de('CAMBIO_DE_ACCESO', usuarios.admin, lista)).toHaveLength(1);
+  });
+
+  it('detecta un inicio de sesión desde una IP que la cuenta no usaba', async () => {
+    const lista = await alertas.detectar(ventana);
+    expect(de('IP_NUEVA', usuarios.viajero, lista)).toHaveLength(1);
+    expect(de('IP_NUEVA', usuarios.habitual, lista)).toHaveLength(0);
+    // La primera vez de una cuenta no es una ubicación inusual.
+    expect(de('IP_NUEVA', usuarios.nuevo, lista)).toHaveLength(0);
+  });
+
+  it('detecta el abuso del portal del paciente', async () => {
+    expect(de('PORTAL_ABUSO', null, await alertas.detectar(ventana))).toEqual([expect.objectContaining({ cantidad: 2, usuarioId: null })]);
   });
 
   it('no entrega datos de pacientes: ni ids ni identidad', async () => {
