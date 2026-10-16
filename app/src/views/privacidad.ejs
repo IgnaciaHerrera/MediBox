@@ -14,7 +14,7 @@
 %>
 </head>
 <body>
-  <main class="page-main contenedor-angosto">
+  <main class="page-main">
     <a class="volver" href="/auth/login-form">← Volver</a>
     <div class="page-head">
       <div>
@@ -23,12 +23,12 @@
       </div>
     </div>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Responsable</h2></div>
       <p><%= tratamiento.responsable %></p>
     </section>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Qué datos tratamos, para qué y hasta cuándo</h2></div>
       <div class="tabla-scroll">
         <table class="tabla">
@@ -42,7 +42,7 @@
       </div>
     </section>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Usos opcionales, solo con su consentimiento</h2></div>
       <p>Su atención no depende de ninguno de ellos: puede negarse o revocarlos cuando quiera, sin que cambie su atención.</p>
       <ul>
@@ -50,12 +50,12 @@
       </ul>
     </section>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>A quién se comunican</h2></div>
       <p><%= tratamiento.destinatarios %></p>
     </section>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Sus derechos</h2></div>
       <ul>
         <% tratamiento.derechos.forEach(function(clave) { %><li><strong><%= DERECHOS[clave][0] %>:</strong> <%= DERECHOS[clave][1] %></li><% }) %>

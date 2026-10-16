@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <section class="panel-card panel-lista">
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Qué pide</h2></div>
       <p><%= QUE_HACE[s.derecho] %></p>
       <% if (s.solicitanteEsRepresentante) { %><p class="aviso">La presenta su representante (<%= s.solicitanteRelacion %>).</p><% } %>
@@ -50,7 +50,7 @@
     </section>
 
     <% if (s.estado === 'recibida') { %>
-      <section class="panel-card panel-lista">
+      <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Verificar la identidad</h2></div>
         <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
         <form method="POST" action="/solicitudes/<%= s.id %>/verificar">
@@ -62,7 +62,7 @@
     <% } %>
 
     <% if (s.estado === 'verificada' && esArchivo) { %>
-      <section class="panel-card panel-lista">
+      <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Generar el archivo del titular</h2></div>
         <% if (!reautenticado) { %>
           <form class="consentimiento-fila" method="POST" action="/solicitudes/reautenticar">
@@ -87,7 +87,7 @@
     <% } %>
 
     <% if (s.estado === 'verificada' && !esArchivo) { %>
-      <section class="panel-card panel-lista">
+      <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Resolver</h2></div>
         <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/ejecutar">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -99,7 +99,7 @@
     <% } %>
 
     <% if (s.estado === 'verificada') { %>
-      <section class="panel-card panel-lista">
+      <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Rechazar por el fondo</h2></div>
         <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/rechazar">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
@@ -111,7 +111,7 @@
     <% } %>
 
     <% if (s.derecho === 'bloqueo' && s.estado === 'resuelta' && paciente.bloqueado) { %>
-      <section class="panel-card panel-lista">
+      <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Levantar el bloqueo</h2></div>
         <form method="POST" action="/solicitudes/<%= s.id %>/desbloquear">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

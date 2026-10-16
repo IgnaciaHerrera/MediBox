@@ -161,3 +161,18 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+/* Paneles con texto, formularios o listas (no solo una tabla): el contenido
+   no queda pegado al borde, igual que el encabezado y las tablas. */
+.page-main .panel-texto > :not(.panel-lista-head):not(.tabla-scroll) {
+  margin-left: 1.25rem;
+  margin-right: 1.25rem;
+}
+
+.page-main .panel-texto > :last-child {
+  margin-bottom: 1.25rem;
+}
+
+.page-main .panel-texto > .panel-lista-head + * {
+  margin-top: 1rem;
+}
