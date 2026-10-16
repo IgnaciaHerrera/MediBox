@@ -8,6 +8,10 @@ const { borrarContactosAnteriores } = require('./pacienteService');
 // sesiones vencen solas a las 8 horas (connect-pg-simple las elimina).
 const MESES_NOTIFICACION = 12;
 const MESES_CONTACTO_SIN_CITAS = 24;
+// Un código de verificación sirve 10 minutos. Pasado un día, su hash y su
+// sal no tienen finalidad (y un hash de 6 dígitos se revierte en segundos):
+// se borran. La fila queda, porque respalda consentimientos y solicitudes.
+const HORAS_HASH_CODIGO = 24;
 
 function mesesAntes(fecha, meses) {
   const limite = new Date(fecha);
@@ -23,13 +27,16 @@ function mesesAntes(fecha, meses) {
  *   - Contacto del paciente: se elimina (queda en NULL) cuando lleva dos años
  *     sin citas, ni pasadas ni futuras, en ese período. Solo sirve para
  *     avisarle de cambios en sus citas. El resto de la ficha se conserva.
+ *   - Códigos de verificación (al funcionario o del portal): el hash y la sal
+ *     se borran un día después de creados; ya vencieron o se usaron.
  *
  * Es idempotente: correrlo de nuevo no cambia nada hasta que venza otro
  * plazo. Queda en la auditoría como acción del sistema, con los conteos y
  * sin datos personales.
  *
  * @param {Date} [ahora] - fecha de referencia; por omisión, ahora.
- * @returns {Promise<{notificacionesEliminadas: number, contactosEliminados: number}>}
+ * @returns {Promise<{notificacionesEliminadas: number, contactosEliminados: number,
+ *   codigosEliminados: number}>}
  *
  * Consumidores: src/retencion.js (npm run retencion).
  */
@@ -55,7 +62,12 @@ async function aplicarRetencion(ahora = new Date()) {
     return tx.paciente.updateMany({ where: { id: { in: ids } }, data: { contactoCifrado: null } });
   });
 
-  const resumen = { notificacionesEliminadas, contactosEliminados };
+  const { count: codigosEliminados } = await prisma.verificacionIdentidad.updateMany({
+    where: { codigoHash: { not: null }, creadaEl: { lt: new Date(ahora.getTime() - HORAS_HASH_CODIGO * 60 * 60 * 1000) } },
+    data: { codigoHash: null, sal: null },
+  });
+
+  const resumen = { notificacionesEliminadas, contactosEliminados, codigosEliminados };
   await registrar({ actor: 'sistema', accion: 'RETENCION', entidad: 'Sistema', entidadId: 0, detalle: resumen });
   return resumen;
 }

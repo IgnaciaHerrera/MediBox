@@ -51,6 +51,9 @@ describe('Plazos de conservación', () => {
       data: { pacienteId: pacientes.inactivo.id, campo: 'contacto', valorAnteriorCifrado: cifrar('historial.contacto', '+56900000000'), cambiadoPorId: usuario.id, cambiadoEl: haceMeses(40) },
     });
     await prisma.notificacion.create({ data: { usuarioId: usuario.id, mensaje: 'vieja', createdAt: haceMeses(13) } });
+    const codigo = { metodo: 'codigo_portal', codigoHash: Buffer.alloc(32, 1), sal: Buffer.alloc(16, 2), expiraEl: new Date() };
+    await prisma.verificacionIdentidad.create({ data: { pacienteId: pacientes.nuevo.id, ...codigo, creadaEl: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) } });
+    await prisma.verificacionIdentidad.create({ data: { pacienteId: pacientes.nuevo.id, ...codigo } });
     await prisma.notificacion.create({ data: { usuarioId: usuario.id, mensaje: 'reciente', createdAt: haceMeses(1) } });
   });
 
@@ -60,6 +63,7 @@ describe('Plazos de conservación', () => {
     const ids = Object.values(pacientes).map((p) => p.id);
     await prisma.cita.deleteMany({ where: { pacienteId: { in: ids } } });
     await prisma.historialCambio.deleteMany({ where: { pacienteId: { in: ids } } });
+    await prisma.verificacionIdentidad.deleteMany({ where: { pacienteId: { in: ids } } });
     await prisma.paciente.deleteMany({ where: { id: { in: ids } } });
     await prisma.notificacion.deleteMany({ where: { usuarioId: usuario.id } });
     await prisma.medico.delete({ where: { id: medico.id } });
@@ -82,6 +86,10 @@ describe('Plazos de conservación', () => {
     // Con una cita en los últimos dos años, o recién registrado, se conserva.
     expect(await contacto('conCitaReciente')).not.toBeNull();
     expect(await contacto('nuevo')).not.toBeNull();
+
+    // El hash de un código de hace más de un día se borra; el de hoy, no.
+    const codigos = await prisma.verificacionIdentidad.findMany({ where: { pacienteId: pacientes.nuevo.id }, orderBy: { id: 'asc' } });
+    expect(codigos.map((c) => c.codigoHash === null)).toEqual([true, false]);
 
     // El resto de la ficha no se toca: el registro clínico dura 15 años.
     expect(await prisma.paciente.count({ where: { id: pacientes.inactivo.id } })).toBe(1);
