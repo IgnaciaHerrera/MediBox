@@ -6,6 +6,14 @@
   padding: 2.5rem 2rem 4rem;
 }
 
+/* Paneles apilados directamente en la página (p. ej. /privacidad o el detalle
+   de una solicitud): sin esto quedan pegados. Los márgenes verticales
+   colapsan, así que no se suma a un margen que el panel ya tenga, y no toca
+   los paneles dentro de grillas, que se separan con su propio gap. */
+.page-main > .panel-card + .panel-card {
+  margin-top: 1.25rem;
+}
+
 .page-head {
   display: flex;
   align-items: baseline;
