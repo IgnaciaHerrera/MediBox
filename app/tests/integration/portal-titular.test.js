@@ -4,6 +4,7 @@ const { pacienteDePrueba, usuarioDePrueba } = require('../helpers/datos');
 const { limpiarPacientes } = require('../helpers/derechos');
 const { ingresarAlPortal, agentePortal } = require('../helpers/portal');
 const { loginAgent } = require('../helpers/csrf');
+const { comoBinario, textoDelExcel } = require('../helpers/archivo');
 const consentimientoService = require('../../src/services/consentimientoService');
 const derechos = require('../../src/services/derechosService');
 
@@ -44,25 +45,43 @@ describe('Portal del titular: sus datos y sus derechos', () => {
     expect(res.body.titular).toMatchObject({ nombre: 'Portal Titular', fechaNacimiento: '1980-02-02', contacto: '+56977200001' });
     expect(JSON.stringify(res.body)).not.toContain('Portal Otro Paciente');
     expect(res.body.accesos.some((a) => a.rol === 'Usted, en el portal')).toBe(true);
+    // Para qué se usan sus datos y a quién se comunican (derecho de acceso).
+    expect(res.body.tratamiento.destinatarios).toBeDefined();
+
+    const pagina = await titular.get('/portal/mis-datos').set('Accept', 'text/html');
+    expect(pagina.status).toBe(200);
+    for (const seccion of ['Para qué usamos sus datos', 'Descargar en Excel', 'Descargar en PDF', 'Sus derechos', 'Sus solicitudes y sus respuestas', 'Quién accedió a sus datos']) {
+      expect(pagina.text).toContain(seccion);
+    }
+    expect(pagina.text).not.toContain('Portal Otro Paciente');
     // Sin datos internos.
     expect(res.body.titular.id).toBeUndefined();
     const lectura = await prisma.auditLog.findFirst({ where: { accion: 'READ', entidadId: pacientes.titular.id, actor: 'titular' } });
     expect(lectura).toMatchObject({ usuarioId: null, detalle: { motivo: 'portal' } });
   });
 
-  it('descarga sus datos: queda como una portabilidad resuelta en el portal', async () => {
-    const res = await titular.post('/portal/descargar');
-    expect(res.status).toBe(200);
-    expect(res.headers['cache-control']).toBe('no-store');
-    expect(res.headers['content-disposition']).toMatch(/attachment/);
-    const archivo = JSON.parse(res.text);
-    expect(archivo.titular.nombre).toBe('Portal Titular');
-    expect(archivo.tratamiento).toBeDefined();
+  it('descarga sus datos en Excel o PDF: queda como una portabilidad resuelta en el portal', async () => {
+    expect((await titular.post('/portal/descargar').send({ formato: 'json' })).status).toBe(400);
+    expect(await prisma.solicitudDerecho.count({ where: { pacienteId: pacientes.titular.id, derecho: 'portabilidad' } })).toBe(0);
+
+    const excel = await comoBinario(titular.post('/portal/descargar').send({ formato: 'excel' }));
+    expect(excel.status).toBe(200);
+    expect(excel.headers['cache-control']).toBe('no-store');
+    expect(excel.headers['content-disposition']).toMatch(/attachment; filename="mis-datos-medibox\.xlsx"/);
+    const texto = textoDelExcel(excel.body);
+    expect(texto).toContain('Portal Titular');
+    expect(texto).toContain('Cómo tratamos mis datos');
+    expect(texto).not.toContain('Portal Otro Paciente');
+
+    const pdf = await comoBinario(titular.post('/portal/descargar').send({ formato: 'pdf' }));
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toBe('application/pdf');
+    expect(pdf.body.subarray(0, 5).toString()).toBe('%PDF-');
 
     const solicitud = await prisma.solicitudDerecho.findFirst({ where: { pacienteId: pacientes.titular.id, derecho: 'portabilidad' } });
     expect(solicitud).toMatchObject({ canal: 'portal', estado: 'resuelta', entrega: 'portal', metodoVerificacion: 'codigo_portal', recibidaPorId: null });
     const exportacion = await prisma.auditLog.findFirst({ where: { accion: 'EXPORT_TITULAR', entidadId: pacientes.titular.id } });
-    expect(exportacion).toMatchObject({ actor: 'titular', usuarioId: null });
+    expect(exportacion).toMatchObject({ actor: 'titular', usuarioId: null, detalle: { formato: 'excel' } });
   });
 
   it('otorga solo con la casilla marcada y sobre el texto vigente, y revoca con un clic', async () => {
@@ -106,7 +125,11 @@ describe('Portal del titular: sus datos y sus derechos', () => {
 
     const gestor = { id: privacidad.id, permisos: ['derechos.registrar', 'derechos.gestionar'] };
     await derechos.ejecutar(solicitud.id, gestor, { respuesta: 'Corregido.' });
-    expect((await titular.get('/portal/mis-datos')).body.titular.nombre).toBe('Portal Titular Corregido');
+    const despues = (await titular.get('/portal/mis-datos')).body;
+    expect(despues.titular.nombre).toBe('Portal Titular Corregido');
+    // Ve la respuesta del hospital y el valor que tenía antes.
+    expect(despues.solicitudes.find((s) => s.derecho === 'rectificacion')).toMatchObject({ estado: 'resuelta', respuesta: 'Corregido.' });
+    expect(despues.historialCambios).toEqual([expect.objectContaining({ campo: 'nombre', valorAnterior: 'Portal Titular' })]);
   });
 
   it('la supresión y el bloqueo quedan pendientes de la cédula en admisión', async () => {

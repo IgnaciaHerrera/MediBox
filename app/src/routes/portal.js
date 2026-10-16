@@ -8,6 +8,7 @@ const { issueCsrfToken } = require('../middleware/csrf');
 const { AppError } = require('../lib/AppError');
 const { toast } = require('../lib/toast');
 const { TRATAMIENTO } = require('../lib/tratamiento');
+const { ETIQUETAS, validarFormato, enviarArchivo } = require('../lib/archivoTitular');
 const consentimientoService = require('../services/consentimientoService');
 
 // Portal temporal del titular: público, sin cuentas. Ver
@@ -144,6 +145,7 @@ router.get('/mis-datos', requirePortal, async (req, res, next) => {
       expiraEl: new Date(req.titular.expiraEl),
       relaciones: consentimientoService.RELACIONES,
       tratamiento: TRATAMIENTO,
+      etiquetas: ETIQUETAS,
     });
   } catch (err) {
     return next(err);
@@ -152,10 +154,9 @@ router.get('/mis-datos', requirePortal, async (req, res, next) => {
 
 router.post('/descargar', requirePortal, async (req, res, next) => {
   try {
-    const archivo = await portalService.descargar(req.titular);
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="mis-datos-medibox.json"');
-    return res.send(JSON.stringify(archivo, null, 2));
+    const formato = validarFormato(req.body.formato);
+    const archivo = await portalService.descargar(req.titular, formato);
+    return await enviarArchivo(res, archivo, formato, 'mis-datos-medibox');
   } catch (err) {
     return next(err);
   }

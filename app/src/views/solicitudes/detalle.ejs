@@ -9,8 +9,8 @@
   const METODOS = { cedula_presencial: 'cédula en persona', codigo_contacto: 'código al contacto registrado', codigo_portal: 'código ingresado por el titular en el portal' };
   const ESTADOS = { recibida: 'Pendiente de verificación', verificada: 'Verificada', resuelta: 'Resuelta', rechazada: 'Rechazada' };
   const QUE_HACE = {
-    acceso: 'Genera una copia de todos los datos del titular (JSON).',
-    portabilidad: 'Genera una copia de todos los datos del titular (JSON), para llevarlos a otro responsable.',
+    acceso: 'Genera una copia de todos los datos del titular, en PDF o en Excel.',
+    portabilidad: 'Genera una copia de todos los datos del titular en Excel, para llevarlos a otro responsable (o en PDF, para leerla).',
     rectificacion: 'Aplica el valor propuesto a la ficha, con historial del cambio.',
     supresion: 'Elimina el contacto, los consentimientos y los datos del representante, y bloquea lo clínico, que la ley obliga a conservar. Anula sus citas futuras.',
     bloqueo: 'Bloquea al paciente: se conserva, pero no se usa para nada. Anula sus citas futuras.',
@@ -78,6 +78,10 @@
               <option value="">¿Cómo se entrega?</option>
               <option value="presencial">En persona</option>
               <option value="contacto_registrado">Al contacto registrado</option>
+            </select>
+            <select name="formato" required aria-label="Formato">
+              <option value="excel">Excel (portabilidad)</option>
+              <option value="pdf">PDF (para leer o imprimir)</option>
             </select>
             <button type="submit" class="btn btn-primary btn--auto btn--control">Generar y descargar</button>
           </form>

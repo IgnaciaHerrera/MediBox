@@ -6,6 +6,7 @@ const { solicitudDePrueba, limpiarPacientes } = require('../helpers/derechos');
 const { descifrar } = require('../../src/lib/cifrado');
 const derechos = require('../../src/services/derechosService');
 const pacienteService = require('../../src/services/pacienteService');
+const { comoBinario, textoDelExcel } = require('../helpers/archivo');
 
 const haceHoras = (horas) => new Date(Date.now() - horas * 60 * 60 * 1000);
 
@@ -94,9 +95,9 @@ describe('Revisión final: bloqueo y supresión de punta a punta', () => {
     expect((await agentePrivacidad.post(`/verificacion/${paciente.id}/cedula`).send({ cedulaVista: 'si' })).status).toBe(200);
     expect((await agentePrivacidad.post(`/solicitudes/${nueva.body.id}/verificar`)).status).toBe(200);
     await agentePrivacidad.post('/solicitudes/reautenticar').send({ password });
-    const archivo = await agentePrivacidad.post(`/solicitudes/${nueva.body.id}/descargar`).send({ entrega: 'presencial' });
+    const archivo = await comoBinario(agentePrivacidad.post(`/solicitudes/${nueva.body.id}/descargar`).send({ entrega: 'presencial', formato: 'excel' }));
     expect(archivo.status).toBe(200);
-    expect(JSON.parse(archivo.text).titular.nombre).toBe('Revision bloqueadoConDerechos');
+    expect(textoDelExcel(archivo.body)).toContain('Revision bloqueadoConDerechos');
   });
 
   it('la reautenticación tiene un límite de intentos', async () => {

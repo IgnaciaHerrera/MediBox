@@ -532,15 +532,16 @@ const ETIQUETA_ROL = { operador: 'Admisión', medico: 'Médico tratante', gestor
  *
  * @param {number} solicitudId
  * @param {{id: number}} solicitante - req.usuario.
- * @param {{entrega: ('contacto_registrado'|'presencial')}} opciones - nunca
- *   el canal por el que llamaron: en persona o al contacto ya registrado.
+ * @param {{entrega: ('contacto_registrado'|'presencial'), formato?: string}} opciones
+ *   entrega: nunca el canal por el que llamaron, sino en persona o al
+ *   contacto ya registrado. formato: 'excel' o 'pdf', para la auditoría.
  * @returns {Promise<object>}
  * @throws {AppError} 409 si no es acceso o portabilidad, si no está
  *   verificada, o si el contacto falta o cambió después de la solicitud.
  *
  * Consumidores: solicitudViewController.descargar.
  */
-async function exportarDatosTitular(solicitudId, solicitante, { entrega }) {
+async function exportarDatosTitular(solicitudId, solicitante, { entrega, formato }) {
   const solicitud = await solicitudOError(solicitudId);
   if (solicitud.derecho !== 'acceso' && solicitud.derecho !== 'portabilidad') throw new AppError('Esta solicitud no es de acceso ni de portabilidad', 409);
   exigirVerificada(solicitud);
@@ -558,7 +559,7 @@ async function exportarDatosTitular(solicitudId, solicitante, { entrega }) {
   const archivo = await armarArchivoTitular(pacienteId);
   await prisma.$transaction(async (tx) => {
     await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: `Se entregó una copia de sus datos (${entrega === 'presencial' ? 'en persona' : 'al contacto registrado'}).`, entrega }, tx);
-    await registrar({ usuarioId: solicitante.id, accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega } }, tx);
+    await registrar({ usuarioId: solicitante.id, accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega, formato } }, tx);
   });
   return archivo;
 }
@@ -582,8 +583,14 @@ async function armarArchivoTitular(pacienteId) {
       orderBy: { otorgadoEl: 'asc' },
       select: { otorgadoEl: true, revocadoEl: true, canal: true, revocacionCanal: true, otorgadoPor: true, representanteCifrado: true, finalidad: { select: { nombre: true } }, texto: { select: { version: true, texto: true } } },
     }),
-    prisma.solicitudDerecho.findMany({ where: { pacienteId }, orderBy: { recibidaEl: 'asc' }, select: { derecho: true, estado: true, canal: true, recibidaEl: true, resueltaEl: true } }),
-    pacienteService.listarHistorial(pacienteId),
+    prisma.solicitudDerecho.findMany({
+      where: { pacienteId },
+      orderBy: { recibidaEl: 'asc' },
+      select: { derecho: true, estado: true, canal: true, campo: true, recibidaEl: true, venceEl: true, resueltaEl: true, respuestaCifrada: true },
+    }),
+    // Con el valor anterior: la rectificación conserva qué había, y ese dato
+    // es del propio titular (no lo ve nadie más).
+    prisma.historialCambio.findMany({ where: { pacienteId }, orderBy: { cambiadoEl: 'asc' }, select: { campo: true, cambiadoEl: true, valorAnteriorCifrado: true } }),
     prisma.auditLog.findMany({
       where: { entidad: 'Paciente', entidadId: pacienteId },
       orderBy: { timestamp: 'asc' },
@@ -608,8 +615,14 @@ async function armarArchivoTitular(pacienteId) {
       revocadoEl: c.revocadoEl,
       canalRevocacion: c.revocacionCanal,
     })),
-    solicitudes,
-    historialCambios: historial.map((h) => ({ campo: h.campo, cambiadoEl: h.cambiadoEl })),
+    // La respuesta es lo que el hospital le contestó al titular: es suya.
+    solicitudes: solicitudes.map(({ respuestaCifrada, ...s }) => ({ ...s, respuesta: respuestaCifrada ? descifrar('solicitud.respuesta', respuestaCifrada) : null })),
+    // Sin valor anterior si la supresión o la retención ya lo eliminaron.
+    historialCambios: historial.map((h) => ({
+      campo: h.campo,
+      cambiadoEl: h.cambiadoEl,
+      valorAnterior: h.valorAnteriorCifrado ? descifrar(`historial.${h.campo}`, h.valorAnteriorCifrado) : null,
+    })),
     accesos: accesos.map((a) => ({
       fecha: a.timestamp,
       accion: a.accion,
@@ -628,11 +641,12 @@ async function armarArchivoTitular(pacienteId) {
  *
  * @param {number} pacienteId - el de la sesión del portal.
  * @param {number} verificacionId - el código con que ingresó.
+ * @param {string} formato - 'excel' o 'pdf', para la auditoría.
  * @returns {Promise<object>} el archivo.
  *
  * Consumidores: portalService.descargar.
  */
-async function exportarDesdePortal(pacienteId, verificacionId) {
+async function exportarDesdePortal(pacienteId, verificacionId, formato) {
   const archivo = await armarArchivoTitular(pacienteId);
   const ahora = new Date();
   await prisma.$transaction(async (tx) => {
@@ -653,7 +667,7 @@ async function exportarDesdePortal(pacienteId, verificacionId) {
       },
       select: { id: true },
     });
-    await registrar({ actor: 'titular', accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega: CANAL_PORTAL } }, tx);
+    await registrar({ actor: 'titular', accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega: CANAL_PORTAL, formato } }, tx);
   });
   return archivo;
 }

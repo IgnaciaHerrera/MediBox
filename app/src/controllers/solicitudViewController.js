@@ -4,6 +4,7 @@ const { verificarContrasena } = require('../services/authService');
 const { registrar } = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
 const { responderAccion } = require('../lib/responderError');
+const { validarFormato, enviarArchivo } = require('../lib/archivoTitular');
 
 // El archivo de un titular concentra todos sus datos: se genera solo con una
 // reautenticación reciente del funcionario.
@@ -113,11 +114,9 @@ async function descargar(req, res, next) {
       throw new AppError('Vuelve a ingresar tu contraseña antes de generar el archivo del titular', 403);
     }
     const id = idDe(req);
-    const archivo = await derechosService.exportarDatosTitular(id, req.usuario, { entrega: req.body.entrega });
-    res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="datos-titular-${id}.json"`);
-    res.send(JSON.stringify(archivo, null, 2));
+    const formato = validarFormato(req.body.formato);
+    const archivo = await derechosService.exportarDatosTitular(id, req.usuario, { entrega: req.body.entrega, formato });
+    await enviarArchivo(res, archivo, formato, `datos-titular-${id}`);
   } catch (err) {
     next(err);
   }

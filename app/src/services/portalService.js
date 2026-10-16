@@ -148,18 +148,24 @@ async function sesionVigente(sesion) {
  * Consumidores: routes/portal.js.
  */
 async function misDatos({ pacienteId }) {
-  const [archivo, consentimientos, solicitudes, edad] = await Promise.all([
+  const [archivo, consentimientos, edad] = await Promise.all([
     derechosService.armarArchivoTitular(pacienteId),
     consentimientoService.estadoPorPaciente(pacienteId),
-    derechosService.listarPorPaciente(pacienteId),
     pacienteService.edadDe(pacienteId),
   ]);
   await registrar({ actor: 'titular', accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { motivo: 'portal' } });
   return {
     ...archivo,
     contactoEnmascarado: archivo.titular.contacto ? enmascararContacto(archivo.titular.contacto) : null,
-    estadoConsentimientos: consentimientos.map((c) => ({ finalidad: c.finalidad, estado: c.estado, textoVigente: c.textoVigente, otorgadoEl: c.otorgadoEl, revocadoEl: c.revocadoEl })),
-    solicitudesAbiertas: solicitudes.filter((s) => s.estado === 'recibida' || s.estado === 'verificada'),
+    estadoConsentimientos: consentimientos.map((c) => ({
+      finalidad: c.finalidad,
+      estado: c.estado,
+      textoVigente: c.textoVigente,
+      version: c.version,
+      otorgadoEl: c.otorgadoEl,
+      revocadoEl: c.revocadoEl,
+      otorgadoPor: c.otorgadoPor,
+    })),
     requiereRepresentante: consentimientoService.requiereRepresentante(edad),
   };
 }
@@ -168,12 +174,13 @@ async function misDatos({ pacienteId }) {
  * Descarga del archivo con todos sus datos (acceso y portabilidad).
  *
  * @param {{pacienteId: number, verificacionId: number}} titular
- * @returns {Promise<object>}
+ * @param {string} formato - 'excel' o 'pdf', ya validado.
+ * @returns {Promise<object>} el archivo, para lib/archivoTitular.
  *
  * Consumidores: routes/portal.js.
  */
-function descargar({ pacienteId, verificacionId }) {
-  return derechosService.exportarDesdePortal(pacienteId, verificacionId);
+function descargar({ pacienteId, verificacionId }, formato) {
+  return derechosService.exportarDesdePortal(pacienteId, verificacionId, formato);
 }
 
 /**

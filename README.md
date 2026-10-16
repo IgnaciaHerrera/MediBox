@@ -247,8 +247,9 @@ las hace el propio titular en el **portal del paciente** (ver más abajo).
   aceptan con cédula, y los ejecuta una persona distinta de quien verificó.
 - **Derechos ARCO+**: el operador recibe y verifica las solicitudes desde la
   ficha; el rol `privacidad` (usuario demo `privacidad@medibox.local`) las
-  resuelve en `/solicitudes`. Acceso y portabilidad generan un JSON del
-  titular, con reautenticación del funcionario, entregado en persona o al
+  resuelve en `/solicitudes`. Acceso y portabilidad generan el archivo del
+  titular en Excel (estructurado: sirve para la portabilidad) o en PDF (para
+  leerlo), con reautenticación del funcionario, entregado en persona o al
   contacto registrado.
 - **Auditoría y alertas**: la auditoría registra actor (`usuario`, `sistema`,
   `titular` o `portal`), resultado e IP sin datos personales; `/alertas`
@@ -263,8 +264,10 @@ recibe un código de un solo uso en el contacto que ya tenía registrado (si
 lleva 24 horas sin cambiar). Con el código abre una sesión de 15 minutos,
 atada a su propio registro, para:
 
-- ver sus datos, sus citas y quién accedió a ellos (por función);
-- descargar todos sus datos en JSON (acceso y portabilidad);
+- ver sus datos, sus citas, para qué se usan y con quién se comparten, las
+  respuestas a sus solicitudes, los cambios de sus datos (con el valor
+  anterior) y quién accedió a ellos (por función);
+- descargar todos sus datos en Excel (portabilidad) o en PDF (acceso);
 - aceptar o revocar los usos opcionales con un clic (un menor de 14, por
   medio de su representante);
 - pedir una rectificación (la revisa y aplica privacidad), una supresión o
