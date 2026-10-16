@@ -11,58 +11,89 @@
     bloqueo: ['Bloqueo', 'Suspender el uso de sus datos mientras se aclara una duda sobre su exactitud o vigencia.'],
     portabilidad: ['Portabilidad', 'Recibir sus datos en un formato estructurado (JSON) para llevarlos a otro responsable.'],
   };
+
+  const SECCIONES = [
+    ['responsable', 'Responsable'],
+    ['datos', 'Qué datos tratamos'],
+    ['opcionales', 'Usos opcionales'],
+    ['destinatarios', 'A quién se comunican'],
+    ['derechos', 'Sus derechos'],
+  ];
 %>
 </head>
-<body>
-  <main class="page-main">
-    <a class="volver" href="/">← Volver al inicio</a>
-    <div class="page-head">
-      <div>
+<body class="doc-body">
+  <%- include('partials/portal-cabecera') %>
+
+  <div class="doc-pagina">
+    <aside class="doc-lateral">
+      <nav class="doc-indice" aria-label="Contenido de la política">
+        <p class="doc-indice-titulo">En esta política</p>
+        <ol>
+          <% SECCIONES.forEach(function(s) { %>
+            <li><a href="#<%= s[0] %>"><%= s[1] %></a></li>
+          <% }) %>
+        </ol>
+      </nav>
+    </aside>
+
+    <article class="doc-articulo">
+      <header class="doc-cabecera">
         <h1>Política de tratamiento de datos personales</h1>
-        <p class="page-sub">Cómo trata MediBox los datos de los pacientes del hospital.</p>
-      </div>
-    </div>
+        <p class="doc-intro">Cómo trata MediBox los datos de los pacientes del hospital: qué datos usa, para qué, con quién los comparte y cómo puede ejercer sus derechos.</p>
+      </header>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Responsable</h2></div>
-      <p><%= tratamiento.responsable %></p>
-    </section>
+      <section class="doc-seccion" id="responsable" aria-labelledby="titulo-responsable">
+        <h2 id="titulo-responsable">Responsable</h2>
+        <p><%= tratamiento.responsable %></p>
+      </section>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Qué datos tratamos, para qué y hasta cuándo</h2></div>
-      <div class="tabla-scroll">
-        <table class="tabla">
-          <thead><tr><th>Datos</th><th>Finalidad</th><th>Base legal</th><th>Plazo</th></tr></thead>
-          <tbody>
-            <% tratamiento.datos.forEach(function(d) { %>
-              <tr><td><strong><%= d.categoria %>:</strong> <%= d.datos %></td><td><%= d.finalidad %></td><td><%= d.base %></td><td><%= d.plazo %></td></tr>
-            <% }) %>
-          </tbody>
-        </table>
-      </div>
-    </section>
+      <section class="doc-seccion" id="datos" aria-labelledby="titulo-datos">
+        <h2 id="titulo-datos">Qué datos tratamos, para qué y hasta cuándo</h2>
+        <% tratamiento.datos.forEach(function(d) { %>
+          <div class="doc-clausula">
+            <h3><%= d.categoria %></h3>
+            <dl>
+              <div><dt>Datos</dt><dd><%= d.datos %></dd></div>
+              <div><dt>Para qué</dt><dd><%= d.finalidad %></dd></div>
+              <div><dt>Base legal</dt><dd><%= d.base %></dd></div>
+              <div><dt>Plazo</dt><dd><%= d.plazo %></dd></div>
+            </dl>
+          </div>
+        <% }) %>
+      </section>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Usos opcionales, solo con su consentimiento</h2></div>
-      <p>Su atención no depende de ninguno de ellos: puede negarse o revocarlos cuando quiera, sin que cambie su atención.</p>
-      <ul>
-        <% tratamiento.finalidades.forEach(function(f) { %><li><strong><%= f.nombre %>.</strong> <%= f.base %></li><% }) %>
-      </ul>
-    </section>
+      <section class="doc-seccion" id="opcionales" aria-labelledby="titulo-opcionales">
+        <h2 id="titulo-opcionales">Usos opcionales, solo con su consentimiento</h2>
+        <p>Su atención no depende de ninguno de ellos: puede negarse o revocarlos cuando quiera, sin que cambie su atención.</p>
+        <ul>
+          <% tratamiento.finalidades.forEach(function(f) { %><li><strong><%= f.nombre %>.</strong> <%= f.base %></li><% }) %>
+        </ul>
+      </section>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>A quién se comunican</h2></div>
-      <p><%= tratamiento.destinatarios %></p>
-    </section>
+      <section class="doc-seccion" id="destinatarios" aria-labelledby="titulo-destinatarios">
+        <h2 id="titulo-destinatarios">A quién se comunican</h2>
+        <p><%= tratamiento.destinatarios %></p>
+      </section>
 
-    <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Sus derechos</h2></div>
-      <ul>
-        <% tratamiento.derechos.forEach(function(clave) { %><li><strong><%= DERECHOS[clave][0] %>:</strong> <%= DERECHOS[clave][1] %></li><% }) %>
-      </ul>
-      <p><strong>Cómo ejercerlos:</strong> <%= tratamiento.comoEjercerlos %></p>
-      <p><a href="/portal">Ir al portal del paciente</a></p>
-    </section>
-  </main>
+      <section class="doc-seccion" id="derechos" aria-labelledby="titulo-derechos">
+        <h2 id="titulo-derechos">Sus derechos</h2>
+        <dl class="doc-derechos">
+          <% tratamiento.derechos.forEach(function(clave) { %>
+            <div><dt><%= DERECHOS[clave][0] %></dt><dd><%= DERECHOS[clave][1] %></dd></div>
+          <% }) %>
+        </dl>
+        <p class="doc-nota"><strong>Cómo ejercerlos.</strong> <%= tratamiento.comoEjercerlos %></p>
+        <a class="doc-enlace-portal" href="/portal">
+          Ir al portal del paciente
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </section>
+    </article>
+  </div>
+
+  <footer class="portal-pie">
+    <span>© 2026 MediBox</span>
+  </footer>
+  <script src="/js/documento.js"></script>
 </body>
 </html>

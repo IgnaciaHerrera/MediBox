@@ -1,0 +1,306 @@
+/* ---------- Documentos (política de privacidad): se lee como un texto legal ---------- */
+
+.doc-body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.doc-pagina {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 42rem);
+  justify-content: center;
+  gap: 4rem;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 4rem;
+}
+
+/* ----- Índice ----- */
+
+.doc-lateral {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+}
+
+.doc-indice-titulo {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.doc-indice ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: indice;
+}
+
+.doc-indice li {
+  counter-increment: indice;
+}
+
+.doc-indice a {
+  display: block;
+  padding: 0.4rem 0 0.4rem 0.9rem;
+  border-left: 2px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.doc-indice a::before {
+  content: counter(indice) ". ";
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-indice a:hover {
+  color: var(--teal-ink);
+}
+
+.doc-indice a[aria-current="true"] {
+  border-left-color: var(--teal);
+  color: var(--teal-ink);
+  font-weight: 600;
+}
+
+.doc-indice a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 107, 92, 0.25);
+}
+
+/* ----- Texto ----- */
+
+.doc-articulo {
+  counter-reset: seccion;
+  min-width: 0;
+}
+
+.doc-cabecera {
+  margin-bottom: 2.25rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.doc-cabecera h1 {
+  font-size: clamp(2rem, 4.2vw, 2.65rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--teal-ink);
+}
+
+.doc-intro {
+  margin: 1rem 0 0;
+  font-size: 1.08rem;
+  line-height: 1.65;
+}
+
+.doc-seccion {
+  margin-bottom: 2.75rem;
+  scroll-margin-top: 1.5rem;
+  counter-increment: seccion;
+}
+
+.doc-seccion h2 {
+  margin: 0 0 0.9rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  color: var(--teal-ink);
+}
+
+.doc-seccion h2::before {
+  content: counter(seccion) ".";
+  margin-right: 0.5rem;
+  color: var(--teal);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-seccion p,
+.doc-seccion li {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.doc-seccion p {
+  margin: 0 0 0.9rem;
+}
+
+.doc-seccion ul {
+  margin: 0 0 0.9rem;
+  padding-left: 1.2rem;
+}
+
+.doc-seccion li + li {
+  margin-top: 0.6rem;
+}
+
+/* Cada tipo de dato es una cláusula: título y sus condiciones en filas. */
+.doc-clausula {
+  padding: 1.1rem 0 0.4rem;
+  border-top: 1px solid var(--line);
+}
+
+.doc-clausula h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.doc-clausula dl,
+.doc-derechos {
+  margin: 0;
+}
+
+.doc-clausula dl > div,
+.doc-derechos > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.4rem 0;
+}
+
+.doc-clausula dt {
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.doc-clausula dd,
+.doc-derechos dd {
+  margin: 0;
+  font-size: 0.97rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.doc-derechos > div {
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.doc-derechos > div:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.doc-derechos dt {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.doc-nota {
+  margin: 1.5rem 0 1rem;
+  padding: 0.8rem 1.1rem;
+  border-left: 3px solid var(--ochre);
+  border-radius: 0 8px 8px 0;
+  background: rgba(185, 130, 47, 0.07);
+}
+
+.doc-enlace-portal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--teal);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.doc-enlace-portal svg {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.doc-enlace-portal:hover svg {
+  transform: translateX(3px);
+}
+
+/* ----- Tablet y celular: el índice pasa arriba como una lista corta ----- */
+
+@media (max-width: 900px) {
+  .doc-pagina {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+    max-width: 42rem;
+    padding: 1.25rem 1.25rem 3rem;
+  }
+
+  .doc-lateral {
+    position: static;
+  }
+
+  .doc-indice {
+    padding: 0.9rem 1.1rem;
+    border: 1px solid rgba(195, 191, 177, 0.6);
+    border-radius: 12px;
+    background: var(--paper-raised);
+  }
+
+  .doc-indice ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1rem 1.25rem;
+  }
+
+  .doc-indice a {
+    padding: 0.3rem 0;
+    border-left: none;
+  }
+
+  .doc-indice a[aria-current="true"] {
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 560px) {
+  .doc-clausula dl > div,
+  .doc-derechos > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+
+/* ----- Impresión: solo el texto ----- */
+
+@media print {
+  .portal-cab,
+  .doc-lateral,
+  .portal-pie,
+  .doc-enlace-portal {
+    display: none;
+  }
+
+  .doc-body {
+    background: #fff;
+  }
+
+  .doc-pagina {
+    display: block;
+    max-width: none;
+    padding: 0;
+  }
+
+  .doc-cabecera h1,
+  .doc-seccion h2 {
+    color: #000;
+  }
+
+  .doc-seccion,
+  .doc-clausula {
+    break-inside: avoid;
+  }
+
+  .doc-nota {
+    background: none;
+    border-left-color: #000;
+  }
+}
