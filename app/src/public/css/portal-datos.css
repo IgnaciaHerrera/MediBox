@@ -1,0 +1,329 @@
+/* ---------- Portal del paciente: Mis datos ----------
+   Usa los mismos componentes que el resto de la app (.topbar, .page-head,
+   .panel-card, .cita-seccion, .tabla, .badge, .btn, .field...). Aquí solo
+   queda lo propio del portal. */
+
+/* Una sección a la vez (con JavaScript); las secciones no tienen margen entre sí. */
+.portal-seccion[hidden] {
+  display: none;
+}
+
+.portal-seccion:not([hidden]) {
+  animation: portal-aparecer 0.3s var(--ease-out);
+}
+
+.portal-seccion > :not(.page-head) + :not(.page-head) {
+  margin-top: 1.25rem;
+}
+
+.portal-seccion .cita-grid {
+  margin-bottom: 0;
+}
+
+/* Marca: el logo del hospital junto al nombre. */
+.portal-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.portal-marca .landing-logo-icono {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+}
+
+.portal-marca .landing-logo-icono svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* Lo que el script oculta (botones de página, filas) no debe reaparecer por el
+   display de los botones y las tablas. */
+.portal-seccion [hidden] {
+  display: none !important;
+}
+
+/* Cuenta junto a un enlace del menú (solicitudes pendientes). */
+.portal-nav-cuenta {
+  min-width: 1.25rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: rgba(31, 107, 92, 0.12);
+  color: var(--teal-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.topbar-nav a.activo .portal-nav-cuenta {
+  background: var(--teal);
+  color: var(--paper-raised);
+}
+
+/* Resumen: fichas más limpias */
+.portal-seccion .cita-seccion .detalle-grid {
+  gap: 1.15rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.portal-seccion .detalle-item .etiqueta {
+  margin-bottom: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+
+.portal-seccion .detalle-item .valor,
+.portal-seccion .detalle-item .valor.tiempo {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.detalle-item--ancho {
+  grid-column: 1 / -1;
+}
+
+.portal-seccion > .cita-grid > .cita-seccion {
+  display: flex;
+  flex-direction: column;
+}
+
+.portal-ayuda {
+  margin: auto 0 0;
+  padding-top: 0.25rem;
+}
+
+.portal-vacio-texto {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.portal-ver {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: auto;
+  text-decoration: none;
+}
+
+.portal-cifra {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.portal-cifra strong {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--teal-ink);
+}
+
+/* Tablas: las fechas y horas no se parten; en celular la tabla se desplaza de lado. */
+.portal-seccion td.tiempo,
+.portal-seccion .cita-hora {
+  white-space: nowrap;
+}
+
+.portal-seccion .tabla {
+  min-width: 42rem;
+}
+
+.portal-sub-celda {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.portal-celda-motivo {
+  max-width: 16rem;
+  color: var(--ink-soft);
+}
+
+.tabla-scroll--alta {
+  max-height: 26rem;
+  overflow-y: auto;
+}
+
+.badge-neutro {
+  border-color: var(--line-strong);
+  background: rgba(84, 92, 88, 0.08);
+  color: var(--ink-soft);
+}
+
+/* Consentimientos y solicitudes */
+/* La fecha en que se otorgó queda separada del botón y del título. */
+.portal-seccion .panel-texto > .consentimiento-meta {
+  margin-bottom: 1.1rem;
+  line-height: 1.5;
+}
+
+.portal-seccion .panel-texto > form {
+  margin-top: 0;
+}
+.portal-texto-legal {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--ochre);
+  border-radius: 0 8px 8px 0;
+  background: rgba(185, 130, 47, 0.07);
+}
+
+.portal-texto-legal p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.portal-acepto {
+  justify-content: space-between;
+}
+
+.portal-derechos {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 1rem 1.25rem 1.25rem 2.5rem;
+}
+
+/* Paneles que se despliegan: el encabezado es el título de la tarjeta. */
+.portal-plegable summary {
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+
+.portal-plegable summary::-webkit-details-marker {
+  display: none;
+}
+
+.portal-plegable summary svg {
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--ink-soft);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.portal-plegable[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.portal-plegable:not([open]) summary {
+  border-bottom: none;
+}
+
+.portal-plegable summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px rgba(31, 107, 92, 0.25);
+}
+
+/* Texto legal del consentimiento: cerrado por defecto, con el mismo estilo al abrir. */
+.portal-texto-plegable summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--teal-deep);
+}
+
+.portal-texto-plegable summary .ayuda {
+  display: inline;
+  margin: 0 0 0 0.25rem;
+}
+
+.portal-texto-plegable[open] summary {
+  margin-bottom: 0.6rem;
+}
+
+/* Franja del resumen: consentimientos y solicitudes en una sola tarjeta delgada. */
+.portal-franja {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+}
+
+.portal-franja-item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.05rem 1.4rem;
+}
+
+.portal-franja-item + .portal-franja-item {
+  border-left: 1px solid var(--line);
+}
+
+.portal-franja-item .cita-seccion-icono {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.portal-franja-texto {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.portal-franja-texto strong {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--teal-ink);
+}
+
+.portal-franja-item .btn-mini {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+/* Descargas y "cómo se usan mis datos" */
+.portal-dos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.portal-descarga-texto {
+  margin: 0 0 1.1rem;
+}
+
+.portal-dos .portal-descarga-texto:last-child {
+  margin-bottom: 0;
+}
+
+.portal-enlace-final {
+  margin: 0;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .portal-dos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-franja {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-franja-item + .portal-franja-item {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .portal-acepto {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-seccion:not([hidden]) {
+    animation: none;
+  }
+}

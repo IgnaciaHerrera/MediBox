@@ -50,7 +50,7 @@ describe('Portal del titular: sus datos y sus derechos', () => {
 
     const pagina = await titular.get('/portal/mis-datos').set('Accept', 'text/html');
     expect(pagina.status).toBe(200);
-    for (const seccion of ['Para qué usamos sus datos', 'Descargar en Excel', 'Descargar en PDF', 'Sus derechos', 'Sus solicitudes y sus respuestas', 'Quién accedió a sus datos']) {
+    for (const seccion of ['Cómo se usan mis datos', 'Descargar en Excel', 'Descargar en PDF', 'Derechos y solicitudes', 'Tus solicitudes', 'Quién accedió a tus datos']) {
       expect(pagina.text).toContain(seccion);
     }
     expect(pagina.text).not.toContain('Portal Otro Paciente');
