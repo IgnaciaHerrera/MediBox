@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <main class="page-main">
+    <div class="page-head">
+      <div>
+        <h1>Portal del paciente</h1>
+        <p class="page-sub">Vea sus datos, descárguelos, gestione sus consentimientos y presente solicitudes sobre sus datos personales.</p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Ingresar</h2></div>
+      <p>Escriba su RUT. Le enviaremos un código de un solo uso al teléfono o correo que tiene registrado en el hospital. No necesita una cuenta ni una contraseña.</p>
+      <form method="POST" action="/portal/ingresar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label for="rut">RUT</label>
+        <input id="rut" name="rut" maxlength="15" autocomplete="off" placeholder="12.345.678-5" required />
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Enviarme un código</button>
+      </form>
+      <p class="ayuda">Si no tiene un contacto registrado, o lo cambió hace menos de 24 horas, no recibirá el código: puede ejercer sus derechos en admisión con su cédula, por teléfono o por correo.</p>
+    </section>
+
+    <p><a href="/privacidad">Política de privacidad</a></p>
+  </main>
+  <%- include('../partials/toast') %>
+</body>
+</html>

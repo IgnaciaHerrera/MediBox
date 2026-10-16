@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <main class="page-main">
+    <a class="volver" href="/portal">← Volver</a>
+    <div class="page-head">
+      <div>
+        <h1>Ingrese su código</h1>
+        <p class="page-sub">El código tiene 6 dígitos, vence en 10 minutos y admite 5 intentos.</p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista panel-texto">
+      <form method="POST" action="/portal/confirmar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label for="codigo">Código</label>
+        <input id="codigo" name="codigo" inputmode="numeric" pattern="\d{6}" maxlength="6" autocomplete="one-time-code" required />
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Ingresar</button>
+      </form>
+      <p class="ayuda">El código es solo para usted: el hospital nunca se lo pedirá. Su sesión durará 15 minutos.</p>
+    </section>
+  </main>
+  <%- include('../partials/toast') %>
+</body>
+</html>

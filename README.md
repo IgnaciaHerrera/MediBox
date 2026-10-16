@@ -51,6 +51,7 @@ npm run alertas                # reglas de accesos anómalos; avisa a los gestor
 npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
 npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids]
 npm run llaves:rotar -- --variable PACIENTE_IDENTIDAD_KEY   # ver "Rotación de llaves"
+npm run sesiones:cerrar -- --correo cuenta@dominio          # cierra todas las sesiones de una cuenta comprometida
 ```
 
 ### Variables de entorno para tests locales
@@ -210,11 +211,11 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 | Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan; la auditoría es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE) |
 | Historial de cambios, consentimientos y solicitudes de derechos | igual que la ficha | no se eliminan: son la prueba de lo que pidió el titular |
 | Paciente bloqueado (bloqueo o supresión) | igual que la ficha | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante |
-| Códigos de verificación | 10 minutos, un solo uso | solo se guarda su hash |
+| Códigos de verificación y del portal | 10 minutos, un solo uso | solo se guarda su hash; `npm run retencion` borra el hash y la sal al día siguiente (la fila queda como respaldo de lo que verificó) |
 | Lista de supresiones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores a la supresión | fuera de la base; `ops/restaurar-db.sh` la reaplica |
 | Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |
 | Notificaciones | 1 año | `npm run retencion` las elimina |
-| Sesiones | 8 horas | vencen solas |
+| Sesiones | 8 horas (las del portal del paciente, 15 minutos) | vencen solas; `npm run sesiones:cerrar` cierra las de una cuenta |
 | Respaldos | 30 días | `ops/respaldar-db.sh` rota los anteriores |
 | Logs de los contenedores | 3 archivos de 10 MB | rotación de Docker (`docker-compose.yml`) |
 
@@ -227,9 +228,9 @@ docker compose exec -T app npm run retencion
 
 ## Consentimiento, derechos del titular e incidentes (Hito 3)
 
-MediBox es solo para el personal: no hay portal de pacientes. Las peticiones
-del titular llegan por cualquier canal (en admisión, por teléfono o por
-correo) y un funcionario las registra, indicando el canal.
+Las peticiones del titular llegan por cualquier canal (en admisión, por
+teléfono o por correo) y un funcionario las registra, indicando el canal; o
+las hace el propio titular en el **portal del paciente** (ver más abajo).
 
 - **Consentimiento por finalidad** (`/pacientes/:id`, operador): solo para
   usos opcionales (recordatorios, investigación y encuestas). La atención no
@@ -239,21 +240,46 @@ correo) y un funcionario las registra, indicando el canal.
   representante, cuyos datos se guardan cifrados.
 - **Verificación de identidad**: con la cédula en admisión (base) o con un
   código de un solo uso enviado al contacto ya registrado (complemento). En
-  desarrollo el envío se simula en `registro/buzon-simulado.txt`; en
-  producción no hay canal configurado y se usa la cédula. Supresión y bloqueo
-  solo se aceptan con cédula.
+  desarrollo el envío se simula en `registro/buzon-simulado.txt` (los últimos
+  50 mensajes); en producción va por el correo del hospital con
+  `CANAL_ENVIO=smtp` y las variables `SMTP_*` de `.env.example` (solo a
+  correos, con TLS; sin SMTP, se usa la cédula). Supresión y bloqueo solo se
+  aceptan con cédula, y los ejecuta una persona distinta de quien verificó.
 - **Derechos ARCO+**: el operador recibe y verifica las solicitudes desde la
   ficha; el rol `privacidad` (usuario demo `privacidad@medibox.local`) las
   resuelve en `/solicitudes`. Acceso y portabilidad generan un JSON del
   titular, con reautenticación del funcionario, entregado en persona o al
   contacto registrado.
-- **Auditoría y alertas**: la auditoría registra actor, resultado e IP sin
-  datos personales; `/alertas` (gestor) aplica las reglas de monitoreo.
+- **Auditoría y alertas**: la auditoría registra actor (`usuario`, `sistema`,
+  `titular` o `portal`), resultado e IP sin datos personales; `/alertas`
+  (gestor) aplica las reglas de monitoreo, incluidas un inicio de sesión desde
+  una IP que la cuenta no usaba y el abuso del portal.
 - **Política de tratamiento**: pública en `/privacidad`.
 
-La IP de la auditoría es `req.ip` sin `trust proxy`: si se pone un proxy
-inverso con TLS delante, hay que configurar `trust proxy` con cuidado (y
-actualizar `proxy-addr`) para que la IP registrada sea la del cliente.
+### Portal del paciente (`/portal`)
+
+Acceso temporal, sin cuentas ni contraseñas: el titular escribe su RUT y
+recibe un código de un solo uso en el contacto que ya tenía registrado (si
+lleva 24 horas sin cambiar). Con el código abre una sesión de 15 minutos,
+atada a su propio registro, para:
+
+- ver sus datos, sus citas y quién accedió a ellos (por función);
+- descargar todos sus datos en JSON (acceso y portabilidad);
+- aceptar o revocar los usos opcionales con un clic (un menor de 14, por
+  medio de su representante);
+- pedir una rectificación (la revisa y aplica privacidad), una supresión o
+  un bloqueo (quedan pendientes de la cédula en admisión).
+
+Controles: la respuesta a un RUT es la misma exista o no; 5 intentos por
+código, 3 códigos por paciente por hora y límites por IP; ninguna ruta recibe
+el id de un paciente; la sesión se regenera al ingresar y no abre ninguna
+ruta del personal; un paciente bloqueado no entra. Todo queda en la
+auditoría con actor `titular`. En desarrollo el código aparece en
+`registro/buzon-simulado.txt`.
+
+La IP de la auditoría es `req.ip`. Si se pone un proxy inverso con TLS
+delante, hay que definir `TRUST_PROXY` (ver `.env.example`) para que la IP
+registrada sea la del cliente y no la del proxy.
 
 ## Notas técnicas
 

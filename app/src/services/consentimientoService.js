@@ -112,7 +112,7 @@ async function estadoPorPaciente(pacienteId) {
       canal: ultimo ? ultimo.canal : null,
       otorgadoPor: ultimo ? ultimo.otorgadoPor : null,
       metodoVerificacion: ultimo ? ultimo.verificacion.metodo : null,
-      registradoPor: ultimo ? ultimo.registradoPor.nombre : null,
+      registradoPor: ultimo ? (ultimo.registradoPor ? ultimo.registradoPor.nombre : 'el titular, en el portal') : null,
       textoVigente: { id: vigente.id, version: vigente.version, texto: vigente.texto },
     };
   });
@@ -135,10 +135,27 @@ async function estadoPorPaciente(pacienteId) {
 async function otorgar({ pacienteId, finalidadClave, textoId, canal, representante }, solicitante) {
   validarCanal(canal);
   const verificacion = await exigirVerificacion(pacienteId, solicitante.id, METODOS_CONSENTIMIENTO);
+  return registrarOtorgamiento({ pacienteId, finalidadClave, textoId, canal, representante }, { usuarioId: solicitante.id, verificacionId: verificacion.id });
+}
+
+/**
+ * Lo común a otorgar desde la ficha y desde el portal, una vez verificada la
+ * identidad: el texto debe ser el vigente, no puede estar ya vigente y un
+ * menor de 14 necesita a su representante.
+ *
+ * @param {{pacienteId: number, finalidadClave: string, textoId: number,
+ *   canal: string, representante?: object}} datos
+ * @param {{usuarioId: (number|null), verificacionId: number, actor?: string}} registro
+ *   usuarioId null y actor 'titular' cuando lo hace el titular en el portal.
+ * @returns {Promise<{id: number}>}
+ *
+ * Consumidores: otorgar(), portalService.otorgar.
+ */
+async function registrarOtorgamiento({ pacienteId, finalidadClave, textoId, canal, representante }, { usuarioId, verificacionId, actor = 'usuario' }) {
   const finalidad = await finalidadPorClave(finalidadClave);
   const [vigente] = finalidad.textos;
   if (Number(textoId) !== vigente.id) {
-    throw new AppError('El texto aceptado no es la versión vigente: muéstrale el texto actual al titular', 400);
+    throw new AppError('El texto aceptado no es la versión vigente: lee el texto actual antes de aceptarlo', 400);
   }
 
   const [estado] = (await estadoPorPaciente(pacienteId)).filter((e) => e.finalidad.clave === finalidadClave);
@@ -160,12 +177,13 @@ async function otorgar({ pacienteId, finalidadClave, textoId, canal, representan
       canal,
       otorgadoPor: representanteCifrado ? 'representante' : 'titular',
       representanteCifrado,
-      registradoPorId: solicitante.id,
-      verificacionId: verificacion.id,
+      registradoPorId: usuarioId,
+      verificacionId,
     },
   });
   await registrar({
-    usuarioId: solicitante.id,
+    usuarioId,
+    actor,
     accion: 'CONSENTIR',
     entidad: 'Paciente',
     entidadId: pacienteId,
@@ -199,21 +217,22 @@ async function revocar({ pacienteId, finalidadClave, canal }, solicitante) {
  * que ya exigió la suya.
  *
  * @param {number} pacienteId
- * @param {{finalidadClave?: string, canal: string, usuarioId: number,
- *   verificacionId: number}} datos
+ * @param {{finalidadClave?: string, canal: string, usuarioId: (number|null),
+ *   verificacionId: number, actor?: string}} datos - usuarioId null y actor
+ *   'titular' cuando revoca el propio titular en el portal.
  * @param {object} [client] - prisma o la transacción en curso.
  * @returns {Promise<number>} cuántos se revocaron.
  *
- * Consumidores: revocar(), derechosService.ejecutar.
+ * Consumidores: revocar(), derechosService.ejecutar, portalService.revocar.
  */
-async function revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId, verificacionId }, client = prisma) {
+async function revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId, verificacionId, actor = 'usuario' }, client = prisma) {
   const { count } = await client.consentimiento.updateMany({
     where: { pacienteId, revocadoEl: null, ...(finalidadClave ? { finalidad: { clave: finalidadClave } } : {}) },
     data: { revocadoEl: new Date(), revocacionCanal: canal, revocacionRegistradaPorId: usuarioId, revocacionVerificacionId: verificacionId },
   });
   if (count > 0) {
     await registrar(
-      { usuarioId, accion: 'REVOCAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { finalidad: finalidadClave || 'todas', revocados: count } },
+      { usuarioId, actor, accion: 'REVOCAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { finalidad: finalidadClave || 'todas', revocados: count } },
       client,
     );
   }
@@ -269,5 +288,6 @@ module.exports = {
   otorgar,
   revocar,
   revocarAbiertos,
+  registrarOtorgamiento,
   tieneVigente,
 };

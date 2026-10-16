@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const ESTADOS_CONSENTIMIENTO = { vigente: 'Vigente', revocado: 'Revocado', a_renovar: 'El texto cambió: debe aceptarlo de nuevo', sin_otorgar: 'No otorgado' };
+  const DERECHOS = { acceso: 'Acceso', portabilidad: 'Portabilidad', rectificacion: 'Rectificación', supresion: 'Supresión', bloqueo: 'Bloqueo', oposicion: 'Oposición' };
+  const ESTADOS_SOLICITUD = { recibida: 'Pendiente de verificar su identidad con la cédula en admisión', verificada: 'En revisión', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+  const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
+  const t = datos.titular;
+%>
+</head>
+<body>
+  <main class="page-main">
+    <div class="page-head">
+      <div>
+        <h1>Mis datos</h1>
+        <p class="page-sub">Su sesión termina a las <%= isoLocal(expiraEl).slice(11, 16) %>. Todo lo que hace aquí queda registrado.</p>
+      </div>
+      <form method="POST" action="/portal/salir">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" class="btn btn-neutro btn--auto btn--control">Salir</button>
+      </form>
+    </div>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Sus datos de identificación y contacto</h2></div>
+      <p><strong>Nombre:</strong> <%= t.nombre %></p>
+      <p><strong>RUT:</strong> <%= t.rut %></p>
+      <p><strong>Fecha de nacimiento:</strong> <%= fechaDMA(t.fechaNacimiento) %></p>
+      <p><strong>Contacto:</strong> <%= t.contacto || 'No tiene un contacto registrado' %></p>
+      <p class="ayuda">¿Algo está mal? Pida corregirlo más abajo.</p>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Descargar todos mis datos</h2></div>
+      <p>Un archivo JSON con sus datos, citas, consentimientos, solicitudes, cambios y quién accedió a sus datos. Sirve también para llevarlos a otro establecimiento.</p>
+      <form method="POST" action="/portal/descargar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Descargar</button>
+      </form>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Sus citas</h2></div>
+      <% if (datos.citas.length === 0) { %><p>No tiene citas registradas.</p><% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Médico</th><th>Especialidad</th><th>Lugar</th><th>Estado</th></tr></thead>
+            <tbody>
+              <% datos.citas.forEach(function(c) { %>
+                <tr><td><%= fechaDMA(c.fecha) %></td><td><%= c.horaInicio %>–<%= c.horaFin %></td><td><%= c.medico %></td><td><%= c.especialidad %></td><td><%= c.pasillo %>, <%= c.box %></td><td><%= c.anulada ? 'Anulada' : c.estado %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Usos opcionales de sus datos (consentimientos)</h2></div>
+      <p>Su atención no depende de ninguno de estos usos. Puede aceptarlos o revocarlos cuando quiera; revocar tiene efecto inmediato.</p>
+      <% datos.estadoConsentimientos.forEach(function(c) { %>
+        <article class="consentimiento-form">
+          <h3><%= c.finalidad.nombre %> — <%= ESTADOS_CONSENTIMIENTO[c.estado] %></h3>
+          <% if (c.estado === 'vigente') { %>
+            <form method="POST" action="/portal/consentimientos/<%= c.finalidad.clave %>/revocar">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="btn btn-neutro btn--auto btn--control">Revocar</button>
+            </form>
+          <% } else { %>
+            <p><%= c.textoVigente.texto %> <span class="ayuda">(versión <%= c.textoVigente.version %>)</span></p>
+            <form method="POST" action="/portal/consentimientos/<%= c.finalidad.clave %>/otorgar">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="textoId" value="<%= c.textoVigente.id %>" />
+              <% if (datos.requiereRepresentante) { %>
+                <p class="aviso">El paciente es menor de 14 años: acepta quien tiene su cuidado personal.</p>
+                <input name="representanteNombre" maxlength="150" placeholder="Nombre del representante" aria-label="Nombre del representante" required />
+                <input name="representanteRut" maxlength="12" placeholder="RUT del representante" aria-label="RUT del representante" required />
+                <select name="representanteRelacion" required aria-label="Relación con el paciente">
+                  <option value="">Relación…</option>
+                  <% relaciones.forEach(function(r) { %><option value="<%= r %>"><%= r %></option><% }) %>
+                </select>
+              <% } %>
+              <label><input type="checkbox" name="acepto" value="si" /> Leí el texto y acepto este uso</label>
+              <button type="submit" class="btn btn-primary btn--auto btn--control">Aceptar</button>
+            </form>
+          <% } %>
+        </article>
+      <% }) %>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Pedir una corrección, la supresión o el bloqueo de sus datos</h2></div>
+      <form class="consentimiento-form" method="POST" action="/portal/solicitudes">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <select name="derecho" required aria-label="Qué pide">
+          <option value="">¿Qué pide?</option>
+          <option value="rectificacion">Corregir un dato (rectificación)</option>
+          <option value="supresion">Eliminar mis datos (supresión)</option>
+          <option value="bloqueo">Suspender el uso de mis datos (bloqueo)</option>
+        </select>
+        <select name="campo" aria-label="Dato a corregir">
+          <option value="">Dato a corregir (solo rectificación)…</option>
+          <% Object.keys(CAMPOS).forEach(function(c) { %><option value="<%= c %>"><%= CAMPOS[c] %></option><% }) %>
+        </select>
+        <input name="valorPropuesto" maxlength="150" autocomplete="off" placeholder="Valor correcto (solo rectificación)" aria-label="Valor correcto" />
+        <% if (datos.requiereRepresentante) { %>
+          <input type="hidden" name="solicitanteEsRepresentante" value="si" />
+          <select name="solicitanteRelacion" required aria-label="Su relación con el paciente">
+            <option value="">Su relación con el paciente…</option>
+            <% relaciones.forEach(function(r) { %><option value="<%= r %>"><%= r %></option><% }) %>
+          </select>
+        <% } %>
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Enviar solicitud</button>
+      </form>
+      <p class="ayuda">La supresión y el bloqueo no se pueden deshacer desde aquí: se ejecutan cuando muestre su cédula en admisión. Los datos clínicos se conservan bloqueados, porque la ley obliga a guardar la ficha clínica. El hospital responde dentro de 30 días corridos.</p>
+      <% if (datos.solicitudesAbiertas.length > 0) { %>
+        <h3>Solicitudes en curso</h3>
+        <ul>
+          <% datos.solicitudesAbiertas.forEach(function(s) { %>
+            <li><%= DERECHOS[s.derecho] %>: <%= ESTADOS_SOLICITUD[s.estado] %> (vence el <%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %>)</li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Quién accedió a sus datos</h2></div>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Fecha</th><th>Quién</th><th>Acción</th><th>Resultado</th></tr></thead>
+          <tbody>
+            <% datos.accesos.slice().reverse().forEach(function(a) { %>
+              <tr><td><%= isoLocal(a.fecha) %></td><td><%= a.rol %></td><td><%= a.accion %></td><td><%= a.resultado %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="ayuda">Se muestra la función de quien accedió, no su nombre. Si ve un acceso que no reconoce, avise al hospital.</p>
+    </section>
+
+    <p><a href="/privacidad">Política de privacidad</a></p>
+  </main>
+  <%- include('../partials/toast') %>
+</body>
+</html>

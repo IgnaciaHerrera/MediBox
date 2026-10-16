@@ -21,6 +21,9 @@ const { METODOS, exigirVerificacion } = require('./verificacionService');
 //   5. Respuesta al titular, registrada y cifrada.
 
 const DERECHOS = ['acceso', 'portabilidad', 'rectificacion', 'supresion', 'bloqueo', 'oposicion'];
+// Canal de lo que el titular hace por sí mismo en el portal. No es una
+// opción para el personal: solo lo asigna el servidor.
+const CANAL_PORTAL = 'portal';
 
 // Plazo para responder, en días corridos desde la recepción. Ley 21.719
 // (rige desde el 01/12/2026): plazo de respuesta del responsable a una
@@ -31,11 +34,13 @@ const PLAZO_RESPUESTA_DIAS = 30;
 // Qué método de verificación acepta cada derecho: una sola fuente para la
 // vista (qué ofrecer) y el servicio (qué aceptar). La supresión y el bloqueo
 // son irreversibles: solo con la cédula vista en persona.
+// El código ingresado en el portal vale lo mismo que el dictado al
+// funcionario: llega al mismo contacto registrado.
 const METODOS_POR_DERECHO = {
-  acceso: [METODOS.CEDULA, METODOS.CODIGO],
-  portabilidad: [METODOS.CEDULA, METODOS.CODIGO],
-  rectificacion: [METODOS.CEDULA, METODOS.CODIGO],
-  oposicion: [METODOS.CEDULA, METODOS.CODIGO],
+  acceso: [METODOS.CEDULA, METODOS.CODIGO, METODOS.PORTAL],
+  portabilidad: [METODOS.CEDULA, METODOS.CODIGO, METODOS.PORTAL],
+  rectificacion: [METODOS.CEDULA, METODOS.CODIGO, METODOS.PORTAL],
+  oposicion: [METODOS.CEDULA, METODOS.CODIGO, METODOS.PORTAL],
   supresion: [METODOS.CEDULA],
   bloqueo: [METODOS.CEDULA],
 };
@@ -104,7 +109,13 @@ async function registrarSolicitud({ pacienteId: idPedido, ...cuerpo }, solicitan
   } else {
     await pacienteService.exigirAlcance(pacienteId, solicitante);
   }
+  return crearSolicitud(pacienteId, value, { recibidaPorId: solicitante.id });
+}
 
+// Lo común a la recepción por un funcionario y por el portal: valida lo que
+// pide cada derecho y crea la solicitud. Desde el portal llega ya verificada
+// con el código, si el derecho acepta ese método.
+async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuario', verificacion = null }) {
   let valorPropuestoCifrado = null;
   if (value.derecho === 'rectificacion') {
     const { error: errorValor, value: valor } = VALOR_POR_CAMPO[value.campo].validate(value.valorPropuesto);
@@ -128,7 +139,8 @@ async function registrarSolicitud({ pacienteId: idPedido, ...cuerpo }, solicitan
       canal: value.canal,
       recibidaEl,
       venceEl: sumarDias(recibidaEl, PLAZO_RESPUESTA_DIAS),
-      recibidaPorId: solicitante.id,
+      recibidaPorId,
+      ...(verificacion ? { estado: 'verificada', identidadVerificada: true, metodoVerificacion: verificacion.metodo, verificacionId: verificacion.id } : {}),
       solicitanteEsRepresentante: value.solicitanteEsRepresentante,
       solicitanteRelacion: value.solicitanteEsRepresentante ? value.solicitanteRelacion || null : null,
       campo: value.campo || null,
@@ -137,8 +149,50 @@ async function registrarSolicitud({ pacienteId: idPedido, ...cuerpo }, solicitan
     },
     select: { id: true, venceEl: true },
   });
-  await registrar({ usuarioId: solicitante.id, accion: 'SOLICITAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId: fila.id, derecho: value.derecho, canal: value.canal } });
+  await registrar({
+    usuarioId: recibidaPorId,
+    actor,
+    accion: 'SOLICITAR',
+    entidad: 'Paciente',
+    entidadId: pacienteId,
+    detalle: { solicitudId: fila.id, derecho: value.derecho, canal: value.canal, ...(verificacion ? { metodo: verificacion.metodo } : {}) },
+  });
   return fila;
+}
+
+// Lo que el titular puede pedir en el portal. El acceso y la portabilidad
+// son la descarga directa del archivo, y la oposición es revocar el
+// consentimiento: ninguno necesita una solicitud aparte.
+const DERECHOS_PORTAL = ['rectificacion', 'supresion', 'bloqueo'];
+const solicitudPortalSchema = solicitudSchema.keys({
+  derecho: Joi.string().valid(...DERECHOS_PORTAL).required().messages({ 'any.only': 'Elige qué quiere pedir', 'any.required': 'Elige qué quiere pedir' }),
+  canal: Joi.any().strip(),
+});
+
+/**
+ * Registra una solicitud que el titular presenta en el portal. Queda
+ * verificada con su código si el derecho lo acepta (rectificación); la
+ * supresión y el bloqueo quedan pendientes de la cédula en admisión.
+ *
+ * @param {number} pacienteId - el de la sesión del portal, nunca del cuerpo.
+ * @param {object} cuerpo - derecho y, según el derecho, campo y valorPropuesto;
+ *   solicitanteEsRepresentante y solicitanteRelacion para un menor de 14.
+ * @param {number} verificacionId - el código con que ingresó.
+ * @returns {Promise<{id: number, venceEl: Date, pendienteDeCedula: boolean}>}
+ * @throws {AppError} 400 si faltan datos o son inválidos.
+ *
+ * Consumidores: portalService.registrarSolicitud.
+ */
+async function registrarDesdePortal(pacienteId, cuerpo, verificacionId) {
+  const { error, value } = solicitudPortalSchema.validate(cuerpo, { stripUnknown: true });
+  if (error) throw new AppError(error.details[0].message, 400);
+  const pendienteDeCedula = !METODOS_POR_DERECHO[value.derecho].includes(METODOS.PORTAL);
+  const fila = await crearSolicitud(
+    pacienteId,
+    { ...value, canal: CANAL_PORTAL },
+    { recibidaPorId: null, actor: 'titular', verificacion: pendienteDeCedula ? null : { id: verificacionId, metodo: METODOS.PORTAL } },
+  );
+  return { ...fila, pendienteDeCedula };
 }
 
 /**
@@ -468,6 +522,7 @@ async function desbloquear(solicitudId, solicitante) {
 
 // Rol del funcionario que aparece en "quién accedió a sus datos": el titular
 // sabe qué función accedió, sin el nombre del funcionario (dato de otra persona).
+const ETIQUETA_ACTOR = { sistema: 'Sistema', titular: 'Usted, en el portal', portal: 'Intento de ingreso al portal' };
 const ETIQUETA_ROL = { operador: 'Admisión', medico: 'Médico tratante', gestor: 'Gestión', privacidad: 'Protección de datos', consulta: 'Informaciones', admin: 'Administración' };
 
 /**
@@ -492,14 +547,34 @@ async function exportarDatosTitular(solicitudId, solicitante, { entrega }) {
   if (!['contacto_registrado', 'presencial'].includes(entrega)) throw new AppError('Indica cómo se entrega: en persona o al contacto registrado', 400);
 
   const { pacienteId } = solicitud;
-  const titular = await pacienteService.datosParaTitular(pacienteId);
   if (entrega === 'contacto_registrado') {
+    const { contacto } = await pacienteService.datosParaTitular(pacienteId);
     const cambio = await pacienteService.ultimoCambioDe(pacienteId, 'contacto');
-    if (!titular.contacto || (cambio && cambio >= solicitud.recibidaEl)) {
+    if (!contacto || (cambio && cambio >= solicitud.recibidaEl)) {
       throw new AppError('El contacto falta o cambió después de la solicitud: entrega el archivo en persona', 409);
     }
   }
 
+  const archivo = await armarArchivoTitular(pacienteId);
+  await prisma.$transaction(async (tx) => {
+    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: `Se entregó una copia de sus datos (${entrega === 'presencial' ? 'en persona' : 'al contacto registrado'}).`, entrega }, tx);
+    await registrar({ usuarioId: solicitante.id, accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega } }, tx);
+  });
+  return archivo;
+}
+
+/**
+ * El archivo del titular: un JSON con todos sus datos y nada de otras
+ * personas ni datos internos (ids, hashes o blobs). No audita: lo hace quien
+ * lo entrega.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<object>}
+ *
+ * Consumidores: exportarDatosTitular(), exportarDesdePortal(), portalService.misDatos.
+ */
+async function armarArchivoTitular(pacienteId) {
+  const titular = await pacienteService.datosParaTitular(pacienteId);
   const [citas, consentimientos, solicitudes, historial, accesos] = await Promise.all([
     citaService.listarParaTitular(pacienteId),
     prisma.consentimiento.findMany({
@@ -539,14 +614,46 @@ async function exportarDatosTitular(solicitudId, solicitante, { entrega }) {
       fecha: a.timestamp,
       accion: a.accion,
       resultado: a.resultado,
-      rol: a.actor === 'sistema' ? 'Sistema' : ETIQUETA_ROL[a.usuario && a.usuario.rol.nombre] || 'Funcionario',
+      rol: ETIQUETA_ACTOR[a.actor] || ETIQUETA_ROL[a.usuario && a.usuario.rol.nombre] || 'Funcionario',
     })),
     tratamiento: TRATAMIENTO,
   };
+  return archivo;
+}
 
+/**
+ * Descarga del archivo por el propio titular en el portal: queda como una
+ * solicitud de portabilidad ya resuelta, verificada con su código y
+ * entregada en el portal, y en la auditoría como EXPORT_TITULAR del titular.
+ *
+ * @param {number} pacienteId - el de la sesión del portal.
+ * @param {number} verificacionId - el código con que ingresó.
+ * @returns {Promise<object>} el archivo.
+ *
+ * Consumidores: portalService.descargar.
+ */
+async function exportarDesdePortal(pacienteId, verificacionId) {
+  const archivo = await armarArchivoTitular(pacienteId);
+  const ahora = new Date();
   await prisma.$transaction(async (tx) => {
-    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: `Se entregó una copia de sus datos (${entrega === 'presencial' ? 'en persona' : 'al contacto registrado'}).`, entrega }, tx);
-    await registrar({ usuarioId: solicitante.id, accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega } }, tx);
+    const { id: solicitudId } = await tx.solicitudDerecho.create({
+      data: {
+        pacienteId,
+        derecho: 'portabilidad',
+        canal: CANAL_PORTAL,
+        estado: 'resuelta',
+        recibidaEl: ahora,
+        venceEl: sumarDias(ahora, PLAZO_RESPUESTA_DIAS),
+        identidadVerificada: true,
+        metodoVerificacion: METODOS.PORTAL,
+        verificacionId,
+        entrega: CANAL_PORTAL,
+        respuestaCifrada: cifrar('solicitud.respuesta', 'Descargó una copia de sus datos en el portal.'),
+        resueltaEl: ahora,
+      },
+      select: { id: true },
+    });
+    await registrar({ actor: 'titular', accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega: CANAL_PORTAL } }, tx);
   });
   return archivo;
 }
@@ -564,4 +671,9 @@ module.exports = {
   rechazar,
   desbloquear,
   exportarDatosTitular,
+  armarArchivoTitular,
+  exportarDesdePortal,
+  registrarDesdePortal,
+  CANAL_PORTAL,
+  DERECHOS_PORTAL,
 };

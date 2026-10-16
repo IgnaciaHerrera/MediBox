@@ -169,8 +169,9 @@ model HistorialCambio {
 model VerificacionIdentidad {
   id              Int       @id @default(autoincrement())
   pacienteId      Int       @map("paciente_id")
-  metodo          String // 'cedula_presencial' | 'codigo_contacto'
-  verificadaPorId Int       @map("verificada_por")
+  metodo          String // 'cedula_presencial' | 'codigo_contacto' | 'codigo_portal'
+  // Vacío solo en el portal del titular, donde no verifica un funcionario.
+  verificadaPorId Int?      @map("verificada_por")
   creadaEl        DateTime  @default(now()) @map("creada_el")
   verificadaEl    DateTime? @map("verificada_el")
   codigoHash      Bytes?    @map("codigo_hash")
@@ -179,7 +180,7 @@ model VerificacionIdentidad {
   intentos        Int       @default(0)
 
   paciente      Paciente @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
-  verificadaPor Usuario  @relation(fields: [verificadaPorId], references: [id], onDelete: Restrict)
+  verificadaPor Usuario? @relation(fields: [verificadaPorId], references: [id], onDelete: Restrict)
 
   consentimientosOtorgados Consentimiento[]   @relation("ConsentimientoVerificacion")
   consentimientosRevocados Consentimiento[]   @relation("ConsentimientoRevocacionVerificacion")
@@ -224,10 +225,11 @@ model Consentimiento {
   finalidadId               Int       @map("finalidad_id")
   textoId                   Int       @map("texto_id")
   otorgadoEl                DateTime  @default(now()) @map("otorgado_el")
-  canal                     String // 'presencial' | 'telefono' | 'correo'
+  canal                     String // 'presencial' | 'telefono' | 'correo' | 'portal'
   otorgadoPor               String    @map("otorgado_por") // 'titular' | 'representante'
   representanteCifrado      Bytes?    @map("representante_cifrado")
-  registradoPorId           Int       @map("registrado_por")
+  // Vacío solo si lo registró el propio titular en el portal.
+  registradoPorId           Int?      @map("registrado_por")
   verificacionId            Int       @map("verificacion_id")
   revocadoEl                DateTime? @map("revocado_el")
   revocacionCanal           String?   @map("revocacion_canal")
@@ -237,7 +239,7 @@ model Consentimiento {
   paciente                Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
   finalidad               Finalidad              @relation(fields: [finalidadId], references: [id], onDelete: Restrict)
   texto                   TextoConsentimiento    @relation(fields: [textoId], references: [id], onDelete: Restrict)
-  registradoPor           Usuario                @relation("ConsentimientoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: Restrict)
+  registradoPor           Usuario?               @relation("ConsentimientoRegistradoPor", fields: [registradoPorId], references: [id], onDelete: Restrict)
   revocacionRegistradaPor Usuario?               @relation("ConsentimientoRevocadoPor", fields: [revocacionRegistradaPorId], references: [id], onDelete: Restrict)
   verificacion            VerificacionIdentidad  @relation("ConsentimientoVerificacion", fields: [verificacionId], references: [id], onDelete: Restrict)
   revocacionVerificacion  VerificacionIdentidad? @relation("ConsentimientoRevocacionVerificacion", fields: [revocacionVerificacionId], references: [id], onDelete: Restrict)
@@ -278,7 +280,9 @@ model AuditLog {
   // Null cuando actúa el sistema o cuando falla un login con un correo que no
   // existe (en ese caso queda emailIndice).
   usuarioId   Int?     @map("usuario_id")
-  actor       String   @default("usuario") // 'usuario' | 'sistema'
+  // 'usuario' | 'sistema' | 'titular' (en el portal, ya verificado) | 'portal'
+  // (en el portal, antes de verificar: quien pide o prueba un código)
+  actor       String   @default("usuario")
   accion      String
   entidad     String
   entidadId   Int      @map("entidad_id")
@@ -317,10 +321,11 @@ model SolicitudDerecho {
   pacienteId                 Int       @map("paciente_id")
   derecho                    String // acceso | portabilidad | rectificacion | supresion | bloqueo | oposicion
   estado                     String    @default("recibida") // recibida | verificada | resuelta | rechazada
-  canal                      String // presencial | telefono | correo
+  canal                      String // presencial | telefono | correo | portal
   recibidaEl                 DateTime  @default(now()) @map("recibida_el")
   venceEl                    DateTime  @map("vence_el")
-  recibidaPorId              Int       @map("recibida_por")
+  // Vacío solo si la presentó el propio titular en el portal.
+  recibidaPorId              Int?      @map("recibida_por")
   solicitanteEsRepresentante Boolean   @default(false) @map("solicitante_es_representante")
   solicitanteRelacion        String?   @map("solicitante_relacion")
   campo                      String? // rectificación: nombre | rut | fechaNacimiento | contacto
@@ -330,13 +335,13 @@ model SolicitudDerecho {
   metodoVerificacion         String?   @map("metodo_verificacion")
   verificacionId             Int?      @map("verificacion_id")
   verificadaPorId            Int?      @map("verificada_por")
-  entrega                    String? // acceso y portabilidad: contacto_registrado | presencial
+  entrega                    String? // acceso y portabilidad: contacto_registrado | presencial | portal
   respuestaCifrada           Bytes?    @map("respuesta_cifrada")
   resueltaEl                 DateTime? @map("resuelta_el")
   resueltaPorId              Int?      @map("resuelta_por")
 
   paciente      Paciente               @relation(fields: [pacienteId], references: [id], onDelete: Restrict)
-  recibidaPor   Usuario                @relation("SolicitudRecibidaPor", fields: [recibidaPorId], references: [id], onDelete: Restrict)
+  recibidaPor   Usuario?               @relation("SolicitudRecibidaPor", fields: [recibidaPorId], references: [id], onDelete: Restrict)
   verificadaPor Usuario?               @relation("SolicitudVerificadaPor", fields: [verificadaPorId], references: [id], onDelete: Restrict)
   resueltaPor   Usuario?               @relation("SolicitudResueltaPor", fields: [resueltaPorId], references: [id], onDelete: Restrict)
   verificacion  VerificacionIdentidad? @relation(fields: [verificacionId], references: [id], onDelete: Restrict)

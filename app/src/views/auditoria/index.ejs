@@ -129,7 +129,7 @@
                 <% const enlace = urlEntidad(r.entidad, r.entidadId); %>
                 <tr class="fila-auditoria" tabindex="0" role="button" aria-expanded="false">
                   <td class="tiempo"><%= fechaDMA(isoLocal(r.timestamp)) %></td>
-                  <td><%= r.usuario ? r.usuario.nombre : (r.actor === 'sistema' ? 'Sistema' : 'Sin cuenta') %></td>
+                  <td><%= r.usuario ? r.usuario.nombre : ({ sistema: 'Sistema', titular: 'Titular (portal)', portal: 'Portal, sin verificar' }[r.actor] || 'Sin cuenta') %></td>
                   <td>
                     <span class="badge-accion badge-accion--<%= categoria %>">
                       <span aria-hidden="true"><%- ICONOS_ACCION[categoria] %></span>

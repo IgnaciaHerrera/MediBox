@@ -27,7 +27,9 @@ describe('GET /api/auditoria', () => {
   it('returns paginated audit entries for a user with auditoria.read', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'auditoria-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
-    const res = await agent.get('/api/auditoria');
+    // Filtrada por el gestor de la prueba: la fila más reciente de toda la
+    // auditoría puede ser del sistema o del portal, que no tienen usuario.
+    const res = await agent.get('/api/auditoria').query({ usuarioId: usuarioGestor.id });
     expect(res.status).toBe(200);
     expect(res.body.total).toBeGreaterThanOrEqual(1);
     // Solo el nombre de quien actuó: nunca el hash ni el correo de su cuenta.

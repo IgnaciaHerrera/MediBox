@@ -11,10 +11,16 @@ const pacienteService = require('./pacienteService');
 //   - CEDULA: el funcionario vio la cédula en admisión. Es la base.
 //   - CODIGO: un código de un solo uso enviado al contacto que el paciente
 //     ya tenía registrado, que el titular le dicta al funcionario.
+//   - PORTAL: el mismo código, pero lo ingresa el propio titular en el portal
+//     (portalService); no hay funcionario que verifique.
 // Qué método acepta cada petición lo decide quien llama (consentimiento y
 // derechos), con exigirVerificacion().
-const METODOS = { CEDULA: 'cedula_presencial', CODIGO: 'codigo_contacto' };
-const NOMBRES_METODO = { [METODOS.CEDULA]: 'cédula en admisión', [METODOS.CODIGO]: 'código al contacto registrado' };
+const METODOS = { CEDULA: 'cedula_presencial', CODIGO: 'codigo_contacto', PORTAL: 'codigo_portal' };
+const NOMBRES_METODO = {
+  [METODOS.CEDULA]: 'cédula en admisión',
+  [METODOS.CODIGO]: 'código al contacto registrado',
+  [METODOS.PORTAL]: 'código ingresado por el titular en el portal',
+};
 
 const DIGITOS_CODIGO = 6;
 const MINUTOS_CODIGO = 10;

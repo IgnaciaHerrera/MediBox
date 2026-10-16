@@ -35,6 +35,7 @@ const rolRoutes = require('./routes/roles');
 const verificacionRoutes = require('./routes/verificacion');
 const solicitudViewRoutes = require('./routes/solicitudViews');
 const alertaViewRoutes = require('./routes/alertaViews');
+const portalRoutes = require('./routes/portal');
 
 const app = express();
 
@@ -101,6 +102,8 @@ app.use('/datos', datosViewRoutes);
 app.use('/verificacion', verificacionRoutes);
 app.use('/solicitudes', solicitudViewRoutes);
 app.use('/alertas', alertaViewRoutes);
+// Portal temporal del titular: público, con su propia sesión (sin usuarioId).
+app.use('/portal', portalRoutes);
 app.use('/api/especialidades', especialidadRoutes);
 app.use('/api/medicos', medicoRoutes);
 app.use('/api', espacioRoutes);

@@ -45,7 +45,7 @@ const TRATAMIENTO = {
     'Sus datos no se comunican a terceros fuera del hospital. Dentro del hospital, cada funcionario ve solo lo que su función requiere; los reportes de gestión e investigación salen seudonimizados.',
   derechos: ['acceso', 'rectificacion', 'supresion', 'oposicion', 'bloqueo', 'portabilidad'],
   comoEjercerlos:
-    'En admisión (con su cédula), por teléfono o por correo. Para la supresión y el bloqueo se pide la cédula en persona. El hospital responde dentro de 30 días corridos (plazo a confirmar con la línea jurídica). Es gratuito.',
+    'En el portal del paciente (/portal), con su RUT y un código que llega al contacto que tiene registrado; en admisión, con su cédula; por teléfono o por correo. Para la supresión y el bloqueo se pide la cédula en persona. El hospital responde dentro de 30 días corridos (plazo a confirmar con la línea jurídica). Es gratuito.',
 };
 
 module.exports = { TRATAMIENTO };
