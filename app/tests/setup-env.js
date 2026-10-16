@@ -12,3 +12,8 @@
  * outside Docker and is missing SESSION_SECRET and friends.
  */
 require('dotenv').config({ path: require('path').resolve(__dirname, '..', '..', '.env') });
+
+// Las supresiones se anotan en un archivo fuera de la base: en las pruebas,
+// uno temporal, para no tocar el registro real del proyecto.
+process.env.SUPRESIONES_ARCHIVO =
+  process.env.SUPRESIONES_ARCHIVO || require('path').join(require('os').tmpdir(), `medibox-supresiones-test-${process.pid}.jsonl`);

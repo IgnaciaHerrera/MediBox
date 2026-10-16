@@ -31,3 +31,9 @@ descifrar | docker compose -f "$raiz/docker-compose.yml" exec -T db \
   sh -c 'pg_restore --clean --if-exists --no-owner --single-transaction -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 
 echo "Base restaurada desde $archivo"
+
+# Un respaldo anterior a una supresión la desharía: se vuelven a aplicar las
+# supresiones anotadas fuera de la base (registro/supresiones.jsonl).
+docker compose -f "$raiz/docker-compose.yml" exec -T app npm run supresiones:reaplicar
+echo "Supresiones reaplicadas"
+

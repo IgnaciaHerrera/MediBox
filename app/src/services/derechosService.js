@@ -8,6 +8,7 @@ const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
 const citaService = require('./citaService');
 const consentimientoService = require('./consentimientoService');
+const { registrarSupresion } = require('./supresionService');
 const { METODOS, exigirVerificacion } = require('./verificacionService');
 
 // Derechos del titular (ARCO+, Hito 3). Los cinco pasos de la clase:
@@ -351,6 +352,10 @@ async function ejecutar(solicitudId, solicitante, datos) {
     await pacienteService.cambiarBloqueo(pacienteId, true, marca, tx);
     await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
   });
+
+  // La supresión queda anotada fuera de la base, para reaplicarla si se
+  // restaura un respaldo anterior.
+  if (solicitud.derecho === 'supresion') registrarSupresion(pacienteId, solicitudId);
 
   // Un paciente bloqueado no se atiende con lo agendado: se anulan sus citas
   // futuras (cada una auditada y avisada al médico, como cualquier anulación).

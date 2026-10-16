@@ -16,6 +16,7 @@
     "minimizacion:migrar": "node prisma/migrar-minimizacion.js",
     "retencion": "node src/retencion.js",
     "recordatorios": "node src/recordatorios.js",
+    "supresiones:reaplicar": "node src/supresiones.js",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
