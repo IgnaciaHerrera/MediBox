@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'alertas' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <div>
+        <h1>Alertas de accesos anómalos</h1>
+        <p class="page-sub">Reglas fijas sobre el registro de auditoría. Ninguna alerta muestra datos de pacientes: el detalle se revisa en Auditoría.</p>
+      </div>
+    </div>
+
+    <form class="panel-card consentimiento-fila" method="GET" action="/alertas">
+      <label for="desde">Desde</label>
+      <input id="desde" type="date" name="desde" value="<%= filtros.desde %>" />
+      <label for="hasta">Hasta</label>
+      <input id="hasta" type="date" name="hasta" value="<%= filtros.hasta %>" />
+      <button type="submit" class="btn btn-neutro btn--auto btn--control">Revisar</button>
+      <span class="ayuda">Hasta <%= diasMaximos %> días por consulta.</span>
+    </form>
+
+    <section class="panel-card panel-lista">
+      <% if (alertas.length === 0) { %>
+        <p class="panel-lista-vacio">Sin alertas entre el <%= fechaDMA(filtros.desde) %> y el <%= fechaDMA(filtros.hasta) %>.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
+              <tr><th>Regla</th><th>Usuario</th><th>Cantidad</th><th>Entre</th><th><span class="sr-only">Revisar</span></th></tr>
+            </thead>
+            <tbody>
+              <% alertas.forEach(function(a) { %>
+                <tr>
+                  <td><strong><%= a.nombre %></strong><br /><span class="ayuda"><%= a.descripcion %></span></td>
+                  <td><%= a.usuarioNombre || 'Sin cuenta (correo intentado)' %></td>
+                  <td><%= a.cantidad %></td>
+                  <td class="tiempo"><%= fechaDMA(isoLocal(a.desde)) %><br /><%= fechaDMA(isoLocal(a.hasta)) %></td>
+                  <td>
+                    <% if (a.usuarioId) { %>
+                      <a class="btn btn-neutro btn--auto btn--control" href="/auditoria?usuarioId=<%= a.usuarioId %>&desde=<%= isoLocal(a.desde).slice(0, 10) %>&hasta=<%= isoLocal(a.hasta).slice(0, 10) %>">Ver en auditoría</a>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="panel-card panel-lista">
+      <div class="panel-lista-head"><h2>Reglas</h2></div>
+      <ul>
+        <% Object.values(reglas).forEach(function(r) { %><li><strong><%= r.nombre %>:</strong> <%= r.descripcion %></li><% }) %>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>
