@@ -15,6 +15,14 @@ services:
       retries: 10
     ports:
       - "5433:5432"
+    logging: &logs-con-tope
+      # Los logs guardan la IP y la ruta de cada petición: se rotan para que
+      # no crezcan sin límite (Hito 1 propone 90 días; Docker solo rota por
+      # tamaño, así que el tope es de 3 archivos de 10 MB).
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   app:
     build: ./app
@@ -26,6 +34,7 @@ services:
         condition: service_healthy
     ports:
       - "3000:3000"
+    logging: *logs-con-tope
 
 volumes:
   db_data:

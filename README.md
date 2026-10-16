@@ -158,6 +158,28 @@ MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/restaurar-db.sh respaldos/me
 Un respaldo solo sirve si se puede restaurar: conviene probar la
 restauración periódicamente, no solo generar los archivos.
 
+Cada respaldo exitoso elimina los anteriores con más de 30 días
+(`MEDIBOX_RESPALDO_DIAS` cambia el plazo). Solo toca archivos
+`medibox-*.dump.gpg` del directorio de destino.
+
+## Plazos de conservación
+
+| Dato | Plazo | Cómo se aplica |
+|---|---|---|
+| Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan |
+| Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |
+| Notificaciones | 1 año | `npm run retencion` las elimina |
+| Sesiones | 8 horas | vencen solas |
+| Respaldos | 30 días | `ops/respaldar-db.sh` rota los anteriores |
+| Logs de los contenedores | 3 archivos de 10 MB | rotación de Docker (`docker-compose.yml`) |
+
+`npm run retencion` es idempotente y está pensado para el cron diario del
+servidor:
+
+```bash
+docker compose exec -T app npm run retencion
+```
+
 ## Notas técnicas
 
 - El `docker-compose.yml` local remapea el puerto 5432 del contenedor al 5433 del host (solo en esta máquina de desarrollo). En CI/CD (GitHub Actions), Postgres usa el puerto 5432 estándar sin remap.

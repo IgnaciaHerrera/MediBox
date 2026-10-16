@@ -14,6 +14,7 @@
     "seed": "node prisma/seed.js",
     "cifrado:migrar": "node prisma/migrar-cifrado.js",
     "minimizacion:migrar": "node prisma/migrar-minimizacion.js",
+    "retencion": "node src/retencion.js",
     "test": "jest --runInBand",
     "test:unit": "jest tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand",
