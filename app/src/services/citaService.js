@@ -13,6 +13,22 @@ const MAX_INTENTOS_SERIALIZACION = 3;
 // migradas sin motivo devuelven null.
 const CON_MOTIVO = { motivoConsultaCifrado: false };
 
+// Lo que la agenda necesita de una cita: cuándo, dónde, con qué médico y en
+// qué estado. Sin el paciente, sin quién la editó y sin marcas internas; el
+// paciente se lee aparte, por pacienteService, que audita esa lectura.
+const SELECT_CITA = {
+  id: true,
+  medicoId: true,
+  boxId: true,
+  fecha: true,
+  horaInicio: true,
+  horaFin: true,
+  estado: true,
+  anulada: true,
+  medico: { select: { id: true, nombre: true } },
+  box: { select: { id: true, nombre: true, pasillo: { select: { id: true, nombre: true } } } },
+};
+
 function descifrarMotivo(cita) {
   const { motivoConsultaCifrado, ...resto } = cita;
   return {
@@ -66,6 +82,7 @@ async function crearCita(datos, usuarioId) {
               estado: 'agendada',
               updatedById: usuarioId,
             },
+            select: SELECT_CITA,
           });
 
           await registrar({ usuarioId, accion: 'CREATE', entidad: 'Cita', entidadId: nuevaCita.id }, tx);
@@ -111,6 +128,7 @@ async function actualizarEstadoCita(citaId, nuevoEstado, usuarioId) {
     const actualizada = await tx.cita.update({
       where: { id: citaId },
       data: { estado: nuevoEstado, updatedById: usuarioId },
+      select: SELECT_CITA,
     });
 
     await registrar({ usuarioId, accion: 'UPDATE_ESTADO', entidad: 'Cita', entidadId: citaId }, tx);
@@ -126,6 +144,7 @@ async function anularCita(citaId, usuarioId) {
     const resultado = await tx.cita.update({
       where: { id: citaId },
       data: { anulada: true, updatedById: usuarioId },
+      select: SELECT_CITA,
     });
 
     await registrar({ usuarioId, accion: 'ANULAR', entidad: 'Cita', entidadId: citaId }, tx);
@@ -161,7 +180,7 @@ async function listarCitas({ boxId, medicoId, pasilloId, fecha, page = 1, pageSi
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { horaInicio: 'asc' },
-      include: { medico: true, box: { include: { pasillo: true } } },
+      select: SELECT_CITA,
     }),
     prisma.cita.count({ where }),
   ]);

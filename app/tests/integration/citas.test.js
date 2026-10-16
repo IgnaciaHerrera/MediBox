@@ -107,6 +107,11 @@ describe('Agenda: conflict prevention and soft delete', () => {
     const conElPasillo = await agent.get('/api/citas').query({ fecha: '2026-11-01', pasilloId: pasillo.id });
     expect(conElPasillo.status).toBe(200);
     expect(conElPasillo.body.items.some((c) => c.boxId === box.id)).toBe(true);
+    // La agenda no necesita saber de quién es la cita ni quién la editó.
+    const [cita] = conElPasillo.body.items;
+    expect(cita).not.toHaveProperty('pacienteId');
+    expect(cita).not.toHaveProperty('updatedById');
+    expect(Object.keys(cita.medico).sort()).toEqual(['id', 'nombre']);
 
     const conOtroPasillo = await agent.get('/api/citas').query({ fecha: '2026-11-01', pasilloId: otroPasillo.id });
     expect(conOtroPasillo.status).toBe(200);
