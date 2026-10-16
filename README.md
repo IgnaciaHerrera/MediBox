@@ -41,6 +41,18 @@ npm run test:integration
 npm run seed         # datos de catálogo + usuario admin de desarrollo
 ```
 
+Procesos de operación (pensados para el cron del servidor o para un
+incidente; dentro de Docker se corren con `docker compose exec -T app ...`):
+
+```bash
+npm run retencion              # plazos de conservación (diario)
+npm run recordatorios          # recordatorios de citas, solo con consentimiento vigente (diario)
+npm run alertas                # reglas de accesos anómalos; avisa a los gestores (diario u horario)
+npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
+npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids]
+npm run llaves:rotar -- --variable PACIENTE_IDENTIDAD_KEY   # ver "Rotación de llaves"
+```
+
 ### Variables de entorno para tests locales
 
 Los tests cargan el `.env` de la raíz (ver `tests/setup-env.js`), así que
@@ -74,6 +86,12 @@ propia llave:
 | `PACIENTE_CLINICO_KEY` | motivo de consulta |
 | `PACIENTE_RUT_HMAC_KEY` | índice ciego del RUT (HMAC-SHA256): búsqueda exacta y unicidad sin descifrar |
 | `PACIENTE_SEUDONIMO_KEY` | seudónimo del paciente en los CSV exportados (HMAC-SHA256): quien la tenga, junto con la base, puede volver a identificarlo |
+| `AUDITORIA_HMAC_KEY` | HMAC del correo de un inicio de sesión fallido en la auditoría: cuenta los intentos sobre una cuenta sin guardar el correo |
+
+Las mismas llaves protegen lo que agregó el Hito 3, cada valor con su propio
+AAD: el valor anterior de un dato rectificado (historial), el valor propuesto
+en una solicitud de rectificación, la respuesta al titular y los datos del
+representante de un menor.
 
 Las exportaciones de `/datos` nunca identifican a un paciente: el CSV de
 pacientes es un reporte seudonimizado (seudónimo, tramo de edad, año de
@@ -88,6 +106,29 @@ El servidor revisa la configuración al arrancar (`app/src/lib/entorno.js`) y
 se niega a iniciar si falta una llave, si no mide 32 bytes, si dos variables
 comparten la misma llave, si `SESSION_SECRET` es corto o conserva el valor de
 ejemplo, o si en producción la base usa la contraseña de `.env.example`.
+
+### Rotación de llaves
+
+Si una llave se filtra, `npm run llaves:rotar` recifra todo lo que protege
+(o recalcula el índice del RUT) en una sola transacción: si cualquier valor
+no se descifra con la llave anterior, no cambia nada. Con la app detenida:
+
+```bash
+docker compose stop app
+MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/respaldar-db.sh
+# En .env: la llave actual pasa a PACIENTE_IDENTIDAD_KEY_ANTERIOR y la nueva
+# (generada como las demás) queda en PACIENTE_IDENTIDAD_KEY.
+docker compose run --rm app npm run llaves:rotar -- --variable PACIENTE_IDENTIDAD_KEY
+# Borra PACIENTE_IDENTIDAD_KEY_ANTERIOR del .env y vuelve a levantar la app.
+docker compose up -d
+```
+
+Se pueden rotar `PACIENTE_IDENTIDAD_KEY`, `PACIENTE_CONTACTO_KEY`,
+`PACIENTE_CLINICO_KEY` y `PACIENTE_RUT_HMAC_KEY`. `PACIENTE_SEUDONIMO_KEY` no
+se guarda en ninguna columna: cambiarla solo rompe la continuidad de los
+seudónimos ya exportados. `AUDITORIA_HMAC_KEY` tampoco se recifra (la
+auditoría es de solo inserción): con una nueva, los intentos fallidos se
+cuentan desde cero.
 
 ### Migrar una base existente
 
@@ -166,7 +207,11 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 
 | Dato | Plazo | Cómo se aplica |
 |---|---|---|
-| Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan |
+| Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan; la auditoría es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE) |
+| Historial de cambios, consentimientos y solicitudes de derechos | igual que la ficha | no se eliminan: son la prueba de lo que pidió el titular |
+| Paciente bloqueado (bloqueo o supresión) | igual que la ficha | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante |
+| Códigos de verificación | 10 minutos, un solo uso | solo se guarda su hash |
+| Lista de supresiones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores a la supresión | fuera de la base; `ops/restaurar-db.sh` la reaplica |
 | Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |
 | Notificaciones | 1 año | `npm run retencion` las elimina |
 | Sesiones | 8 horas | vencen solas |
@@ -179,6 +224,36 @@ servidor:
 ```bash
 docker compose exec -T app npm run retencion
 ```
+
+## Consentimiento, derechos del titular e incidentes (Hito 3)
+
+MediBox es solo para el personal: no hay portal de pacientes. Las peticiones
+del titular llegan por cualquier canal (en admisión, por teléfono o por
+correo) y un funcionario las registra, indicando el canal.
+
+- **Consentimiento por finalidad** (`/pacientes/:id`, operador): solo para
+  usos opcionales (recordatorios, investigación y encuestas). La atención no
+  depende de él. Cada otorgamiento guarda la versión del texto, el canal, quién
+  lo registró y la verificación de identidad; revocar sigue el mismo
+  procedimiento y no borra nada. Los menores de 14 consienten por medio de su
+  representante, cuyos datos se guardan cifrados.
+- **Verificación de identidad**: con la cédula en admisión (base) o con un
+  código de un solo uso enviado al contacto ya registrado (complemento). En
+  desarrollo el envío se simula en `registro/buzon-simulado.txt`; en
+  producción no hay canal configurado y se usa la cédula. Supresión y bloqueo
+  solo se aceptan con cédula.
+- **Derechos ARCO+**: el operador recibe y verifica las solicitudes desde la
+  ficha; el rol `privacidad` (usuario demo `privacidad@medibox.local`) las
+  resuelve en `/solicitudes`. Acceso y portabilidad generan un JSON del
+  titular, con reautenticación del funcionario, entregado en persona o al
+  contacto registrado.
+- **Auditoría y alertas**: la auditoría registra actor, resultado e IP sin
+  datos personales; `/alertas` (gestor) aplica las reglas de monitoreo.
+- **Política de tratamiento**: pública en `/privacidad`.
+
+La IP de la auditoría es `req.ip` sin `trust proxy`: si se pone un proxy
+inverso con TLS delante, hay que configurar `trust proxy` con cuidado (y
+actualizar `proxy-addr`) para que la IP registrada sea la del cliente.
 
 ## Notas técnicas
 
