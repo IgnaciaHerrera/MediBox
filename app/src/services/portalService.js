@@ -2,7 +2,7 @@ const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
 const { logger } = require('../lib/logger');
 const { descifrar, indiceCiego } = require('../lib/cifrado');
-const { normalizarRut, rutValido } = require('../lib/rut');
+const { normalizarRut } = require('../lib/rut');
 const { enmascararContacto } = require('../lib/contacto');
 const canalEnvio = require('../lib/canalEnvio');
 const { registrar } = require('./auditService');
@@ -34,6 +34,7 @@ const { METODOS, MINUTOS_CODIGO, nuevoCodigo, contactoEstable, consumirCodigo } 
 //     para enviarle un código. Ejerce sus derechos a través de privacidad.
 
 const MINUTOS_SESION = 15;
+const FORMA_DE_RUT = /^[\d.\s]+-?[\dkK]$/;
 const ENVIOS_POR_HORA = 3;
 
 /**
@@ -52,7 +53,9 @@ const ENVIOS_POR_HORA = 3;
  * Consumidores: routes/portal.js.
  */
 async function solicitarIngreso(rut) {
-  if (typeof rut !== 'string' || rut.length > 15 || !rutValido(rut)) throw new AppError('Revisa el RUT: el dígito verificador no corresponde', 400);
+  // Solo la forma, como el buscador del personal: la búsqueda es exacta por el
+  // índice ciego, y un RUT antiguo con un dígito mal registrado igual entra.
+  if (typeof rut !== 'string' || rut.length > 15 || !FORMA_DE_RUT.test(rut)) throw new AppError('Revise el RUT: escríbalo como 12.345.678-5', 400);
   const paciente = await prisma.paciente.findFirst({
     where: { rutIndice: indiceCiego('paciente.rut', normalizarRut(rut)), bloqueado: false },
     select: { id: true, contactoCifrado: true, createdAt: true },

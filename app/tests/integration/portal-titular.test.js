@@ -2,7 +2,7 @@ const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { pacienteDePrueba, usuarioDePrueba } = require('../helpers/datos');
 const { limpiarPacientes } = require('../helpers/derechos');
-const { ingresarAlPortal } = require('../helpers/portal');
+const { ingresarAlPortal, agentePortal } = require('../helpers/portal');
 const { loginAgent } = require('../helpers/csrf');
 const consentimientoService = require('../../src/services/consentimientoService');
 const derechos = require('../../src/services/derechosService');
@@ -147,6 +147,13 @@ describe('Portal del titular: sus datos y sus derechos', () => {
 
     const { agent: funcionario } = await loginAgent(app, { email: privacidad.email, password });
     expect((await funcionario.get('/portal/mis-datos')).status).toBe(401);
+  });
+
+  it('un error en un formulario del portal vuelve a su página, no al panel del personal', async () => {
+    const agente = await agentePortal(app);
+    const res = await agente.post('/portal/ingresar').set('Accept', 'text/html').type('form').send({ rut: 'no es un rut' });
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe('/portal');
   });
 
   it('si el paciente se bloquea, su sesión del portal se corta', async () => {

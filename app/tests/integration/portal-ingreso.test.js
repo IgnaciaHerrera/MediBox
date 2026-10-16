@@ -98,6 +98,13 @@ describe('Portal del titular: ingreso', () => {
     expect(canalEnvio.ultimo('+56977100005')).toBeUndefined();
   });
 
+  it('acepta un RUT con la forma correcta aunque su dígito no calce, y rechaza lo que no es un RUT', async () => {
+    // La búsqueda es exacta por el índice ciego: un dígito mal registrado no
+    // deja fuera al titular, y un RUT inexistente no envía nada.
+    expect((await portalService.solicitarIngreso('12.345.678-0')).verificacionId).toBeNull();
+    await expect(portalService.solicitarIngreso('<script>')).rejects.toMatchObject({ statusCode: 400 });
+  });
+
   it('agotados los 5 intentos, ni el código correcto sirve', async () => {
     const { verificacionId } = await portalService.solicitarIngreso(rutDe(pacientes.intentos));
     const codigo = canalEnvio.ultimo('+56977100006').mensaje.match(/\b(\d{6})\b/)[1];

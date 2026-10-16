@@ -6,7 +6,6 @@ const portalService = require('../services/portalService');
 const { registrar } = require('../services/auditService');
 const { issueCsrfToken } = require('../middleware/csrf');
 const { AppError } = require('../lib/AppError');
-const { responderError, responderAccion } = require('../lib/responderError');
 const { toast } = require('../lib/toast');
 const { TRATAMIENTO } = require('../lib/tratamiento');
 const consentimientoService = require('../services/consentimientoService');
@@ -26,7 +25,7 @@ function limitador(max, accion) {
     handler: async (req, res, next) => {
       try {
         await registrar({ actor: 'portal', accion, entidad: 'Sistema', entidadId: 0, resultado: 'denegado' });
-        responderError(req, res, 429, 'Demasiados intentos: espere unos minutos antes de volver a intentarlo');
+        next(new AppError('Demasiados intentos: espere unos minutos antes de volver a intentarlo', 429));
       } catch (err) {
         next(err);
       }
@@ -44,6 +43,19 @@ const limiteCodigo = limitador(10, 'PORTAL_LIMITADO');
 const MINIMO_INGRESO_MS = 400;
 
 const pideHtml = (req) => req.accepts(['json', 'html']) === 'html';
+
+// Las respuestas del portal vuelven siempre a una página fija del portal, no
+// a la anterior según el Referer: sin Referer, la respuesta genérica lleva
+// al panel del personal.
+function responder(req, res, mensaje, datos = {}, destino = '/portal/mis-datos') {
+  if (pideHtml(req)) {
+    toast(req, mensaje);
+    return res.redirect(destino);
+  }
+  return res.json({ ok: true, mensaje, ...datos });
+}
+
+const DESTINO_DEL_ERROR = { '/ingresar': '/portal', '/confirmar': '/portal/codigo' };
 
 function regenerar(req) {
   return new Promise((resolve, reject) => req.session.regenerate((err) => (err ? reject(err) : resolve())));
@@ -155,7 +167,7 @@ router.post('/consentimientos/:clave/otorgar', requirePortal, async (req, res, n
       ? { nombre: req.body.representanteNombre, rut: req.body.representanteRut, relacion: req.body.representanteRelacion }
       : undefined;
     await portalService.otorgar(req.titular, { finalidadClave: req.params.clave, textoId: req.body.textoId, acepto: req.body.acepto, representante });
-    return responderAccion(req, res, 'Consentimiento registrado. Puede revocarlo cuando quiera, aquí mismo.');
+    return responder(req, res, 'Consentimiento registrado. Puede revocarlo cuando quiera, aquí mismo.');
   } catch (err) {
     return next(err);
   }
@@ -164,7 +176,7 @@ router.post('/consentimientos/:clave/otorgar', requirePortal, async (req, res, n
 router.post('/consentimientos/:clave/revocar', requirePortal, async (req, res, next) => {
   try {
     const revocados = await portalService.revocar(req.titular, req.params.clave);
-    return responderAccion(req, res, revocados > 0 ? 'Consentimiento revocado: desde ahora no se usan sus datos para eso.' : 'No tenía ese consentimiento vigente.', { revocados });
+    return responder(req, res, revocados > 0 ? 'Consentimiento revocado: desde ahora no se usan sus datos para eso.' : 'No tenía ese consentimiento vigente.', { revocados });
   } catch (err) {
     return next(err);
   }
@@ -176,7 +188,7 @@ router.post('/solicitudes', requirePortal, async (req, res, next) => {
     const mensaje = pendienteDeCedula
       ? 'Solicitud registrada. Como no se puede deshacer, se ejecuta cuando muestre su cédula en admisión; el plazo de respuesta ya corre.'
       : 'Solicitud registrada: el encargado de protección de datos la revisará.';
-    return responderAccion(req, res, mensaje, { id, venceEl, pendienteDeCedula });
+    return responder(req, res, mensaje, { id, venceEl, pendienteDeCedula });
   } catch (err) {
     return next(err);
   }
@@ -189,6 +201,14 @@ router.post('/salir', (req, res, next) => {
     if (pideHtml(req)) return res.redirect('/portal');
     return res.json({ ok: true });
   });
+});
+
+// Un error en un formulario del portal vuelve a su página con el aviso; la
+// API recibe el JSON de siempre.
+router.use((err, req, res, next) => {
+  if (!(err instanceof AppError) || !pideHtml(req) || req.method === 'GET') return next(err);
+  toast(req, err.message, 'error');
+  return res.redirect(303, DESTINO_DEL_ERROR[req.path] || '/portal/mis-datos');
 });
 
 module.exports = router;
