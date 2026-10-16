@@ -86,6 +86,26 @@ function variableDe(registro, campo) {
 }
 
 /**
+ * Cifra un texto con una llave dada. Es el núcleo de cifrar(); la usa
+ * directamente la rotación de llaves, que necesita cifrar con la llave nueva
+ * antes de que esté en el entorno.
+ *
+ * @param {Buffer} llave - 32 bytes.
+ * @param {string} campo - nombre del campo, que va como AAD.
+ * @param {string} texto - valor en claro.
+ * @returns {Buffer} blob versionado.
+ *
+ * Consumidores: cifrar(), services/rotacionService.js.
+ */
+function cifrarCon(llave, campo, texto) {
+  const iv = crypto.randomBytes(IV_BYTES);
+  const cipher = crypto.createCipheriv(ALGORITMO, llave, iv, { authTagLength: TAG_BYTES });
+  cipher.setAAD(Buffer.from(campo, 'utf8'));
+  const cifrado = Buffer.concat([cipher.update(texto, 'utf8'), cipher.final()]);
+  return Buffer.concat([Buffer.from([VERSION_FORMATO]), iv, cipher.getAuthTag(), cifrado]);
+}
+
+/**
  * Cifra un texto con la llave asignada a su campo.
  *
  * @param {string} campo - clave de LLAVE_POR_CAMPO, p. ej. 'paciente.rut'.
@@ -96,12 +116,32 @@ function variableDe(registro, campo) {
  * Consumidores: services/pacienteService.js, prisma/migrar-cifrado.js.
  */
 function cifrar(campo, texto) {
-  const llave = leerLlave(variableDe(LLAVE_POR_CAMPO, campo));
-  const iv = crypto.randomBytes(IV_BYTES);
-  const cipher = crypto.createCipheriv(ALGORITMO, llave, iv, { authTagLength: TAG_BYTES });
-  cipher.setAAD(Buffer.from(campo, 'utf8'));
-  const cifrado = Buffer.concat([cipher.update(texto, 'utf8'), cipher.final()]);
-  return Buffer.concat([Buffer.from([VERSION_FORMATO]), iv, cipher.getAuthTag(), cifrado]);
+  return cifrarCon(leerLlave(variableDe(LLAVE_POR_CAMPO, campo)), campo, texto);
+}
+
+/**
+ * Descifra un blob con una llave dada. Es el núcleo de descifrar(); la usa
+ * directamente la rotación de llaves, con la llave anterior.
+ *
+ * @param {Buffer} llave - 32 bytes.
+ * @param {string} campo - el mismo campo usado al cifrar.
+ * @param {Buffer} blob
+ * @returns {string}
+ * @throws {Error} si el formato es desconocido, la llave no corresponde o el
+ *   blob fue alterado.
+ *
+ * Consumidores: descifrar(), services/rotacionService.js.
+ */
+function descifrarCon(llave, campo, blob) {
+  if (!Buffer.isBuffer(blob) || blob.length < CABECERA_BYTES || blob[0] !== VERSION_FORMATO) {
+    throw new Error(`Formato cifrado desconocido en ${campo}`);
+  }
+  const iv = blob.subarray(1, 1 + IV_BYTES);
+  const tag = blob.subarray(1 + IV_BYTES, CABECERA_BYTES);
+  const decipher = crypto.createDecipheriv(ALGORITMO, llave, iv, { authTagLength: TAG_BYTES });
+  decipher.setAAD(Buffer.from(campo, 'utf8'));
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(blob.subarray(CABECERA_BYTES)), decipher.final()]).toString('utf8');
 }
 
 /**
@@ -116,16 +156,7 @@ function cifrar(campo, texto) {
  * Consumidores: services/pacienteService.js.
  */
 function descifrar(campo, blob) {
-  if (!Buffer.isBuffer(blob) || blob.length < CABECERA_BYTES || blob[0] !== VERSION_FORMATO) {
-    throw new Error(`Formato cifrado desconocido en ${campo}`);
-  }
-  const llave = leerLlave(variableDe(LLAVE_POR_CAMPO, campo));
-  const iv = blob.subarray(1, 1 + IV_BYTES);
-  const tag = blob.subarray(1 + IV_BYTES, CABECERA_BYTES);
-  const decipher = crypto.createDecipheriv(ALGORITMO, llave, iv, { authTagLength: TAG_BYTES });
-  decipher.setAAD(Buffer.from(campo, 'utf8'));
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(blob.subarray(CABECERA_BYTES)), decipher.final()]).toString('utf8');
+  return descifrarCon(leerLlave(variableDe(LLAVE_POR_CAMPO, campo)), campo, blob);
 }
 
 /**
@@ -140,7 +171,20 @@ function descifrar(campo, blob) {
  * Consumidores: services/pacienteService.js, services/auditService.js.
  */
 function indiceCiego(campo, valor) {
-  const llave = leerLlave(variableDe(LLAVE_INDICE_POR_CAMPO, campo));
+  return hmacCon(leerLlave(variableDe(LLAVE_INDICE_POR_CAMPO, campo)), valor);
+}
+
+/**
+ * HMAC-SHA256 con una llave dada: el núcleo de indiceCiego(), que usa la
+ * rotación para recalcular el índice del RUT con la llave nueva.
+ *
+ * @param {Buffer} llave
+ * @param {string} valor
+ * @returns {Buffer} 32 bytes.
+ *
+ * Consumidores: indiceCiego(), services/rotacionService.js.
+ */
+function hmacCon(llave, valor) {
   return crypto.createHmac('sha256', llave).update(valor, 'utf8').digest();
 }
 
@@ -170,4 +214,27 @@ function revisarLlaves() {
   return problemas;
 }
 
-module.exports = { cifrar, descifrar, indiceCiego, revisarLlaves, VARIABLES_DE_LLAVE };
+/**
+ * Qué variable de entorno protege un campo cifrado.
+ *
+ * @param {string} campo
+ * @returns {string}
+ *
+ * Consumidores: services/rotacionService.js.
+ */
+function variableDeCampo(campo) {
+  return variableDe(LLAVE_POR_CAMPO, campo);
+}
+
+module.exports = {
+  cifrar,
+  descifrar,
+  cifrarCon,
+  descifrarCon,
+  indiceCiego,
+  hmacCon,
+  variableDeCampo,
+  revisarLlaves,
+  VARIABLES_DE_LLAVE,
+  LLAVE_BYTES,
+};
