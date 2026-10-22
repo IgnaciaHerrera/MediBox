@@ -44,8 +44,40 @@ const TRATAMIENTO = {
   destinatarios:
     'Sus datos no se comunican a terceros fuera del hospital. Dentro del hospital, cada funcionario ve solo lo que su función requiere; los reportes de gestión e investigación salen seudonimizados.',
   derechos: ['acceso', 'rectificacion', 'supresion', 'oposicion', 'bloqueo', 'portabilidad'],
-  comoEjercerlos:
-    'En el portal del paciente (/portal), con su RUT y un código que llega al contacto que tiene registrado; en admisión, con su cédula; por teléfono o por correo. Para la supresión y el bloqueo se pide la cédula en persona. El hospital responde dentro de 30 días corridos (plazo a confirmar con la línea jurídica). Es gratuito.',
+  // Cómo ejercer los derechos, por partes: /privacidad muestra cada canal por
+  // separado; la exportación usa el texto corrido de comoEjercerlos (abajo).
+  ejercicio: {
+    canales: [
+      { donde: 'En el portal del paciente', enlace: '/portal', como: 'con su RUT y un código que llega al contacto que tiene registrado' },
+      { donde: 'En admisión', como: 'con su cédula' },
+      { donde: 'Por teléfono o por correo' },
+    ],
+    condiciones: [
+      'Para la supresión y el bloqueo se pide la cédula en persona.',
+      'El hospital responde dentro de 30 días corridos (plazo a confirmar con la línea jurídica).',
+      'Es gratuito.',
+    ],
+  },
 };
+
+/**
+ * Arma el texto corrido de cómo ejercer los derechos a partir de sus partes:
+ * los canales separados por punto y coma, y luego las condiciones.
+ *
+ * @param {{canales: {donde: string, enlace?: string, como?: string}[], condiciones: string[]}} ejercicio
+ * @returns {string} p. ej. "En el portal del paciente (/portal), con su RUT…; en admisión, con su cédula; … Es gratuito."
+ *
+ * Consumidores: TRATAMIENTO.comoEjercerlos, que lee lib/archivoTitular.js
+ * (exportación de los datos al titular).
+ */
+function textoEjercicio({ canales, condiciones }) {
+  const frases = canales.map((c, i) => {
+    const frase = c.donde + (c.enlace ? ` (${c.enlace})` : '') + (c.como ? `, ${c.como}` : '');
+    return i === 0 ? frase : frase.charAt(0).toLowerCase() + frase.slice(1);
+  });
+  return `${frases.join('; ')}. ${condiciones.join(' ')}`;
+}
+
+TRATAMIENTO.comoEjercerlos = textoEjercicio(TRATAMIENTO.ejercicio);
 
 module.exports = { TRATAMIENTO };

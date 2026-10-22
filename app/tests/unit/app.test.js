@@ -18,3 +18,12 @@ describe('GET /', () => {
     expect(res.text).toContain(`name="_csrf" value="${res.headers['x-csrf-token']}"`);
   });
 });
+
+describe('GET /privacidad', () => {
+  it('separa la cita legal del texto y deja los paréntesis que no son leyes', async () => {
+    const res = await request(app).get('/privacidad');
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('Al menos 15 años.<span class="doc-cita">Ley 20.584, art. 13</span>');
+    expect(res.text).toContain('Órgano público (avisos); consentimiento (recordatorios y encuestas).');
+  });
+});

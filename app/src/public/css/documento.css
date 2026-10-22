@@ -143,66 +143,222 @@
   margin-top: 0.6rem;
 }
 
-/* Cada tipo de dato es una cláusula: título y sus condiciones en filas. */
+/* Cada tipo de dato es una ficha: arriba qué datos son, al medio para qué
+   (lo que más importa leer) y al pie la base legal y el plazo lado a lado,
+   con la cita de la ley aparte y más chica. */
 .doc-clausula {
-  padding: 1.1rem 0 0.4rem;
-  border-top: 1px solid var(--line);
+  margin-top: 0.9rem;
+  padding: 1.35rem 1.5rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-raised);
 }
 
 .doc-clausula h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.1rem;
-  color: var(--ink);
-}
-
-.doc-clausula dl,
-.doc-derechos {
   margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  color: var(--teal-ink);
 }
 
-.doc-clausula dl > div,
-.doc-derechos > div {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 1rem;
-  padding: 0.4rem 0;
-}
-
-.doc-clausula dt {
-  font-size: 0.86rem;
-  font-weight: 500;
-  line-height: 1.7;
+.doc-seccion .doc-clausula-datos {
+  margin: 0.3rem 0 1.1rem;
   color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
-.doc-clausula dd,
-.doc-derechos dd {
+.doc-clausula dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   margin: 0;
-  font-size: 0.97rem;
-  line-height: 1.65;
-  color: var(--ink);
 }
 
-.doc-derechos > div {
-  padding: 0.7rem 0;
+.doc-clausula dl > div {
+  padding-top: 0.85rem;
   border-top: 1px solid var(--line);
 }
 
-.doc-derechos > div:last-child {
+/* Sin hueco entre columnas: la línea sobre base legal y plazo es una sola. */
+.doc-clausula dl > div:nth-child(2) {
+  padding-right: 2rem;
+}
+
+.doc-clausula .doc-clausula-fin {
+  grid-column: 1 / -1;
+  margin-bottom: 0.85rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.doc-clausula dt,
+.doc-derechos dt {
+  margin: 0;
+}
+
+.doc-clausula dt {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.doc-clausula dd {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.doc-clausula-fin dd {
+  font-size: 1rem;
+}
+
+.doc-cita {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+/* Usos opcionales: una lista corta, sin viñetas, con la base legal común al pie. */
+.doc-seccion .doc-opcionales {
+  margin: 1.1rem 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-seccion .doc-opcionales li {
+  margin: 0;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.doc-seccion .doc-opcionales li:last-child {
   border-bottom: 1px solid var(--line);
 }
 
-.doc-derechos dt {
-  font-weight: 600;
-  color: var(--ink);
+.doc-seccion .doc-opcionales-base {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
 }
 
-.doc-nota {
-  margin: 1.5rem 0 1rem;
-  padding: 0.8rem 1.1rem;
-  border-left: 3px solid var(--ochre);
-  border-radius: 0 8px 8px 0;
-  background: rgba(185, 130, 47, 0.07);
+/* Derechos: grilla de dos columnas; el nombre manda y la explicación sigue. */
+.doc-derechos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 2rem;
+  margin: 0;
+}
+
+.doc-derechos > div {
+  padding: 1rem 0 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.doc-derechos dt {
+  color: var(--teal-ink);
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+
+.doc-derechos dd {
+  margin: 0.3rem 0 0;
+  color: var(--ink);
+  font-size: 0.93rem;
+  line-height: 1.6;
+}
+
+/* Cómo ejercerlos: el portal, canal principal, a lo ancho y con su enlace;
+   debajo los otros canales y las condiciones que valen para todos. */
+.doc-ejercicio {
+  margin-top: 2rem;
+}
+
+.doc-ejercicio h3 {
+  margin: 0 0 0.9rem;
+  font-size: 1.15rem;
+  color: var(--teal-ink);
+}
+
+.doc-seccion .doc-canales {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-seccion .doc-canal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper-raised);
+}
+
+.doc-seccion .doc-canal--principal {
+  grid-column: 1 / -1;
+  padding: 1.15rem 1.35rem;
+  border-color: rgba(31, 107, 92, 0.45);
+  background: rgba(31, 107, 92, 0.05);
+}
+
+.doc-seccion .doc-canal-donde {
+  margin: 0;
+  color: var(--teal-ink);
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.doc-seccion .doc-canal-como {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.doc-canal .doc-enlace-portal {
+  flex-shrink: 0;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.doc-seccion .doc-condiciones {
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-seccion .doc-condiciones li {
+  position: relative;
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.doc-seccion .doc-condiciones li + li {
+  margin-top: 0.35rem;
+}
+
+.doc-condiciones li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 0;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 1px;
+  background: var(--ochre);
 }
 
 .doc-enlace-portal {
@@ -262,10 +418,28 @@
 }
 
 @media (max-width: 560px) {
-  .doc-clausula dl > div,
-  .doc-derechos > div {
+  .doc-clausula {
+    padding: 1.15rem 1.1rem 1.1rem;
+  }
+
+  .doc-clausula dl,
+  .doc-derechos,
+  .doc-seccion .doc-canales {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.1rem;
+  }
+
+  .doc-seccion .doc-canal--principal {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Apilados, el plazo se separa de la base legal como esta de "Para qué". */
+  .doc-clausula dl > div:nth-child(2) {
+    padding-right: 0;
+  }
+
+  .doc-clausula dl > div:last-child {
+    margin-top: 0.85rem;
   }
 }
 
@@ -299,8 +473,9 @@
     break-inside: avoid;
   }
 
-  .doc-nota {
+  .doc-clausula,
+  .doc-seccion .doc-canal {
+    border-color: #999;
     background: none;
-    border-left-color: #000;
   }
 }

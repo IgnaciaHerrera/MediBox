@@ -12,6 +12,14 @@
     portabilidad: ['Portabilidad', 'Recibir sus datos en un formato estructurado (JSON) para llevarlos a otro responsable.'],
   };
 
+  // Separa la cita legal final, "(Ley …)", del texto en lenguaje simple para
+  // mostrarla aparte y más chica. Paréntesis que no empiezan con "Ley" (p. ej.
+  // "Órgano público (avisos)") quedan en el texto.
+  const conCita = (texto) => {
+    const m = texto.match(/^(.*?)\s*\((Ley [^)]+)\)\.?$/);
+    return m ? { texto: m[1] + '.', cita: m[2] } : { texto, cita: null };
+  };
+
   const SECCIONES = [
     ['responsable', 'Responsable'],
     ['datos', 'Qué datos tratamos'],
@@ -52,11 +60,15 @@
         <% tratamiento.datos.forEach(function(d) { %>
           <div class="doc-clausula">
             <h3><%= d.categoria %></h3>
+            <p class="doc-clausula-datos"><%= d.datos %></p>
             <dl>
-              <div><dt>Datos</dt><dd><%= d.datos %></dd></div>
-              <div><dt>Para qué</dt><dd><%= d.finalidad %></dd></div>
-              <div><dt>Base legal</dt><dd><%= d.base %></dd></div>
-              <div><dt>Plazo</dt><dd><%= d.plazo %></dd></div>
+              <div class="doc-clausula-fin"><dt>Para qué</dt><dd><%= d.finalidad %></dd></div>
+              <% [['Base legal', d.base], ['Plazo', d.plazo]].forEach(function(campo) { const c = conCita(campo[1]); %>
+                <div>
+                  <dt><%= campo[0] %></dt>
+                  <dd><%= c.texto %><% if (c.cita) { %><span class="doc-cita"><%= c.cita %></span><% } %></dd>
+                </div>
+              <% }) %>
             </dl>
           </div>
         <% }) %>
@@ -65,9 +77,12 @@
       <section class="doc-seccion" id="opcionales" aria-labelledby="titulo-opcionales">
         <h2 id="titulo-opcionales">Usos opcionales, solo con su consentimiento</h2>
         <p>Su atención no depende de ninguno de ellos: puede negarse o revocarlos cuando quiera, sin que cambie su atención.</p>
-        <ul>
-          <% tratamiento.finalidades.forEach(function(f) { %><li><strong><%= f.nombre %>.</strong> <%= f.base %></li><% }) %>
+        <%# Si todos tienen la misma base (hoy, el consentimiento), se dice una vez y no en cada uno. %>
+        <% const unaBase = tratamiento.finalidades.every(function(f) { return f.base === tratamiento.finalidades[0].base; }); %>
+        <ul class="doc-opcionales">
+          <% tratamiento.finalidades.forEach(function(f) { %><li><%= f.nombre %><% if (!unaBase) { %>. <span class="doc-cita"><%= f.base %></span><% } %></li><% }) %>
         </ul>
+        <% if (unaBase) { %><p class="doc-opcionales-base">Base legal de todos: <%= tratamiento.finalidades[0].base.charAt(0).toLowerCase() + tratamiento.finalidades[0].base.slice(1) %></p><% } %>
       </section>
 
       <section class="doc-seccion" id="destinatarios" aria-labelledby="titulo-destinatarios">
@@ -82,11 +97,28 @@
             <div><dt><%= DERECHOS[clave][0] %></dt><dd><%= DERECHOS[clave][1] %></dd></div>
           <% }) %>
         </dl>
-        <p class="doc-nota"><strong>Cómo ejercerlos.</strong> <%= tratamiento.comoEjercerlos %></p>
-        <a class="doc-enlace-portal" href="/portal">
-          Ir al portal del paciente
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </a>
+        <div class="doc-ejercicio">
+          <h3>Cómo ejercerlos</h3>
+          <ul class="doc-canales">
+            <% tratamiento.ejercicio.canales.forEach(function(c) { %>
+              <li class="doc-canal<%= c.enlace ? ' doc-canal--principal' : '' %>">
+                <div>
+                  <p class="doc-canal-donde"><%= c.donde %></p>
+                  <% if (c.como) { %><p class="doc-canal-como"><%= c.como.charAt(0).toUpperCase() + c.como.slice(1) %>.</p><% } %>
+                </div>
+                <% if (c.enlace) { %>
+                  <a class="doc-enlace-portal" href="<%= c.enlace %>">
+                    Ir al portal
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </a>
+                <% } %>
+              </li>
+            <% }) %>
+          </ul>
+          <ul class="doc-condiciones">
+            <% tratamiento.ejercicio.condiciones.forEach(function(c) { %><li><%= c %></li><% }) %>
+          </ul>
+        </div>
       </section>
     </article>
   </div>

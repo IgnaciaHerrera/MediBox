@@ -9,7 +9,7 @@ describe('Política de tratamiento /privacidad', () => {
   it('se ve sin iniciar sesión y explica finalidades, derechos y cómo ejercerlos', async () => {
     const res = await request(app).get('/privacidad').set('Accept', 'text/html');
     expect(res.status).toBe(200);
-    for (const texto of ['Recordatorios de citas', 'Investigación y estadística', 'Encuestas de satisfacción', 'Rectificación', 'Portabilidad', 'por teléfono o por correo', 'Ley 20.584']) {
+    for (const texto of ['Recordatorios de citas', 'Investigación y estadística', 'Encuestas de satisfacción', 'Rectificación', 'Portabilidad', 'Por teléfono o por correo', 'Ley 20.584']) {
       expect(res.text).toContain(texto);
     }
   });
