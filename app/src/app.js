@@ -73,9 +73,14 @@ app.get('/health', (req, res) => {
   res.status(200).json({ ok: true });
 });
 
-// Página de inicio pública: una entrada para pacientes (/portal) y otra para
-// el personal (/auth/login-form).
-app.get('/', (req, res) => res.render('landing', { titulo: 'Inicio' }));
+// Página de inicio pública. El paciente empieza a ingresar ahí mismo (el
+// formulario envía a /portal/ingresar); con una sesión del portal vigente se
+// le ofrece volver a sus datos en vez de pedirle otro código. El personal
+// entra por /auth/login-form.
+app.get('/', (req, res) => {
+  const portalActivo = Boolean(req.session.portal && req.session.portal.expiraEl > Date.now());
+  res.render('landing', { titulo: 'Inicio', portalActivo, csrfToken: res.locals.csrfToken });
+});
 
 // Política de tratamiento de datos (Ley 21.719, art. 14 ter): pública.
 app.get('/privacidad', (req, res) => res.render('privacidad', { titulo: 'Política de privacidad', tratamiento: TRATAMIENTO }));
