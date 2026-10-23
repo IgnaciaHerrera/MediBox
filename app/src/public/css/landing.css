@@ -331,11 +331,12 @@
   border-top: 1px solid var(--line);
 }
 
+/* Texto a la izquierda y botón al borde derecho del contenedor, sin que el
+   botón caiga a otra línea en tablet; en celular se apilan. */
 .landing-personal-fila {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 1.5rem 3rem;
 }
 
@@ -386,9 +387,21 @@
   font-size: 0.8rem;
 }
 
-/* ----- Tablet ----- */
+/* ----- Tablet: se mantienen las columnas, con menos aire ----- */
 
 @media (max-width: 960px) {
+  .landing-hero-grilla {
+    gap: 2.5rem;
+  }
+
+  .landing-grupos {
+    gap: 1.75rem;
+  }
+}
+
+/* ----- Una columna: tablet angosta y celular ----- */
+
+@media (max-width: 760px) {
   .landing-hero-grilla {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -416,13 +429,35 @@
     margin-top: 0;
   }
 
+  /* Apilada, la tarjeta toma el ancho de la columna en vez de dejar un hueco. */
   .landing-tarjeta {
-    justify-self: start;
+    justify-self: stretch;
+    max-width: none;
   }
 
   .landing-grupos {
     grid-template-columns: minmax(0, 1fr);
     gap: 2.5rem;
+  }
+
+  /* Cada grupo en dos columnas: el verbo a la izquierda, la lista al lado. */
+  .landing-grupo {
+    display: grid;
+    grid-template-columns: minmax(0, 11rem) minmax(0, 1fr);
+    gap: 0 1.5rem;
+  }
+
+  .landing-grupo ul {
+    margin-top: 0.3rem;
+  }
+
+  .landing-personal-fila {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .landing-nav-largo {
+    display: none;
   }
 }
 
@@ -433,8 +468,14 @@
     padding: 0 1rem;
   }
 
+  /* Con zoom alto (320 px) el menú baja bajo el logo en vez de desbordar. */
   .landing-cabecera-fila {
+    flex-wrap: wrap;
     gap: 0.5rem;
+    height: auto;
+    min-height: 4.75rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 
   .landing-nav {
@@ -449,11 +490,15 @@
     width: 100%;
   }
 
-  .landing-tarjeta {
-    padding: 1.5rem 1.25rem 1.25rem;
+  .landing-grupo {
+    display: block;
   }
 
-  .landing-nav-largo {
-    display: none;
+  .landing-grupo ul {
+    margin-top: 1.25rem;
+  }
+
+  .landing-tarjeta {
+    padding: 1.5rem 1.25rem 1.25rem;
   }
 }
