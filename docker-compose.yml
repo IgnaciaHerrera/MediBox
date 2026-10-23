@@ -24,14 +24,31 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Aplica las migraciones con el dueño de la base (DATABASE_URL de .env) y
+  # activa el login del rol medibox_app. Corre una vez y termina: la app no
+  # arranca hasta que termine bien.
+  migraciones:
+    build: ./app
+    env_file: .env
+    command: ["sh", "-c", "npx prisma migrate deploy && node prisma/rol-app.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logs-con-tope
+
   app:
     build: ./app
     env_file: .env
     environment:
       TZ: America/Santiago
+      # La app se conecta con el rol de mínimo privilegio (migración
+      # 20261023120000_rol_aplicacion), nunca con el dueño de la base, cuya
+      # contraseña no le llega.
+      DATABASE_URL: postgresql://medibox_app:${APP_DB_PASSWORD}@db:5432/${DB_NAME}
+      DB_PASSWORD: ""
     depends_on:
-      db:
-        condition: service_healthy
+      migraciones:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     # Archivos que deben vivir fuera de la base y de sus respaldos: la lista de

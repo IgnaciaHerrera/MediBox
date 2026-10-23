@@ -30,4 +30,28 @@ function revisarEntorno() {
   return [...problemas, ...revisarLlaves()];
 }
 
-module.exports = { revisarEntorno };
+/**
+ * Revisa con qué rol se conectó la aplicación a la base: no debe ser
+ * superusuario ni dueño de las tablas, porque con esos privilegios podría
+ * desactivar el trigger de solo inserción de la auditoría, borrar pacientes o
+ * cambiar el esquema. Debe ser medibox_app (migración
+ * 20261023120000_rol_aplicacion), y las migraciones las aplica el dueño.
+ *
+ * @param {import('@prisma/client').PrismaClient} prisma - cliente de la app.
+ * @returns {Promise<string[]>} problemas encontrados; vacío si el rol es adecuado.
+ *
+ * Consumidores: src/server.js (solo en producción) y
+ *   tests/integration/rol-aplicacion.test.js.
+ */
+async function revisarRolBase(prisma) {
+  const [{ superusuario, duenoDeTablas }] = await prisma.$queryRaw`
+    SELECT r.rolsuper AS superusuario,
+           EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tableowner = current_user) AS "duenoDeTablas"
+    FROM pg_roles r WHERE r.rolname = current_user`;
+  if (superusuario || duenoDeTablas) {
+    return ['DATABASE_URL se conecta como superusuario o dueño de las tablas: la aplicación debe usar el rol medibox_app'];
+  }
+  return [];
+}
+
+module.exports = { revisarEntorno, revisarRolBase };

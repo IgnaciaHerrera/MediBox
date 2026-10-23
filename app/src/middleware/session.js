@@ -5,7 +5,9 @@ const { Pool } = require('pg');
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const sessionMiddleware = session({
-  store: new pgSession({ pool, tableName: 'session', createTableIfMissing: true }),
+  // La tabla la crea la migración 20261023120000_rol_aplicacion: el rol de la
+  // aplicación no puede crear tablas.
+  store: new pgSession({ pool, tableName: 'session' }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,

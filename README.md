@@ -14,9 +14,14 @@ un ramo de Seguridad y Protección de Datos.
 ```bash
 cp .env.example .env
 # editar .env con valores propios (no usar los de ejemplo en producción);
-# las llaves de cifrado se generan como indica el propio .env.example
+# las llaves de cifrado y APP_DB_PASSWORD se generan como indica el propio
+# .env.example
 docker compose up --build
 ```
+
+`docker compose up` corre primero el servicio `migraciones` (aplica las
+migraciones con el dueño de la base y activa el rol `medibox_app`) y recién
+después la app. Ver "Rol de la aplicación en la base".
 
 La app queda disponible en `http://localhost:3000`, que redirige al
 formulario de login (`/auth/login-form`). Endpoint de salud: `GET /health`.
@@ -166,19 +171,43 @@ queden datos sin migrar. En una base que ya tiene pacientes:
 
 ```bash
 # 1. Aplica los pasos "expandir"; el paso "contraer" se detiene.
-docker compose exec app npx prisma migrate deploy
+docker compose run --rm migraciones npx prisma migrate deploy
 
 # 2. Copia el motivo de legado a las citas y cifra las fechas de nacimiento.
 docker compose exec app npm run minimizacion:migrar
 
 # 3. Marca el paso "contraer" como revertido y vuelve a aplicarlo.
-docker compose exec app npx prisma migrate resolve --rolled-back 20261016120100_minimizacion_pacientes_contraer
-docker compose exec app npx prisma migrate deploy
+docker compose run --rm migraciones npx prisma migrate resolve --rolled-back 20261016120100_minimizacion_pacientes_contraer
+docker compose run --rm migraciones npx prisma migrate deploy
 ```
 
 El script es idempotente y no borra nada. El paso "contraer" descarta el
 motivo de legado de los pacientes que no tienen ninguna cita: no orienta
 ninguna atención. Una base nueva aplica todo de corrido, sin intervención.
+
+## Rol de la aplicación en la base
+
+La app no se conecta con el dueño de la base (que en Docker es superusuario),
+sino con el rol `medibox_app` que crea la migración
+`20261023120000_rol_aplicacion`:
+
+| Puede | No puede |
+|---|---|
+| Leer, insertar y actualizar las tablas del sistema | Crear, alterar o borrar tablas, ni desactivar triggers (no es dueño de nada) |
+| Borrar sesiones, notificaciones vencidas, permisos de un rol y el catálogo de espacios y médicos | Borrar pacientes, citas, consentimientos, solicitudes, historial, verificaciones o usuarios |
+| Leer e insertar en `audit_log` | Modificar, borrar o vaciar `audit_log` (la base lo rechaza antes que el trigger) |
+| | Leer `_prisma_migrations` |
+
+Las tablas que agreguen migraciones futuras nacen con lectura, inserción y
+actualización, sin borrado: concederlo exige hacerlo a propósito.
+
+El rol se crea sin login; `prisma/rol-app.js` (servicio `migraciones`) le
+activa el login con `APP_DB_PASSWORD`. El contenedor de la app recibe solo esa
+credencial: `DATABASE_URL` apunta a `medibox_app` y `DB_PASSWORD` le llega
+vacía. En producción el servidor se niega a arrancar si se conecta como
+superusuario o como dueño de las tablas. El seed y los procesos de operación
+corren con el rol de la app (`docker compose exec app ...`); las migraciones,
+con el dueño (`docker compose run --rm migraciones ...`).
 
 ## Respaldos cifrados
 

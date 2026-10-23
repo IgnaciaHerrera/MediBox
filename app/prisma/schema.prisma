@@ -313,6 +313,17 @@ model Notificacion {
   @@map("notificaciones")
 }
 
+// Sesiones de express-session (connect-pg-simple). Las crea la migración y no
+// la aplicación, que no puede crear tablas (rol medibox_app).
+model Session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}
+
 // Solicitud de un derecho del titular (ARCO+). La registra un funcionario por
 // cualquier canal; se ejecuta solo con la identidad verificada por el método
 // que acepta el derecho. Lo pedido y lo respondido van cifrados.

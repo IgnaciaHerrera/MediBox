@@ -17,4 +17,6 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app .
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node src/server.js"]
+# Las migraciones no corren aquí: las aplica el servicio `migraciones` de
+# docker-compose.yml con el dueño de la base, que la app no conoce.
+CMD ["node", "src/server.js"]
