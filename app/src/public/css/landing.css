@@ -317,11 +317,18 @@
   margin-top: 0.8rem;
 }
 
-/* ----- Enlace a la política ----- */
+/* ----- Título de sección con el enlace a la política al borde derecho ----- */
 
-.landing-politica {
-  display: inline-block;
-  margin-top: 3rem;
+.landing-seccion-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem 3rem;
+}
+
+.landing-seccion-cabeza .landing-enlace {
+  padding-bottom: 0.4rem;
 }
 
 /* ----- Personal y pie ----- */
