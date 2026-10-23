@@ -12,11 +12,11 @@
   var CLAVE = 'portal-pestana';
 
   function recordar(nombre) {
-    try { window.sessionStorage.setItem(CLAVE, nombre); } catch (e) { /* sin almacenamiento */ }
+    try { window.sessionStorage.setItem(CLAVE, nombre); } catch { /* sin almacenamiento */ }
   }
 
   function recordada() {
-    try { return window.sessionStorage.getItem(CLAVE); } catch (e) { return null; }
+    try { return window.sessionStorage.getItem(CLAVE); } catch { return null; }
   }
 
   function existe(nombre) {

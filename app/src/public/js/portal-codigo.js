@@ -7,7 +7,7 @@
 
   // Entrar al portal siempre empieza en el Resumen: se olvida la sección que
   // Mis datos recordaba de una visita anterior.
-  try { window.sessionStorage.removeItem('portal-pestana'); } catch (e) { /* sin almacenamiento */ }
+  try { window.sessionStorage.removeItem('portal-pestana'); } catch { /* sin almacenamiento */ }
 
   var input = form.querySelector('.portal-codigo-input');
   var campo = form.querySelector('.portal-codigo');
