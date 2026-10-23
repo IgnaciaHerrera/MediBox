@@ -225,7 +225,7 @@ describe('Paciente encryption and access control', () => {
     expect(res.status).toBe(404);
   });
 
-  it('rejects a RUT with a wrong check digit and stores a valid one normalized', async () => {
+  it('validates at the boundary: rejects a wrong RUT and data the system does not need, and stores a valid RUT normalized', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'paciente-operador-test@medibox.local', password });
     expect(loginRes.status).toBe(200);
     const datos = { nombre: 'Rut Formato', fechaNacimiento: '1980-08-08', contacto: '+56955556666' };
@@ -233,6 +233,16 @@ describe('Paciente encryption and access control', () => {
     const invalido = await agent.post('/api/pacientes').send({ ...datos, rut: '7.654.321-0' });
     expect(invalido.status).toBe(400);
     expect(invalido.body.error).toMatch(/RUT no es válido/);
+
+    // Minimización: un campo que MediBox no necesita se rechaza, no se guarda.
+    const antes = await prisma.paciente.count();
+    const extras = [{ direccion: 'Av. Siempre Viva 742' }, { sexo: 'F' }, { diagnostico: 'Hipertensión' }, { contactoSecundario: '+56900000000' }];
+    const respuestas = await Promise.all(extras.map((extra) => agent.post('/api/pacientes').send({ ...datos, rut: '7.654.321-6', ...extra })));
+    respuestas.forEach((res) => {
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/is not allowed/);
+    });
+    expect(await prisma.paciente.count()).toBe(antes);
 
     const valido = await agent.post('/api/pacientes').send({ ...datos, rut: '7.654.321-6' });
     expect(valido.status).toBe(201);
