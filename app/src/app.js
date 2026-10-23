@@ -56,6 +56,8 @@ if (process.env.TRUST_PROXY) {
 }
 
 app.use(helmet());
+// Las fuentes casi no cambian: el navegador las guarda un mes.
+app.use('/fonts', express.static(path.join(__dirname, 'public', 'fonts'), { maxAge: '30d' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(pinoHttp({ logger, serializers: serializadoresHttp }));
 app.use(express.json());

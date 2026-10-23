@@ -16,8 +16,8 @@
   --line: #dad7cc;
   --line-strong: #c3bfb1;
 
-  --font-display: "Source Serif 4", Georgia, serif;
-  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Source Serif 4", "Source Serif 4 Fallback", Georgia, serif;
+  --font-body: "IBM Plex Sans", "IBM Plex Sans Fallback", -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 
   --shadow-sm: 0 1px 2px rgba(27, 33, 31, 0.06), 0 1px 1px rgba(27, 33, 31, 0.04);
