@@ -201,15 +201,19 @@
 }
 
 .landing-nav a {
-  color: var(--noche-suave);
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid transparent;
+  color: var(--noche-texto);
   font-size: 0.92rem;
   font-weight: 500;
   text-decoration: none;
-  transition: color var(--dur-fast) var(--ease-out);
+  transition: border-color var(--dur-fast) var(--ease-out);
 }
 
-.landing-nav a:hover {
-  color: var(--noche-texto);
+/* La raya de acento aparece al pasar el mouse (o al enfocar con el teclado). */
+.landing-nav a:hover,
+.landing-nav a:focus-visible {
+  border-bottom-color: #8fd1bf;
 }
 
 .landing-hero {
@@ -389,6 +393,29 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* El ingreso va justo después del titular; el texto de apoyo, debajo. */
+  .landing-hero-texto {
+    display: contents;
+  }
+
+  .landing-hero h1 {
+    order: 1;
+  }
+
+  .landing-tarjeta {
+    order: 2;
+  }
+
+  .landing-hero-sub {
+    order: 3;
+    margin-top: 0;
+  }
+
+  .landing-hero-confianza {
+    order: 4;
+    margin-top: 0;
+  }
+
   .landing-tarjeta {
     justify-self: start;
   }
@@ -407,15 +434,15 @@
   }
 
   .landing-cabecera-fila {
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .landing-nav {
-    gap: 1rem;
+    gap: 0.7rem;
   }
 
   .landing-nav a {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .landing-personal .landing-btn {
