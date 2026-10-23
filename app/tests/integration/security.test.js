@@ -12,6 +12,27 @@ describe('Security middleware', () => {
     expect(res.headers['x-content-type-options']).toBe('nosniff');
   });
 
+  it('solo permite fuentes y estilos de este mismo sitio', async () => {
+    const res = await request(app).get('/health');
+    const directivas = Object.fromEntries(
+      res.headers['content-security-policy'].split(';').map((d) => {
+        const [nombre, ...valores] = d.trim().split(/\s+/);
+        return [nombre, valores];
+      }),
+    );
+    expect(directivas['font-src']).toEqual(["'self'"]);
+    expect(directivas['style-src']).toEqual(["'self'", "'unsafe-inline'"]);
+    expect(directivas['script-src']).toEqual(["'self'"]);
+  });
+
+  it('las páginas públicas no cargan nada de otros sitios', async () => {
+    for (const ruta of ['/', '/auth/login-form', '/portal', '/privacidad']) {
+      const res = await request(app).get(ruta).set('Accept', 'text/html');
+      const externos = res.text.match(/(?:href|src)="https?:\/\/[^"]+"/g) || [];
+      expect(externos).toEqual([]);
+    }
+  });
+
   it('rejects a login POST without a valid CSRF token', async () => {
     const res = await request(app).post('/auth/login').send({ email: 'admin@medibox.local', password: 'Admin123!' });
     expect(res.status).toBe(403);

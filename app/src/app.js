@@ -55,7 +55,22 @@ if (process.env.TRUST_PROXY) {
   app.set('trust proxy', /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
 }
 
-app.use(helmet());
+// Política de seguridad del navegador: la de helmet, pero las fuentes y las
+// hojas de estilo solo pueden venir de este mismo sitio. Antes se permitía
+// cualquier https porque las fuentes se pedían a Google; ahora son propias
+// (public/fonts). 'unsafe-inline' se mantiene en los estilos por los atributos
+// style de algunas vistas (p. ej. la grilla de la agenda).
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'font-src': ["'self'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+      },
+    },
+  }),
+);
 // Las fuentes casi no cambian: el navegador las guarda un mes.
 app.use('/fonts', express.static(path.join(__dirname, 'public', 'fonts'), { maxAge: '30d' }));
 app.use(express.static(path.join(__dirname, 'public')));
