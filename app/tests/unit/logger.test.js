@@ -33,3 +33,37 @@ describe('access log serializers', () => {
     });
   });
 });
+
+describe('error serializer', () => {
+  const { Prisma } = require('@prisma/client');
+  const { serializarError } = require('../../src/lib/logger');
+  const argumentos = 'data: { nombre: "Ana Secreta", email: "ana.secreta@hospital.cl", passwordHash: "$2b$12$HASHSECRETO" }';
+
+  it('drops the query arguments that Prisma copies into its error message', () => {
+    const err = new Prisma.PrismaClientValidationError(`Invalid \`prisma.usuario.create()\` invocation:\n{ ${argumentos} }`, {
+      clientVersion: '5.22.0',
+    });
+
+    const log = JSON.stringify(serializarError(err));
+
+    ['Ana Secreta', 'ana.secreta@hospital.cl', 'HASHSECRETO'].forEach((dato) => expect(log).not.toContain(dato));
+    expect(serializarError(err).type).toBe('PrismaClientValidationError');
+  });
+
+  it('keeps the code and the field names of a known Prisma error, not their values', () => {
+    const err = new Prisma.PrismaClientKnownRequestError(`Unique constraint failed\n${argumentos}`, {
+      code: 'P2002',
+      clientVersion: '5.22.0',
+      meta: { modelName: 'Usuario', target: ['email'] },
+    });
+
+    const serializado = serializarError(err);
+
+    expect(serializado).toMatchObject({ code: 'P2002', modelo: 'Usuario', campos: ['email'] });
+    expect(JSON.stringify(serializado)).not.toContain('ana.secreta@hospital.cl');
+  });
+
+  it('serializes other errors as usual', () => {
+    expect(serializarError(new Error('algo inesperado')).message).toBe('algo inesperado');
+  });
+});
