@@ -1,6 +1,6 @@
 const { prisma } = require('../lib/prisma');
 const canalEnvio = require('../lib/canalEnvio');
-const { hoyISO } = require('../lib/fecha');
+const { hoyISO, fechaDMA } = require('../lib/fecha');
 const { registrar } = require('./auditService');
 const { pacientesConVigente } = require('./consentimientoService');
 const { contactosParaProceso } = require('./pacienteService');
@@ -14,8 +14,6 @@ function mananaISO() {
   fecha.setDate(fecha.getDate() + 1);
   return fecha.toISOString().slice(0, 10);
 }
-
-const fechaDMA = (iso) => iso.split('-').reverse().join('-');
 
 /**
  * Envía un recordatorio por cada cita agendada del día indicado, solo a los

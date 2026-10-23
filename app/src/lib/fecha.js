@@ -32,4 +32,19 @@ function edadEnAnios(nacimientoISO, alISO = hoyISO()) {
   return alISO.slice(5) < nacimientoISO.slice(5) ? anios - 1 : anios;
 }
 
-module.exports = { isoLocal, hoyISO, edadEnAnios };
+/**
+ * Muestra una fecha ISO como día-mes-año, el formato de todo lo que ve una
+ * persona: "2026-10-03" → "03-10-2026" y "2026-10-03 14:05" → "03-10-2026 14:05".
+ * Solo para texto visible; los value de los inputs de fecha siguen en ISO.
+ *
+ * @param {string} iso - "AAAA-MM-DD", seguido o no de la hora.
+ * @returns {string} la misma fecha como "DD-MM-AAAA", con la hora si la traía.
+ *
+ * Consumidores: app.js (app.locals, todas las vistas), lib/archivoTitular.js
+ *   (archivo de acceso y portabilidad), services/recordatorioService.js.
+ */
+function fechaDMA(iso) {
+  return iso.slice(0, 10).split('-').reverse().join('-') + iso.slice(10);
+}
+
+module.exports = { isoLocal, hoyISO, edadEnAnios, fechaDMA };

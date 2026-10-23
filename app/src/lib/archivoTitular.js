@@ -1,6 +1,6 @@
 const writeExcelFile = require('write-excel-file/node').default;
 const PDFDocument = require('pdfkit');
-const { isoLocal } = require('./fecha');
+const { isoLocal, fechaDMA } = require('./fecha');
 const { AppError } = require('./AppError');
 
 // El archivo del titular (acceso y portabilidad) en dos formatos, con las
@@ -48,8 +48,10 @@ const ETIQUETAS = {
 // espacio sobrante en el PDF.
 const LARGAS = ['Texto aceptado', 'Respuesta', 'Finalidad', 'Base legal', 'Motivo'];
 
-const fecha = (valor) => (valor ? isoLocal(valor) : '');
-const dia = (iso) => (iso ? iso.slice(0, 10).split('-').reverse().join('-') : '');
+// Todas las fechas como día-mes-año, igual que en la interfaz: las marcas de
+// tiempo con hora y minutos ("16-10-2026 10:12"), las fechas sin hora solas.
+const fecha = (valor) => (valor ? fechaDMA(isoLocal(valor).slice(0, 16)) : '');
+const dia = (iso) => (iso ? fechaDMA(iso.slice(0, 10)) : '');
 const etiqueta = (grupo, valor) => (valor ? ETIQUETAS[grupo][valor] || valor : '');
 
 /**
