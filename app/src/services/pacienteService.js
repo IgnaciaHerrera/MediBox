@@ -10,6 +10,9 @@ const { edadEnAnios } = require('../lib/fecha');
 // ("80+"): las edades extremas son pocas y por sí solas identifican.
 const TRAMO_EDAD_ANIOS = 10;
 const EDAD_TRAMO_ABIERTO = 80;
+// Un grupo del reporte estadístico con menos pacientes distintos que esto se
+// suprime: un grupo de 1 o 2 personas las singulariza aunque no tenga nombre.
+const K_ANONIMATO = 5;
 
 // Toda lectura de datos de paciente pasa por este servicio (con su propia
 // auditoría), y es el único lugar donde se cifra y descifra.
@@ -598,6 +601,76 @@ async function listarSeudonimizadoParaExport(usuarioId, { pacienteIds, finalidad
   }));
 }
 
+/**
+ * Agrupa citas por año, especialidad y tramo etario, cuenta pacientes
+ * distintos y citas, y suprime los grupos con menos de k pacientes. El
+ * resultado no lleva ids ni seudónimos: no se puede seguir a nadie de una
+ * fila a otra ni cruzarlo con otro archivo. Es anonimización por agregación
+ * con umbral k, a diferencia de los reportes seudonimizados.
+ *
+ * @param {{pacienteId: number, anio: number, especialidad: string, tramoEtario: string}[]} registros - una entrada por cita.
+ * @param {number} [k=K_ANONIMATO] - mínimo de pacientes distintos para publicar un grupo.
+ * @returns {{filas: {anio: number, especialidad: string, tramoEtario: string, pacientes: number, citas: number}[], suprimidos: number}}
+ *   filas ordenadas por año, especialidad y tramo; suprimidos = grupos omitidos.
+ *
+ * Consumidores: reporteEstadisticoAnonimo() y tests/unit/estadistica-anonima.test.js.
+ */
+function agregarAnonimo(registros, k = K_ANONIMATO) {
+  const grupos = new Map();
+  for (const { pacienteId, anio, especialidad, tramoEtario: tramo } of registros) {
+    const clave = `${anio}|${especialidad}|${tramo}`;
+    const grupo = grupos.get(clave) || { anio, especialidad, tramoEtario: tramo, pacientes: new Set(), citas: 0 };
+    grupo.pacientes.add(pacienteId);
+    grupo.citas += 1;
+    grupos.set(clave, grupo);
+  }
+  const todos = [...grupos.values()];
+  const filas = todos
+    .filter((grupo) => grupo.pacientes.size >= k)
+    .map((grupo) => ({ ...grupo, pacientes: grupo.pacientes.size }))
+    .sort((a, b) => a.anio - b.anio || a.especialidad.localeCompare(b.especialidad) || parseInt(a.tramoEtario, 10) - parseInt(b.tramoEtario, 10));
+  return { filas, suprimidos: todos.length - filas.length };
+}
+
+/**
+ * Reporte estadístico anónimo de la atención: citas no anuladas de pacientes
+ * no bloqueados, agregadas por año, especialidad y tramo etario a la fecha de
+ * la cita, con supresión de los grupos pequeños (agregarAnonimo). Queda en
+ * la auditoría como EXPORT de 'Estadistica', con el número de grupos.
+ *
+ * @param {number} usuarioId - quien exporta.
+ * @returns {Promise<{anio: number, especialidad: string, tramoEtario: string, pacientes: number, citas: number}[]>}
+ *
+ * Consumidores: controllers/datosViewController.js (exportarEstadistica).
+ */
+async function reporteEstadisticoAnonimo(usuarioId) {
+  const citas = await prisma.cita.findMany({
+    where: { anulada: false, paciente: { bloqueado: false } },
+    select: {
+      pacienteId: true,
+      fecha: true,
+      medico: { select: { especialidad: { select: { nombre: true } } } },
+      paciente: { select: { fechaNacimientoCifrada: true } },
+    },
+  });
+  const nacimientos = new Map();
+  const registros = citas.map((cita) => {
+    if (!nacimientos.has(cita.pacienteId)) {
+      nacimientos.set(cita.pacienteId, descifrar('paciente.fechaNacimiento', cita.paciente.fechaNacimientoCifrada));
+    }
+    const fecha = cita.fecha.toISOString().slice(0, 10);
+    return {
+      pacienteId: cita.pacienteId,
+      anio: Number(fecha.slice(0, 4)),
+      especialidad: cita.medico.especialidad.nombre,
+      tramoEtario: tramoEtario(edadEnAnios(nacimientos.get(cita.pacienteId), fecha)),
+    };
+  });
+  const { filas, suprimidos } = agregarAnonimo(registros);
+  await registrar({ usuarioId, accion: 'EXPORT', entidad: 'Estadistica', entidadId: 0, detalle: { grupos: filas.length, suprimidos } });
+  return filas;
+}
+
 // Sin auditar: es un conteo agregado, no expone la identidad de ningún
 // paciente en particular (a diferencia de listarPacientes/obtenerPacientePorId).
 async function contar() {
@@ -605,6 +678,8 @@ async function contar() {
 }
 
 module.exports = {
+  agregarAnonimo,
+  reporteEstadisticoAnonimo,
   crearPaciente,
   obtenerPacientePorId,
   actualizarPaciente,

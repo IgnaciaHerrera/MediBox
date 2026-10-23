@@ -50,6 +50,9 @@ const ENTIDADES_EXPORTABLES = [
   // Solo pacientes con el consentimiento "investigación" vigente: revocarlo
   // los saca del reporte siguiente.
   { entidad: 'Investigacion', etiqueta: 'Pacientes para investigación (con consentimiento)', permiso: 'data.export', url: '/datos/exportar/investigacion.csv' },
+  // Anónimo: agregado y sin seudónimo, con los grupos de menos de 5
+  // pacientes suprimidos (pacienteService.agregarAnonimo).
+  { entidad: 'Estadistica', etiqueta: 'Estadística de atención (anónima)', permiso: 'data.export', url: '/datos/exportar/estadistica.csv' },
   { entidad: 'Cita', etiqueta: 'Agenda de citas', permiso: 'agenda.read', url: '/datos/exportar/citas.csv' },
   { entidad: 'AuditLog', etiqueta: 'Registro de auditoría', permiso: 'auditoria.read', url: '/datos/exportar/auditoria.csv' },
 ];
@@ -104,6 +107,15 @@ async function exportarInvestigacion(req, res, next) {
     const filas = await pacienteService.listarSeudonimizadoParaExport(req.usuario.id, { pacienteIds, finalidad: 'investigacion' });
     const csv = toCsv(['paciente', 'tramoEtario', 'anioRegistro', 'citas'], filas);
     enviarCsv(res, 'pacientes-investigacion.csv', csv);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function exportarEstadistica(req, res, next) {
+  try {
+    const filas = await pacienteService.reporteEstadisticoAnonimo(req.usuario.id);
+    enviarCsv(res, 'estadistica-anonima.csv', toCsv(['anio', 'especialidad', 'tramoEtario', 'pacientes', 'citas'], filas));
   } catch (err) {
     next(err);
   }
@@ -188,4 +200,4 @@ async function importarEspacios(req, res, next) {
   }
 }
 
-module.exports = { index, exportarPacientes, exportarInvestigacion, exportarCitas, exportarAuditoria, importarEspacios };
+module.exports = { index, exportarPacientes, exportarInvestigacion, exportarEstadistica, exportarCitas, exportarAuditoria, importarEspacios };
