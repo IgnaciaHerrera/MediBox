@@ -3,6 +3,7 @@ const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
 const { cifrar, descifrar } = require('../lib/cifrado');
 const { TRATAMIENTO } = require('../lib/tratamiento');
+const { ETIQUETAS } = require('../lib/archivoTitular');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { logger } = require('../lib/logger');
 const { registrar } = require('./auditService');
@@ -99,8 +100,9 @@ function exigeDocumento(solicitud) {
   return solicitud.solicitanteEsRepresentante && (IRREVERSIBLES.includes(solicitud.derecho) || solicitud.solicitanteRelacion === 'apoderado');
 }
 
-function acreditada(solicitud) {
-  return Boolean(solicitud.solicitanteAcreditacion) && solicitud.solicitanteAcreditacion !== consentimientoService.DECLARADA;
+// Lo exige y todavía no la acreditó con un documento.
+function faltaAcreditar(solicitud) {
+  return exigeDocumento(solicitud) && [null, consentimientoService.DECLARADA].includes(solicitud.solicitanteAcreditacion);
 }
 
 function sumarDias(fecha, dias) {
@@ -132,7 +134,6 @@ function calcularVencimiento(derecho, recibidaEl) {
   return derecho === 'bloqueo' ? sumarDiasHabiles(recibidaEl, PLAZO_BLOQUEO_DIAS_HABILES) : sumarDias(recibidaEl, PLAZO_RESPUESTA_DIAS);
 }
 
-const NOMBRE_DERECHO = { acceso: 'acceso', portabilidad: 'portabilidad', rectificacion: 'rectificación', supresion: 'supresión', bloqueo: 'bloqueo', oposicion: 'oposición' };
 
 // Acuse de recibo (art. 11) al contacto que el titular ya tenía registrado,
 // aunque la solicitud llegue por otro canal: si no la presentó él, se entera.
@@ -143,7 +144,7 @@ async function acusarRecibo(pacienteId, { id, derecho, recibidaEl, venceEl }) {
   try {
     await canalEnvio.enviar(
       contacto,
-      `MediBox recibió el ${fechaDMA(isoLocal(recibidaEl).slice(0, 10))} una solicitud de ${NOMBRE_DERECHO[derecho]} de sus datos, con el número ${id}. Responderemos a más tardar el ${fechaDMA(isoLocal(venceEl).slice(0, 10))}. Si usted no la presentó, avise en admisión.`,
+      `MediBox recibió el ${fechaDMA(isoLocal(recibidaEl).slice(0, 10))} una solicitud de ${ETIQUETAS.derecho[derecho].toLowerCase()} de sus datos, con el número ${id}. Responderemos a más tardar el ${fechaDMA(isoLocal(venceEl).slice(0, 10))}. Si usted no la presentó, avise en admisión.`,
     );
     return true;
   } catch {
@@ -293,7 +294,7 @@ async function registrarDesdePortal(pacienteId, cuerpo, verificacionId) {
  * funcionario (paso 2), si su método es uno que acepta ese derecho. Un
  * código solo vale si el contacto no cambió después de recibir la solicitud.
  * Si la presentó un representante y lo que pide exige la representación
- * acreditada (exigeDocumento), aquí se registra el documento que el
+ * acreditada (faltaAcreditar), aquí se registra el documento que el
  * funcionario vio.
  *
  * @param {number} solicitudId
@@ -313,7 +314,7 @@ async function verificarSolicitud(solicitudId, solicitante, { pacienteId, docume
   if (!solicitud || (pacienteId !== undefined && solicitud.pacienteId !== pacienteId)) throw new AppError('Solicitud no encontrada', 404);
   if (solicitud.estado !== 'recibida') throw new AppError('La solicitud ya está verificada o cerrada', 409);
   let acreditacion = solicitud.solicitanteAcreditacion;
-  if (exigeDocumento(solicitud) && !acreditada(solicitud)) {
+  if (faltaAcreditar(solicitud)) {
     if (!consentimientoService.DOCUMENTOS_REPRESENTACION.includes(documento)) {
       throw new AppError('La presenta un representante: indica el documento con que acreditó la representación', 409);
     }
@@ -388,7 +389,7 @@ async function listarPorPaciente(pacienteId) {
     pendienteDeVerificacion: f.estado === 'recibida',
     metodosAceptados: METODOS_POR_DERECHO[f.derecho],
     // Al verificarla hay que indicar el documento de la representación.
-    faltaAcreditar: exigeDocumento(f) && !acreditada(f),
+    faltaAcreditar: faltaAcreditar(f),
   }));
 }
 
@@ -439,7 +440,7 @@ function exigirVerificada(solicitud) {
   if (!METODOS_POR_DERECHO[solicitud.derecho].includes(solicitud.metodoVerificacion)) {
     throw new AppError('Este derecho exige verificar la identidad con la cédula en persona', 409);
   }
-  if (exigeDocumento(solicitud) && !acreditada(solicitud)) {
+  if (faltaAcreditar(solicitud)) {
     throw new AppError('La presenta un representante: falta acreditar la representación con un documento', 409);
   }
 }
@@ -609,7 +610,7 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       respuesta: solicitud.respuestaCifrada ? descifrar('solicitud.respuesta', solicitud.respuestaCifrada) : null,
       motivoProrroga: solicitud.prorrogaMotivoCifrado ? descifrar('solicitud.prorroga', solicitud.prorrogaMotivoCifrado) : null,
       metodosAceptados: METODOS_POR_DERECHO[solicitud.derecho],
-      faltaAcreditar: exigeDocumento(solicitud) && !acreditada(solicitud),
+      faltaAcreditar: faltaAcreditar(solicitud),
     },
     documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
     paciente: {
