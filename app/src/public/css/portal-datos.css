@@ -28,14 +28,7 @@
 }
 
 .portal-marca .landing-logo-icono {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 9px;
-}
-
-.portal-marca .landing-logo-icono svg {
-  width: 1.1rem;
-  height: 1.1rem;
+  height: 1.7rem;
 }
 
 /* Lo que el script oculta (botones de página, filas) no debe reaparecer por el

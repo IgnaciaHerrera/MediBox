@@ -80,17 +80,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 10px;
-  background: var(--teal);
-  color: var(--paper-raised);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  height: 2rem;
 }
 
-.landing-logo-icono svg {
-  width: 1.3rem;
-  height: 1.3rem;
+.landing-logo-icono img {
+  display: block;
+  height: 100%;
+  width: auto;
 }
 
 .landing-logo-texto {
@@ -186,12 +182,6 @@
 
 .landing-logo--claro {
   color: var(--noche-texto);
-}
-
-.landing-logo--claro .landing-logo-icono {
-  background: var(--paper-raised);
-  color: var(--teal-ink);
-  box-shadow: none;
 }
 
 .landing-nav {
