@@ -190,3 +190,18 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Categorías de datos de un incidente: un grupo de casillas con su título, sin el marco del navegador. */
+.consentimiento-form fieldset.field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.consentimiento-form fieldset.field legend {
+  margin-bottom: 0.35rem;
+  padding: 0;
+  color: var(--ink);
+  font-size: 0.85rem;
+}

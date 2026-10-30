@@ -613,6 +613,7 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       faltaAcreditar: faltaAcreditar(solicitud),
     },
     documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
+    relaciones: RELACIONES_SOLICITUD,
     paciente: {
       ...paciente,
       motivoBloqueo: paciente.bloqueado ? await motivoBloqueoDe(solicitud.pacienteId) : null,

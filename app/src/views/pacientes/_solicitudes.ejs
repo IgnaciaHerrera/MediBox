@@ -89,12 +89,13 @@
     <div class="tabla-scroll">
       <table class="tabla">
         <thead>
-          <tr><th>Recibida</th><th>Derecho</th><th>Canal</th><th>Estado</th><th>Vence</th><th><span class="sr-only">Acciones</span></th></tr>
+          <tr><th>N°</th><th>Recibida</th><th>Derecho</th><th>Canal</th><th>Estado</th><th>Vence</th><th><span class="sr-only">Acciones</span></th></tr>
         </thead>
         <tbody>
           <% solicitudes.forEach(function(s) { %>
             <% const estado = ESTADOS[s.estado]; %>
             <tr>
+              <td><%= s.id %></td>
               <td class="tiempo"><%= fechaDMA(isoLocal(s.recibidaEl).slice(0, 10)) %></td>
               <td><%= DERECHOS[s.derecho] %><%= s.campo ? ' (' + CAMPOS[s.campo].toLowerCase() + ')' : '' %></td>
               <td><%= CANALES[s.canal] %></td>
