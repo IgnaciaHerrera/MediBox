@@ -42,7 +42,9 @@ async function autenticar(email, password) {
   const usuario = await prisma.usuario.findUnique({ where: { email } });
   const hash = usuario ? usuario.passwordHash : await obtenerHashSimulado();
   const passwordValida = await verifyPassword(password, hash);
-  if (!usuario || !passwordValida) return null;
+  // Una cuenta suspendida (contención de un incidente) no entra aunque la
+  // contraseña sea correcta, y responde igual que una incorrecta.
+  if (!usuario || !passwordValida || usuario.suspendida) return null;
 
   return { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rolId: usuario.rolId };
 }

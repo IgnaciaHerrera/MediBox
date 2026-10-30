@@ -43,6 +43,9 @@
                     <% if (a.usuarioId) { %>
                       <a class="btn btn-neutro btn--auto btn--control" href="/auditoria?usuarioId=<%= a.usuarioId %>&desde=<%= isoLocal(a.desde).slice(0, 10) %>&hasta=<%= isoLocal(a.hasta).slice(0, 10) %>">Ver en auditoría</a>
                     <% } %>
+                    <% if (usuario.permisos.includes('incidentes.gestionar')) { %>
+                      <a class="btn btn-neutro btn--auto btn--control" href="/incidentes?titulo=<%= encodeURIComponent('Alerta: ' + a.nombre) %>">Registrar incidente</a>
+                    <% } %>
                   </td>
                 </tr>
               <% }) %>

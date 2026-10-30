@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const ESTADOS = { alerta: { texto: 'Alerta', clase: 'badge-agendada' }, sospechoso: { texto: 'Sospechoso', clase: 'badge-agendada' }, confirmado: { texto: 'Confirmado', clase: 'badge-anulada' }, descartado: { texto: 'Descartado', clase: '' }, cerrado: { texto: 'Cerrado', clase: 'badge-atendido' } };
+  const SEVERIDADES = { baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica' };
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'incidentes' }) %>
+
+  <main class="page-main">
+    <div class="page-head">
+      <div>
+        <h1>Incidentes de seguridad</h1>
+        <p class="page-sub">Registro de vulneraciones (Ley 21.719, art. 14 sexies): alerta → sospechoso → confirmado → cerrado, o descartado. Nada se borra.</p>
+      </div>
+    </div>
+
+    <section class="panel-card panel-lista">
+      <% if (incidentes.length === 0) { %>
+        <p class="panel-lista-vacio">No hay incidentes registrados.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead><tr><th>N°</th><th>Detectado</th><th>Título</th><th>Severidad</th><th>Estado</th><th><span class="sr-only">Abrir</span></th></tr></thead>
+            <tbody>
+              <% incidentes.forEach(function(i) { %>
+                <tr>
+                  <td><%= i.id %></td>
+                  <td class="tiempo"><%= fechaDMA(isoLocal(i.detectadoEl).slice(0, 16)) %></td>
+                  <td><%= i.titulo %></td>
+                  <td><%= SEVERIDADES[i.severidad] %></td>
+                  <td><span class="badge <%= ESTADOS[i.estado].clase %>"><%= ESTADOS[i.estado].texto %></span></td>
+                  <td><a class="btn btn-neutro btn--auto btn--control" href="/incidentes/<%= i.id %>">Abrir</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Registrar una alerta o un reporte</h2></div>
+      <form class="consentimiento-form" method="POST" action="/incidentes">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <%- include('_campos', { valores: sugerido, opciones }) %>
+        <button type="submit" class="btn btn-primary btn--auto btn--control">Registrar</button>
+      </form>
+      <p class="ayuda">Antes de contener (cerrar sesiones, suspender una cuenta), preserva la evidencia: <code>npm run incidente:evidencia</code>.</p>
+    </section>
+  </main>
+</body>
+</html>

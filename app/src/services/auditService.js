@@ -133,7 +133,34 @@ async function listarEntidadesDistintas() {
   return filas.map((f) => f.entidad);
 }
 
+// La auditoría se conserva lo mismo que el registro del paciente (Ley 20.584,
+// art. 13): así un paciente puede reclamar por un acceso indebido mientras
+// exista su ficha. El trigger de la base rechaza borrar una fila más nueva.
+const ANIOS_CONSERVACION = 15;
+
+/**
+ * Elimina las filas de auditoría que ya cumplieron los 15 años y deja
+ * constancia de cuántas. Solo funciona con el dueño de la base (la
+ * aplicación no tiene DELETE sobre audit_log) y solo sobre filas vencidas
+ * (el trigger rechaza el resto). Después conviene un VACUUM para que
+ * PostgreSQL reutilice el espacio de las filas borradas.
+ *
+ * @param {Date} [ahora]
+ * @returns {Promise<{eliminadas: number, anteriorA: Date}>}
+ *
+ * Consumidores: src/auditoria-purgar.js (npm run auditoria:purgar).
+ */
+async function purgarVencidos(ahora = new Date()) {
+  const anteriorA = new Date(ahora);
+  anteriorA.setFullYear(anteriorA.getFullYear() - ANIOS_CONSERVACION);
+  const eliminadas = await prisma.$executeRaw`DELETE FROM "audit_log" WHERE "timestamp" < ${anteriorA}`;
+  await registrar({ actor: 'sistema', accion: 'PURGAR_AUDITORIA', entidad: 'Sistema', entidadId: 0, detalle: { eliminadas, anteriorA: anteriorA.toISOString() } });
+  return { eliminadas, anteriorA };
+}
+
 module.exports = {
+  ANIOS_CONSERVACION,
+  purgarVencidos,
   registrar,
   indiceEmail,
   listar,

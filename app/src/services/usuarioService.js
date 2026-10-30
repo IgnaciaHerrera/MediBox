@@ -4,7 +4,7 @@ const { AppError } = require('../lib/AppError');
 const { registrar } = require('./auditService');
 const { cerrarSesionesDe } = require('./sesionService');
 
-const SELECT_SEGURO = { id: true, nombre: true, email: true, rolId: true, createdAt: true, rol: true };
+const SELECT_SEGURO = { id: true, nombre: true, email: true, rolId: true, createdAt: true, suspendida: true, rol: true };
 
 async function listar() {
   return prisma.usuario.findMany({ select: SELECT_SEGURO, orderBy: { nombre: 'asc' } });
@@ -109,6 +109,29 @@ async function cambiarPassword(id, nuevaPassword, solicitanteId, { sesionActual 
   await cerrarSesionesDe(id, { excepto: sesionActual, solicitanteId });
 }
 
+/**
+ * Suspende o reactiva una cuenta: la contención de una cuenta comprometida
+ * del plan de respuesta a incidentes. Suspender cierra además sus sesiones;
+ * la cuenta no se borra, porque la auditoría la referencia.
+ *
+ * @param {number} id - la cuenta.
+ * @param {boolean} suspendida - true para suspender, false para reactivar.
+ * @param {{actor?: ('usuario'|'sistema'), solicitanteId?: number}} [opciones]
+ * @returns {Promise<{cerradas: number}>} cuántas sesiones se cerraron.
+ * @throws {AppError} 404 si la cuenta no existe.
+ *
+ * Consumidores: src/cuentas.js (npm run cuenta:suspender).
+ */
+async function cambiarSuspension(id, suspendida, { actor = 'usuario', solicitanteId = null } = {}) {
+  await obtenerPorId(id);
+  await prisma.$transaction(async (tx) => {
+    await tx.usuario.update({ where: { id }, data: { suspendida, suspendidaEl: suspendida ? new Date() : null } });
+    await registrar({ actor, usuarioId: solicitanteId, accion: suspendida ? 'SUSPENDER_CUENTA' : 'REACTIVAR_CUENTA', entidad: 'Usuario', entidadId: id }, tx);
+  });
+  const cerradas = suspendida ? await cerrarSesionesDe(id, { actor, solicitanteId }) : 0;
+  return { cerradas };
+}
+
 async function listarPorRolNombre(rolNombre) {
   return prisma.usuario.findMany({
     where: { rol: { nombre: rolNombre } },
@@ -121,4 +144,4 @@ async function contar() {
   return prisma.usuario.count();
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, cambiarPassword, listarPorRolNombre, contar };
+module.exports = { listar, obtenerPorId, crear, actualizar, cambiarPassword, cambiarSuspension, listarPorRolNombre, contar };

@@ -176,3 +176,17 @@
 .page-main .panel-texto > .panel-lista-head + * {
   margin-top: 1rem;
 }
+
+/* Borrador de la notificación de un incidente: texto para copiar, con sus saltos de línea. */
+.incidente-borrador {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

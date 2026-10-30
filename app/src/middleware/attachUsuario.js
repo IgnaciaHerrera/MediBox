@@ -6,7 +6,9 @@ const { responderNoAutenticado } = require('../lib/responderError');
 async function attachUsuario(req, res, next) {
   try {
     const usuario = await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, include: { rol: true } });
-    if (!usuario) {
+    // Una cuenta suspendida pierde en la petición siguiente las sesiones que
+    // tuviera abiertas, aunque alguna no se haya alcanzado a cerrar.
+    if (!usuario || usuario.suspendida) {
       return responderNoAutenticado(req, res);
     }
     const permisos = await obtenerPermisosPorRol(usuario.rolId);

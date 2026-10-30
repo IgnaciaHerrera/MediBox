@@ -17,6 +17,10 @@ model Usuario {
   passwordHash String   @map("password_hash")
   rolId        Int      @map("rol_id")
   createdAt    DateTime @default(now()) @map("created_at")
+  // Contención de una cuenta comprometida: no inicia sesión y sus sesiones
+  // abiertas se cortan en la petición siguiente.
+  suspendida   Boolean   @default(false)
+  suspendidaEl DateTime? @map("suspendida_el")
 
   rol                        Rol                     @relation(fields: [rolId], references: [id])
   citasEditadas              Cita[]                  @relation("CitaUpdatedBy")
@@ -30,6 +34,7 @@ model Usuario {
   solicitudesRecibidas       SolicitudDerecho[]      @relation("SolicitudRecibidaPor")
   solicitudesVerificadas     SolicitudDerecho[]      @relation("SolicitudVerificadaPor")
   solicitudesResueltas       SolicitudDerecho[]      @relation("SolicitudResueltaPor")
+  incidentesRegistrados      Incidente[]
 
   @@map("usuarios")
 }
@@ -375,4 +380,39 @@ model SolicitudDerecho {
   @@index([pacienteId])
   @@index([estado, venceEl])
   @@map("solicitudes_derechos")
+}
+
+// Registro de incidentes de seguridad (Ley 21.719, art. 14 sexies): solo
+// conteos y categorías, nunca datos de pacientes. alerta -> sospechoso ->
+// confirmado -> cerrado, o descartado.
+model Incidente {
+  id                    Int       @id @default(autoincrement())
+  titulo                String
+  origen                String // alerta_automatica | reporte_funcionario | reporte_titular | hallazgo_externo
+  estado                String    @default("alerta")
+  severidad             String    @default("media") // baja | media | alta | critica
+  dimension             String // confidencialidad | integridad | disponibilidad
+  descripcion           String
+  detectadoEl           DateTime  @default(now()) @map("detectado_el")
+  ocurridoDesde         DateTime? @map("ocurrido_desde")
+  ocurridoHasta         DateTime? @map("ocurrido_hasta")
+  categoriasDatos       String[]  @default([]) @map("categorias_datos")
+  titularesAfectados    Int?      @map("titulares_afectados")
+  incluyeMenores        Boolean   @default(false) @map("incluye_menores")
+  consecuencias         String?
+  medidas               String?
+  recomendaciones       String?
+  lecciones             String?
+  sinNotificacionMotivo String?   @map("sin_notificacion_motivo")
+  notificadoAgenciaEl   DateTime? @map("notificado_agencia_el")
+  notificadoTitularesEl DateTime? @map("notificado_titulares_el")
+  notificadoCsirtEl     DateTime? @map("notificado_csirt_el")
+  cerradoEl             DateTime? @map("cerrado_el")
+  registradoPorId       Int       @map("registrado_por")
+  actualizadoEl         DateTime  @default(now()) @updatedAt @map("actualizado_el")
+
+  registradoPor Usuario @relation(fields: [registradoPorId], references: [id], onDelete: Restrict)
+
+  @@index([estado])
+  @@map("incidentes")
 }

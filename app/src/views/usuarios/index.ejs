@@ -72,7 +72,7 @@
                     <%= u.email %>
                   </span>
                 </td>
-                <td><span class="rol-chip rol-chip--<%= u.rol.nombre %>"><%= u.rol.nombre %></span></td>
+                <td><span class="rol-chip rol-chip--<%= u.rol.nombre %>"><%= u.rol.nombre %></span><% if (u.suspendida) { %> <span class="badge badge-anulada">Suspendida</span><% } %></td>
                 <td class="celda-derecha">
                   <a
                     class="fila-link btn-editar-usuario btn-mini"

@@ -1,0 +1,69 @@
+<%
+  // Campos del registro de un incidente (art. 14 sexies: naturaleza, efectos,
+  // categorías de datos, número aproximado de titulares y medidas). Nunca
+  // datos de pacientes: solo conteos y categorías.
+  const ORIGENES = { alerta_automatica: 'Alerta automática', reporte_funcionario: 'Reporte de un funcionario', reporte_titular: 'Reporte de un paciente', hallazgo_externo: 'Hallazgo fuera del sistema' };
+  const SEVERIDADES = { baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica' };
+  const DIMENSIONES = { confidencialidad: 'Confidencialidad', integridad: 'Integridad', disponibilidad: 'Disponibilidad' };
+  const CATEGORIAS = { identidad: 'Identificación', contacto: 'Contacto', salud: 'Salud', menores: 'Menores de 14', credenciales: 'Credenciales', trazabilidad: 'Registros de acceso' };
+  const v = valores || {};
+  const fecha = (d) => (d ? isoLocal(d).slice(0, 16).replace(' ', 'T') : '');
+  const completo = Boolean(v.id);
+%>
+<p class="aviso">No escribas datos de pacientes (nombres, RUT, contactos): solo qué pasó, conteos y categorías.</p>
+<div class="form-grid">
+  <div class="field">
+    <label for="inc-titulo">Título</label>
+    <input id="inc-titulo" name="titulo" maxlength="150" required value="<%= v.titulo || '' %>" />
+  </div>
+  <div class="field">
+    <label for="inc-origen">Origen</label>
+    <select id="inc-origen" name="origen" required>
+      <option value="">Elige…</option>
+      <% opciones.origenes.forEach(function(o) { %><option value="<%= o %>" <%= v.origen === o ? 'selected' : '' %>><%= ORIGENES[o] %></option><% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="inc-severidad">Severidad</label>
+    <select id="inc-severidad" name="severidad" required>
+      <% opciones.severidades.forEach(function(o) { %><option value="<%= o %>" <%= (v.severidad || 'media') === o ? 'selected' : '' %>><%= SEVERIDADES[o] %></option><% }) %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="inc-dimension">Qué se comprometió</label>
+    <select id="inc-dimension" name="dimension" required>
+      <option value="">Elige…</option>
+      <% opciones.dimensiones.forEach(function(o) { %><option value="<%= o %>" <%= v.dimension === o ? 'selected' : '' %>><%= DIMENSIONES[o] %></option><% }) %>
+    </select>
+  </div>
+</div>
+<div class="field">
+  <label for="inc-descripcion">Qué ocurrió</label>
+  <textarea id="inc-descripcion" name="descripcion" rows="3" maxlength="4000" required><%= v.descripcion || '' %></textarea>
+</div>
+<% if (completo) { %>
+  <div class="form-grid">
+    <div class="field"><label for="inc-desde">Ocurrió desde</label><input id="inc-desde" type="datetime-local" name="ocurridoDesde" value="<%= fecha(v.ocurridoDesde) %>" /></div>
+    <div class="field"><label for="inc-hasta">Ocurrió hasta</label><input id="inc-hasta" type="datetime-local" name="ocurridoHasta" value="<%= fecha(v.ocurridoHasta) %>" /></div>
+    <div class="field"><label for="inc-titulares">Titulares afectados (aprox.)</label><input id="inc-titulares" type="number" min="0" name="titularesAfectados" value="<%= v.titularesAfectados ?? '' %>" /></div>
+  </div>
+  <fieldset class="field">
+    <legend>Categorías de datos afectadas</legend>
+    <div class="consentimiento-fila">
+      <% opciones.categorias.forEach(function(c) { %>
+        <label class="casilla"><input type="checkbox" name="categoriasDatos" value="<%= c %>" <%= (v.categoriasDatos || []).includes(c) ? 'checked' : '' %> /> <%= CATEGORIAS[c] %></label>
+      <% }) %>
+      <label class="casilla"><input type="checkbox" name="incluyeMenores" value="si" <%= v.incluyeMenores ? 'checked' : '' %> /> Incluye menores de edad</label>
+    </div>
+  </fieldset>
+  <div class="field"><label for="inc-consecuencias">Posibles consecuencias para los titulares</label><textarea id="inc-consecuencias" name="consecuencias" rows="2" maxlength="4000"><%= v.consecuencias || '' %></textarea></div>
+  <div class="field"><label for="inc-medidas">Medidas de contención y mitigación</label><textarea id="inc-medidas" name="medidas" rows="2" maxlength="4000"><%= v.medidas || '' %></textarea></div>
+  <div class="field"><label for="inc-recomendaciones">Recomendaciones a los titulares</label><textarea id="inc-recomendaciones" name="recomendaciones" rows="2" maxlength="4000"><%= v.recomendaciones || '' %></textarea></div>
+  <div class="form-grid">
+    <div class="field"><label for="inc-agencia">Notificado a la Agencia</label><input id="inc-agencia" type="datetime-local" name="notificadoAgenciaEl" value="<%= fecha(v.notificadoAgenciaEl) %>" /></div>
+    <div class="field"><label for="inc-titulares-el">Comunicado a los titulares</label><input id="inc-titulares-el" type="datetime-local" name="notificadoTitularesEl" value="<%= fecha(v.notificadoTitularesEl) %>" /></div>
+    <div class="field"><label for="inc-csirt">Alertado al CSIRT Nacional</label><input id="inc-csirt" type="datetime-local" name="notificadoCsirtEl" value="<%= fecha(v.notificadoCsirtEl) %>" /></div>
+  </div>
+  <div class="field"><label for="inc-sin">Si no se notifica a la Agencia, por qué (sin riesgo razonable para los titulares)</label><textarea id="inc-sin" name="sinNotificacionMotivo" rows="2" maxlength="2000"><%= v.sinNotificacionMotivo || '' %></textarea></div>
+  <div class="field"><label for="inc-lecciones">Lecciones aprendidas (causa, medidas correctivas y preventivas)</label><textarea id="inc-lecciones" name="lecciones" rows="3" maxlength="4000"><%= v.lecciones || '' %></textarea></div>
+<% } %>

@@ -54,14 +54,16 @@ function responderNoAutenticado(req, res) {
  * @param {object} res
  * @param {string} mensaje - el aviso.
  * @param {object} [datos] - campos extra para la respuesta JSON.
+ * @param {string} [destino] - ruta de este sitio a la que volver, en vez de
+ *   la página anterior (p. ej. el registro recién creado).
  *
  * Consumidores: routes/verificacion.js, pacienteViewController,
- *   solicitudViewController.
+ *   solicitudViewController, incidenteViewController.
  */
-function responderAccion(req, res, mensaje, datos = {}) {
+function responderAccion(req, res, mensaje, datos = {}, destino) {
   if (pideHtml(req)) {
     toast(req, mensaje);
-    return res.redirect(paginaAnterior(req));
+    return res.redirect(destino || paginaAnterior(req));
   }
   return res.json({ ok: true, mensaje, ...datos });
 }

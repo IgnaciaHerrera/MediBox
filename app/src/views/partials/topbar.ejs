@@ -37,7 +37,8 @@
   const verRoles = usuario.permisos.includes('admin.roles');
   const verDatos = usuario.permisos.includes('data.export') || usuario.permisos.includes('data.import');
   const verSolicitudes = usuario.permisos.includes('derechos.gestionar');
-  const hayAdmin = verAuditoria || verUsuarios || verRoles || verDatos || verSolicitudes;
+  const verIncidentes = usuario.permisos.includes('incidentes.gestionar');
+  const hayAdmin = verAuditoria || verUsuarios || verRoles || verDatos || verSolicitudes || verIncidentes;
 
   const noLeidas = usuario.notificacionesNoLeidas;
 %>
@@ -87,6 +88,7 @@
       <% if (verSolicitudes) { %><a href="/solicitudes" <%- navAttrs('solicitudes') %>><%- icono('auditoria') %>Solicitudes</a><% } %>
       <% if (verAuditoria) { %><a href="/auditoria" <%- navAttrs('auditoria') %>><%- icono('auditoria') %>Auditoría</a><% } %>
       <% if (verAuditoria) { %><a href="/alertas" <%- navAttrs('alertas') %>><%- icono('auditoria') %>Alertas</a><% } %>
+      <% if (verIncidentes) { %><a href="/incidentes" <%- navAttrs('incidentes') %>><%- icono('auditoria') %>Incidentes</a><% } %>
       <% if (verUsuarios) { %><a href="/usuarios" <%- navAttrs('usuarios') %>><%- icono('usuarios') %>Usuarios</a><% } %>
       <% if (verRoles) { %><a href="/roles" <%- navAttrs('roles') %>><%- icono('roles') %>Roles</a><% } %>
       <% if (verDatos) { %><a href="/datos" <%- navAttrs('datos') %>><%- icono('datos') %>Datos</a><% } %>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<%- include('../partials/head', { titulo }) %>
+<%
+  const i = incidente;
+  const ESTADOS = { alerta: 'Alerta', sospechoso: 'Evento sospechoso', confirmado: 'Incidente confirmado', descartado: 'Descartado', cerrado: 'Cerrado' };
+  const ACCIONES = { sospechoso: 'No se pudo descartar: pasar a sospechoso', confirmado: 'Hay evidencia: confirmar el incidente', descartado: 'Descartar (falso positivo)', cerrado: 'Cerrar el caso' };
+  const abierto = i.siguientes.length > 0;
+%>
+</head>
+<body>
+  <%- include('../partials/topbar', { usuario, csrfToken, activo: 'incidentes' }) %>
+
+  <main class="page-main">
+    <a class="volver" href="/incidentes">← Volver a incidentes</a>
+    <div class="page-head">
+      <div>
+        <h1>N° <%= i.id %> · <%= i.titulo %></h1>
+        <p class="page-sub">
+          <%= ESTADOS[i.estado] %> · detectado el <%= fechaDMA(isoLocal(i.detectadoEl).slice(0, 16)) %>
+          <% if (i.cerradoEl) { %> · cerrado el <%= fechaDMA(isoLocal(i.cerradoEl).slice(0, 16)) %><% } %>
+        </p>
+      </div>
+    </div>
+
+    <% if (i.estado === 'confirmado') { %>
+      <section class="panel-card panel-lista panel-texto">
+        <div class="panel-lista-head"><h2>Plazos de notificación</h2></div>
+        <ul>
+          <li><strong>Agencia de Protección de Datos Personales</strong> (Ley 21.719, art. 14 sexies): sin dilaciones indebidas, si hay riesgo razonable para los titulares. <%= i.notificadoAgenciaEl ? 'Notificada el ' + fechaDMA(isoLocal(i.notificadoAgenciaEl).slice(0, 16)) + '.' : 'Pendiente.' %></li>
+          <li><strong>Titulares</strong>: <%= i.exigeNotificarTitulares ? 'obligatorio, porque afecta datos de salud o de menores de 14.' : 'solo si el análisis lo recomienda.' %> <%= i.notificadoTitularesEl ? 'Comunicado el ' + fechaDMA(isoLocal(i.notificadoTitularesEl).slice(0, 16)) + '.' : '' %></li>
+          <li><strong>CSIRT Nacional</strong> (Ley 21.663, art. 9): alerta temprana dentro de 3 horas si el incidente tiene efectos significativos sobre el servicio (vence el <%= fechaDMA(isoLocal(i.alertaCsirtVence).slice(0, 16)) %>). <%= i.notificadoCsirtEl ? 'Alertado el ' + fechaDMA(isoLocal(i.notificadoCsirtEl).slice(0, 16)) + '.' : '' %></li>
+        </ul>
+        <p class="ayuda">Quién autoriza la comunicación: el responsable de los datos (dirección del hospital), con la línea jurídica. Privacidad la redacta.</p>
+      </section>
+    <% } %>
+
+    <% if (abierto) { %>
+      <section class="panel-card panel-lista panel-texto">
+        <div class="panel-lista-head"><h2>Avanzar el caso</h2></div>
+        <div class="consentimiento-fila">
+          <% i.siguientes.forEach(function(estado) { %>
+            <form method="POST" action="/incidentes/<%= i.id %>/estado">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="estado" value="<%= estado %>" />
+              <button type="submit" class="btn <%= estado === 'descartado' ? 'btn-neutro' : 'btn-primary' %> btn--auto btn--control"><%= ACCIONES[estado] %></button>
+            </form>
+          <% }) %>
+        </div>
+        <p class="ayuda">Para cerrar: medidas, lecciones aprendidas y la notificación a la Agencia (o el motivo para no hacerla); si afecta salud o menores de 14, también la comunicación a los titulares.</p>
+      </section>
+
+      <section class="panel-card panel-lista panel-texto">
+        <div class="panel-lista-head"><h2>Análisis y respuesta</h2></div>
+        <form class="consentimiento-form" method="POST" action="/incidentes/<%= i.id %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <%- include('_campos', { valores: i, opciones }) %>
+          <button type="submit" class="btn btn-primary btn--auto btn--control">Guardar</button>
+        </form>
+      </section>
+    <% } else { %>
+      <section class="panel-card panel-lista panel-texto">
+        <div class="panel-lista-head"><h2>Registro</h2></div>
+        <p><%= i.descripcion %></p>
+        <% if (i.medidas) { %><p><strong>Medidas:</strong> <%= i.medidas %></p><% } %>
+        <% if (i.lecciones) { %><p><strong>Lecciones aprendidas:</strong> <%= i.lecciones %></p><% } %>
+        <% if (i.sinNotificacionMotivo) { %><p><strong>Sin notificación a la Agencia:</strong> <%= i.sinNotificacionMotivo %></p><% } %>
+      </section>
+    <% } %>
+
+    <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Borrador de la notificación</h2></div>
+      <p class="ayuda">Contenido mínimo del plan. El sistema no lo envía: lo revisa y autoriza el responsable de los datos.</p>
+      <pre class="incidente-borrador"><%= i.borrador %></pre>
+    </section>
+  </main>
+</body>
+</html>
