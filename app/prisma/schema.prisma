@@ -355,6 +355,13 @@ model SolicitudDerecho {
   verificadaPorId            Int?      @map("verificada_por")
   entrega                    String? // acceso y portabilidad: contacto_registrado | presencial | portal
   respuestaCifrada           Bytes?    @map("respuesta_cifrada")
+  verificadaEl               DateTime? @map("verificada_el")
+  // Al cerrar: atendida | parcial (denegación parcial, p. ej. la supresión,
+  // que conserva lo clínico) | rechazada.
+  resultado                  String?
+  // El plazo se prorroga una sola vez, hasta por 30 días (Ley 21.719, art. 11).
+  prorrogadaEl               DateTime? @map("prorrogada_el")
+  prorrogaMotivoCifrado      Bytes?    @map("prorroga_motivo_cifrado")
   resueltaEl                 DateTime? @map("resuelta_el")
   resueltaPorId              Int?      @map("resuelta_por")
 

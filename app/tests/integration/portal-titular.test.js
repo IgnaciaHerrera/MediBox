@@ -61,7 +61,7 @@ describe('Portal del titular: sus datos y sus derechos', () => {
   });
 
   it('descarga sus datos en Excel o PDF: queda como una portabilidad resuelta en el portal', async () => {
-    expect((await titular.post('/portal/descargar').send({ formato: 'json' })).status).toBe(400);
+    expect((await titular.post('/portal/descargar').send({ formato: 'csv' })).status).toBe(400);
     expect(await prisma.solicitudDerecho.count({ where: { pacienteId: pacientes.titular.id, derecho: 'portabilidad' } })).toBe(0);
 
     const excel = await comoBinario(titular.post('/portal/descargar').send({ formato: 'excel' }));

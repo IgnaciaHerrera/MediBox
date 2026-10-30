@@ -86,7 +86,7 @@ describe('Acceso y portabilidad de los datos del titular', () => {
 
   it('un formato inválido no genera nada ni resuelve la solicitud', async () => {
     await reautenticar(agente);
-    expect((await agente.post(`/solicitudes/${solicitud.id}/descargar`).send({ entrega: 'presencial', formato: 'json' })).status).toBe(400);
+    expect((await agente.post(`/solicitudes/${solicitud.id}/descargar`).send({ entrega: 'presencial', formato: 'csv' })).status).toBe(400);
     expect((await prisma.solicitudDerecho.findUnique({ where: { id: solicitud.id } })).estado).toBe('verificada');
   });
 

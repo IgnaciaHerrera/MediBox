@@ -186,9 +186,10 @@ router.post('/consentimientos/:clave/revocar', requirePortal, async (req, res, n
 router.post('/solicitudes', requirePortal, async (req, res, next) => {
   try {
     const { id, venceEl, pendienteDeCedula } = await portalService.registrarSolicitud(req.titular, req.body);
+    // Acuse de recibo con el número de seguimiento (Ley 21.719, art. 11).
     const mensaje = pendienteDeCedula
-      ? 'Solicitud registrada. Como no se puede deshacer, se ejecuta cuando muestre su cédula en admisión; el plazo de respuesta ya corre.'
-      : 'Solicitud registrada: el encargado de protección de datos la revisará.';
+      ? `Solicitud número ${id} registrada. Como no se puede deshacer, se ejecuta cuando muestre su cédula en admisión; el plazo de respuesta ya corre.`
+      : `Solicitud número ${id} registrada: el encargado de protección de datos la revisará.`;
     return responder(req, res, mensaje, { id, venceEl, pendienteDeCedula });
   } catch (err) {
     return next(err);

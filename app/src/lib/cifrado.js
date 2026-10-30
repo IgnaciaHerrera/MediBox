@@ -42,8 +42,10 @@ const LLAVE_POR_CAMPO = {
   'solicitud.valor.rut': 'PACIENTE_IDENTIDAD_KEY',
   'solicitud.valor.fechaNacimiento': 'PACIENTE_IDENTIDAD_KEY',
   'solicitud.valor.contacto': 'PACIENTE_CONTACTO_KEY',
-  // Lo que se le respondió al titular (puede explicar sus datos).
+  // Lo que se le respondió al titular (puede explicar sus datos), y por qué
+  // se prorrogó el plazo de respuesta.
   'solicitud.respuesta': 'PACIENTE_IDENTIDAD_KEY',
+  'solicitud.prorroga': 'PACIENTE_IDENTIDAD_KEY',
 };
 
 // Llaves de HMAC. Separadas de las de cifrado: quien tenga una puede

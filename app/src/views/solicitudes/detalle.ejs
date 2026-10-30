@@ -7,13 +7,14 @@
   const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo', portal: 'En el portal' };
   const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
   const METODOS = { cedula_presencial: 'cédula en persona', codigo_contacto: 'código al contacto registrado', codigo_portal: 'código ingresado por el titular en el portal' };
-  const ESTADOS = { recibida: 'Pendiente de verificación', verificada: 'Verificada', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+  const ESTADOS = { recibida: 'Pendiente de verificación', verificada: 'Verificada: en evaluación', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+  const RESULTADOS = { atendida: 'atendida', parcial: 'atendida en parte', rechazada: 'rechazada' };
   const DOCUMENTOS = { certificado_nacimiento: 'Certificado de nacimiento', resolucion_judicial: 'Resolución judicial', poder_notarial: 'Poder notarial' };
   const QUE_HACE = {
-    acceso: 'Genera una copia de todos los datos del titular, en PDF o en Excel.',
-    portabilidad: 'Genera una copia de todos los datos del titular en Excel, para llevarlos a otro responsable (o en PDF, para leerla).',
+    acceso: 'Entrega una copia de todos los datos del titular: en persona (JSON, Excel o PDF) o en el portal, con aviso al contacto registrado.',
+    portabilidad: 'Entrega una copia de todos los datos del titular en JSON, para llevarlos a otro responsable (o en Excel o PDF, para revisarla): en persona o en el portal.',
     rectificacion: 'Aplica el valor propuesto a la ficha, con historial del cambio.',
-    supresion: 'Elimina el contacto, los consentimientos y los datos del representante, y bloquea lo clínico, que la ley obliga a conservar. Anula sus citas futuras.',
+    supresion: 'Elimina el contacto, los consentimientos y los datos del representante, y bloquea lo clínico, que la ley obliga a conservar. Anula sus citas futuras. Se cierra como atendida en parte, con el aviso de reclamo ante la Agencia.',
     bloqueo: 'Bloquea al paciente: se conserva, pero no se usa para nada. Anula sus citas futuras.',
     oposicion: 'Revoca el consentimiento del uso al que se opone.',
   };
@@ -29,10 +30,12 @@
     <a class="volver" href="/solicitudes">← Volver a solicitudes</a>
     <div class="page-head">
       <div>
-        <h1><%= DERECHOS[s.derecho] %>: <%= paciente.nombre %></h1>
+        <h1>N° <%= s.id %> · <%= DERECHOS[s.derecho] %>: <%= paciente.nombre %></h1>
         <p class="page-sub">
-          Recibida el <%= fechaDMA(isoLocal(s.recibidaEl).slice(0, 10)) %> (<%= CANALES[s.canal].toLowerCase() %>) · vence el <%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %> · <%= ESTADOS[s.estado] %>
+          Recibida el <%= fechaDMA(isoLocal(s.recibidaEl).slice(0, 10)) %> (<%= CANALES[s.canal].toLowerCase() %>)<% if (s.verificadaEl) { %> · verificada el <%= fechaDMA(isoLocal(s.verificadaEl).slice(0, 10)) %><% } %>
+          · vence el <%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %><%= s.prorrogadaEl ? ' (prorrogada)' : '' %> · <%= ESTADOS[s.estado] %>
           <% if (s.metodoVerificacion) { %> con <%= METODOS[s.metodoVerificacion] %><% } %>
+          <% if (s.resultado) { %> · <%= RESULTADOS[s.resultado] %><% } %>
         </p>
       </div>
     </div>
@@ -52,6 +55,7 @@
       <% } %>
       <% if (s.derecho === 'oposicion') { %><p>Uso al que se opone: <strong><%= s.finalidadClave %></strong>.</p><% } %>
       <% if (paciente.bloqueado) { %><p class="aviso">Paciente bloqueado: <%= paciente.motivoBloqueo %></p><% } %>
+      <% if (s.motivoProrroga) { %><p>Motivo de la prórroga: <%= s.motivoProrroga %></p><% } %>
       <% if (s.respuesta) { %><p>Respuesta registrada: <%= s.respuesta %></p><% } %>
       <p class="ayuda">Método aceptado: <%= s.metodosAceptados.map(function(m) { return METODOS[m]; }).join(' o ') %>.</p>
     </section>
@@ -89,17 +93,18 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
             <select name="entrega" required aria-label="Cómo se entrega">
               <option value="">¿Cómo se entrega?</option>
-              <option value="presencial">En persona</option>
-              <option value="contacto_registrado">Al contacto registrado</option>
+              <option value="presencial">En persona: generar y descargar</option>
+              <option value="contacto_registrado">En el portal: avisar al contacto registrado</option>
             </select>
-            <select name="formato" required aria-label="Formato">
-              <option value="excel">Excel (portabilidad)</option>
+            <select name="formato" aria-label="Formato (en persona)">
+              <option value="json">JSON (portabilidad)</option>
+              <option value="excel">Excel (planilla)</option>
               <option value="pdf">PDF (para leer o imprimir)</option>
             </select>
-            <button type="submit" class="btn btn-primary btn--auto btn--control">Generar y descargar</button>
+            <button type="submit" class="btn btn-primary btn--auto btn--control">Entregar</button>
           </form>
         <% } %>
-        <p class="ayuda">El archivo se entrega solo en persona o al contacto que ya estaba registrado, nunca por el canal por el que llamaron.</p>
+        <p class="ayuda">Nunca por el canal por el que llamaron: en persona, o en el portal del paciente, donde el titular entra con un código que llega a su contacto registrado. A distancia el archivo no pasa por tu correo.</p>
       </section>
     <% } %>
 
@@ -111,6 +116,20 @@
           <label for="respuesta">Respuesta al titular</label>
           <textarea id="respuesta" name="respuesta" rows="3" maxlength="2000" required></textarea>
           <button type="submit" class="btn btn-primary btn--auto btn--control">Ejecutar y responder</button>
+        </form>
+      </section>
+    <% } %>
+
+    <% if (abierta && !s.prorrogadaEl && s.derecho !== 'bloqueo') { %>
+      <section class="panel-card panel-lista panel-texto">
+        <div class="panel-lista-head"><h2>Prorrogar el plazo</h2></div>
+        <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/prorrogar">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <label for="prorroga-dias">Días (una sola vez, hasta <%= prorrogaDias %>)</label>
+          <input id="prorroga-dias" name="dias" type="number" min="1" max="<%= prorrogaDias %>" value="<%= prorrogaDias %>" required />
+          <label for="prorroga-motivo">Motivo, para el titular</label>
+          <textarea id="prorroga-motivo" name="motivo" rows="2" maxlength="1000" required></textarea>
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Prorrogar</button>
         </form>
       </section>
     <% } %>

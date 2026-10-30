@@ -22,6 +22,7 @@ const COLUMNAS_CIFRADAS = [
   { modelo: 'consentimiento', columna: 'representanteCifrado', campo: () => 'consentimiento.representante' },
   { modelo: 'solicitudDerecho', columna: 'valorPropuestoCifrado', extra: 'campo', campo: (f) => `solicitud.valor.${f.campo}` },
   { modelo: 'solicitudDerecho', columna: 'respuestaCifrada', campo: () => 'solicitud.respuesta' },
+  { modelo: 'solicitudDerecho', columna: 'prorrogaMotivoCifrado', campo: () => 'solicitud.prorroga' },
 ];
 
 // Llaves que no tienen nada rotable en la base:

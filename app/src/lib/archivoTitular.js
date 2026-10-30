@@ -3,12 +3,13 @@ const PDFDocument = require('pdfkit');
 const { isoLocal, fechaDMA } = require('./fecha');
 const { AppError } = require('./AppError');
 
-// El archivo del titular (acceso y portabilidad) en dos formatos, con las
-// mismas secciones:
-//   - Excel (.xlsx): una hoja por sección y una fila por registro. Es el de
-//     la portabilidad: estructurado y de uso común, para llevar los datos a
-//     otro responsable. Los valores van como texto, nunca como fórmula, así
-//     que un dato que empiece con "=" no se ejecuta al abrir el archivo.
+// El archivo del titular (acceso y portabilidad) en tres formatos, con los
+// mismos datos:
+//   - JSON: para llevar los datos a otro responsable (portabilidad): un
+//     formato estructurado y genérico que cualquier sistema lee.
+//   - Excel (.xlsx): una hoja por sección y una fila por registro, para
+//     revisarlo en una planilla. Los valores van como texto, nunca como
+//     fórmula, así que un dato que empiece con "=" no se ejecuta al abrirlo.
 //   - PDF: la misma información para leerla o imprimirla. No sirve para
 //     portabilidad por sí solo: no es un formato que otro sistema pueda leer.
 // Ninguno lleva datos de otras personas ni ids internos: son los mismos
@@ -16,7 +17,8 @@ const { AppError } = require('./AppError');
 
 const ETIQUETAS = {
   derecho: { acceso: 'Acceso', portabilidad: 'Portabilidad', rectificacion: 'Rectificación', supresion: 'Supresión', bloqueo: 'Bloqueo', oposicion: 'Oposición' },
-  estadoSolicitud: { recibida: 'Pendiente de verificar la identidad', verificada: 'En revisión', resuelta: 'Resuelta', rechazada: 'Rechazada' },
+  estadoSolicitud: { recibida: 'Pendiente de verificar la identidad', verificada: 'En evaluación', resuelta: 'Resuelta', rechazada: 'Rechazada' },
+  resultadoSolicitud: { atendida: 'Atendida', parcial: 'Atendida en parte', rechazada: 'Rechazada' },
   canal: { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo', portal: 'En el portal' },
   campo: { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' },
   estadoCita: { agendada: 'Agendada', atendido: 'Atendida', no_atendido: 'No atendida' },
@@ -35,6 +37,8 @@ const ETIQUETAS = {
     VERIFICAR_SOLICITUD: 'Verificación de una solicitud',
     EJECUTAR_DERECHO: 'Se resolvió una solicitud',
     RECHAZAR_DERECHO: 'Se rechazó una solicitud',
+    PRORROGAR_DERECHO: 'Se prorrogó el plazo de una solicitud',
+    AVISAR_ENTREGA: 'Aviso de que su copia está en el portal',
     BLOQUEAR: 'Bloqueo de sus datos',
     DESBLOQUEAR: 'Fin del bloqueo',
     ANOTAR_SUPRESION: 'Registro de su supresión',
@@ -46,13 +50,15 @@ const ETIQUETAS = {
 
 // Columnas de texto largo: más anchas en el Excel y las que se reparten el
 // espacio sobrante en el PDF.
-const LARGAS = ['Texto aceptado', 'Respuesta', 'Finalidad', 'Base legal', 'Motivo'];
+const LARGAS = ['Texto aceptado', 'Respuesta', 'Finalidad', 'Base legal', 'Motivo', 'Motivo de la prórroga', 'Origen'];
 
 // Todas las fechas como día-mes-año, igual que en la interfaz: las marcas de
 // tiempo con hora y minutos ("16-10-2026 10:12"), las fechas sin hora solas.
 const fecha = (valor) => (valor ? fechaDMA(isoLocal(valor).slice(0, 16)) : '');
 const dia = (iso) => (iso ? fechaDMA(iso.slice(0, 10)) : '');
 const etiqueta = (grupo, valor) => (valor ? ETIQUETAS[grupo][valor] || valor : '');
+// La fecha de nacimiento vigente viene como AAAA-MM-DD: se muestra igual que la anterior.
+const campoVisible = (campo, valor) => (campo === 'fechaNacimiento' ? dia(valor) : valor);
 
 /**
  * Las secciones del archivo, como tablas: el único lugar que decide qué
@@ -107,22 +113,31 @@ function secciones(archivo) {
     },
     {
       titulo: 'Solicitudes',
-      columnas: ['Derecho', 'Dato', 'Canal', 'Recibida el', 'Vence el', 'Estado', 'Resuelta el', 'Respuesta'],
+      columnas: ['N°', 'Derecho', 'Dato', 'Canal', 'Recibida el', 'Verificada el', 'Vence el', 'Estado', 'Resultado', 'Resuelta el', 'Motivo de la prórroga', 'Respuesta'],
       filas: archivo.solicitudes.map((s) => [
+        String(s.numero),
         etiqueta('derecho', s.derecho),
         etiqueta('campo', s.campo),
         etiqueta('canal', s.canal),
         fecha(s.recibidaEl),
-        fecha(s.venceEl),
+        fecha(s.verificadaEl),
+        fecha(s.venceEl) + (s.prorrogadaEl ? ' (prorrogada)' : ''),
         etiqueta('estadoSolicitud', s.estado),
+        etiqueta('resultadoSolicitud', s.resultado),
         fecha(s.resueltaEl),
+        s.motivoProrroga || '',
         s.respuesta || '',
       ]),
     },
     {
       titulo: 'Cambios de mis datos',
-      columnas: ['Dato', 'Cambiado el', 'Valor anterior'],
-      filas: archivo.historialCambios.map((h) => [etiqueta('campo', h.campo), fecha(h.cambiadoEl), h.valorAnterior === null ? '(eliminado)' : h.valorAnterior]),
+      columnas: ['Dato', 'Cambiado el', 'Valor anterior', 'Valor nuevo'],
+      filas: archivo.historialCambios.map((h) => [
+        etiqueta('campo', h.campo),
+        fecha(h.cambiadoEl),
+        h.valorAnterior === null ? '(eliminado)' : campoVisible(h.campo, h.valorAnterior),
+        h.valorNuevo === null ? '(eliminado)' : campoVisible(h.campo, h.valorNuevo),
+      ]),
     },
     {
       titulo: 'Accesos a mis datos',
@@ -131,12 +146,12 @@ function secciones(archivo) {
     },
     {
       titulo: 'Cómo tratamos mis datos',
-      columnas: ['Datos', 'Finalidad', 'Base legal', 'Plazo'],
+      columnas: ['Datos', 'Origen', 'Finalidad', 'Base legal', 'Plazo'],
       filas: [
-        ...archivo.tratamiento.datos.map((d) => [`${d.categoria}: ${d.datos}`, d.finalidad, d.base, d.plazo]),
-        ['Destinatarios', archivo.tratamiento.destinatarios, '', ''],
-        ['Responsable', archivo.tratamiento.responsable, '', ''],
-        ['Cómo ejercer sus derechos', archivo.tratamiento.comoEjercerlos, '', ''],
+        ...archivo.tratamiento.datos.map((d) => [`${d.categoria}: ${d.datos}`, d.origen, d.finalidad, d.base, d.plazo]),
+        ['Destinatarios', '', archivo.tratamiento.destinatarios, '', ''],
+        ['Responsable', '', archivo.tratamiento.responsable, '', ''],
+        ['Cómo ejercer sus derechos', '', archivo.tratamiento.comoEjercerlos, '', ''],
       ],
     },
   ];
@@ -193,23 +208,39 @@ function aPdf(archivo) {
   });
 }
 
+/**
+ * El archivo como JSON: el formato de la portabilidad por excelencia
+ * (estructurado, genérico y de uso común, Ley 21.719, art. 9), que otro
+ * sistema lee sin conocer MediBox. Las fechas van en ISO 8601, para una
+ * máquina; son los mismos datos que el Excel y el PDF, sin ids internos.
+ *
+ * @param {object} archivo - ver secciones().
+ * @returns {Buffer} UTF-8.
+ *
+ * Consumidores: enviarArchivo() (formato 'json').
+ */
+function aJson(archivo) {
+  return Buffer.from(JSON.stringify({ formato: 'medibox-titular', version: 1, ...archivo }, null, 2), 'utf8');
+}
+
 const FORMATOS = {
   excel: { extension: 'xlsx', tipo: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', generar: aExcel },
   pdf: { extension: 'pdf', tipo: 'application/pdf', generar: aPdf },
+  json: { extension: 'json', tipo: 'application/json; charset=utf-8', generar: aJson },
 };
 
 /**
  * Valida el formato pedido. Se llama antes de generar el archivo: generarlo
  * resuelve la solicitud, y un formato inválido no debe dejarla resuelta.
  *
- * @param {*} valor - 'excel' o 'pdf'.
+ * @param {*} valor - 'excel', 'pdf' o 'json'.
  * @returns {string} el mismo valor, ya validado.
  * @throws {AppError} 400 con cualquier otro valor.
  *
  * Consumidores: routes/portal.js, solicitudViewController.descargar.
  */
 function validarFormato(valor) {
-  if (!Object.prototype.hasOwnProperty.call(FORMATOS, valor)) throw new AppError('Elige el formato: Excel o PDF', 400);
+  if (!Object.prototype.hasOwnProperty.call(FORMATOS, valor)) throw new AppError('Elige el formato: Excel, PDF o JSON', 400);
   return valor;
 }
 
@@ -234,4 +265,4 @@ async function enviarArchivo(res, archivo, formato, nombre) {
   res.send(contenido);
 }
 
-module.exports = { ETIQUETAS, secciones, aExcel, aPdf, validarFormato, enviarArchivo };
+module.exports = { ETIQUETAS, secciones, aExcel, aPdf, aJson, validarFormato, enviarArchivo };

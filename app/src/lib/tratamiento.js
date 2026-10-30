@@ -10,6 +10,7 @@ const TRATAMIENTO = {
     {
       categoria: 'Identificación',
       datos: 'Nombre, RUT y fecha de nacimiento',
+      origen: 'Los entregó usted (o su representante) al registrarse en admisión.',
       finalidad: 'Identificar sin ambigüedad a quien se atiende en la agenda y en la atención.',
       base: 'Tratamiento por un órgano público en sus funciones legales (Ley 19.628, art. 20; Ley 21.719, art. 20).',
       plazo: 'Al menos 15 años (Ley 20.584, art. 13).',
@@ -17,6 +18,7 @@ const TRATAMIENTO = {
     {
       categoria: 'Contacto',
       datos: 'Teléfono o correo (opcional)',
+      origen: 'Lo entregó usted en admisión o lo corrigió en una rectificación.',
       finalidad: 'Avisar cambios o anulaciones de las citas y, solo con consentimiento, enviar recordatorios o encuestas.',
       base: 'Órgano público (avisos); consentimiento (recordatorios y encuestas).',
       plazo: 'Se elimina tras dos años sin citas.',
@@ -24,6 +26,7 @@ const TRATAMIENTO = {
     {
       categoria: 'Salud',
       datos: 'Citas (fecha, médico, especialidad, box y estado) y motivo de consulta',
+      origen: 'Las genera el hospital al agendar y atender; el motivo lo registra admisión con lo que usted informa.',
       finalidad: 'Coordinar y orientar la atención de salud.',
       base: 'Dato de salud para la asistencia sanitaria (Ley 19.628, art. 10; Ley 21.719, art. 16 bis letra e; Ley 20.584, arts. 12 y 13).',
       plazo: 'Al menos 15 años (Ley 20.584, art. 13).',
@@ -31,6 +34,7 @@ const TRATAMIENTO = {
     {
       categoria: 'Trazabilidad',
       datos: 'Registro de quién accedió a sus datos, cuándo y para qué',
+      origen: 'Lo genera el sistema automáticamente.',
       finalidad: 'Rendir cuentas de los accesos y detectar accesos indebidos.',
       base: 'Obligación legal de resguardar los datos (Ley 19.628, art. 11; Ley 21.719, art. 14 quinquies).',
       plazo: 'Al menos 15 años, igual que el registro del paciente.',
@@ -54,7 +58,7 @@ const TRATAMIENTO = {
     ],
     condiciones: [
       'Para la supresión y el bloqueo se pide la cédula en persona.',
-      'El hospital responde dentro de 30 días corridos (plazo a confirmar con la línea jurídica).',
+      'El hospital acusa recibo con un número de seguimiento y responde dentro de 30 días corridos, prorrogables una vez por 30 días más; un bloqueo, dentro de 2 días hábiles (Ley 21.719, art. 11).',
       'Es gratuito.',
     ],
   },

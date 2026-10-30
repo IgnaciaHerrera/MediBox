@@ -8,7 +8,7 @@ const { AppError } = require('../lib/AppError');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { toast } = require('../lib/toast');
 const { responderAccion } = require('../lib/responderError');
-const { hoyISO } = require('../lib/fecha');
+const { hoyISO, isoLocal, fechaDMA } = require('../lib/fecha');
 
 const pacienteSchema = Joi.object({
   nombre: Joi.string().min(2).max(150).required(),
@@ -270,8 +270,10 @@ async function revocarConsentimiento(req, res, next) {
 
 async function registrarSolicitud(req, res, next) {
   try {
-    const { id } = await derechosService.registrarSolicitud({ ...req.body, pacienteId: Number(req.params.id) }, req.usuario);
-    return responderAccion(req, res, 'Solicitud registrada. Verifica la identidad del titular para que privacidad pueda resolverla.', { id });
+    const { id, venceEl, acuse } = await derechosService.registrarSolicitud({ ...req.body, pacienteId: Number(req.params.id) }, req.usuario);
+    // El número de seguimiento se le da al titular en el momento (acuse de recibo).
+    const aviso = acuse ? ' Se envió el acuse al contacto registrado.' : '';
+    return responderAccion(req, res, `Solicitud número ${id} registrada: dale ese número al titular. Vence el ${fechaDMA(isoLocal(venceEl).slice(0, 10))}.${aviso} Verifica su identidad para que privacidad pueda resolverla.`, { id, venceEl });
   } catch (err) {
     return next(err);
   }

@@ -14,7 +14,7 @@
     <div class="page-head">
       <div>
         <h1>Solicitudes de derechos</h1>
-        <p class="page-sub">Abiertas, de la más próxima a vencer a la más lejana. Plazo de respuesta: <%= plazoDias %> días corridos desde la recepción (a confirmar con la línea jurídica).</p>
+        <p class="page-sub">Abiertas, de la más próxima a vencer a la más lejana. Plazo: <%= plazoDias %> días corridos desde la recepción, prorrogable una vez hasta por <%= prorrogaDias %> días; un bloqueo, 2 días hábiles (Ley 21.719, art. 11).</p>
       </div>
     </div>
 
@@ -25,12 +25,15 @@
         <div class="tabla-scroll">
           <table class="tabla">
             <thead>
-              <tr><th>Vence</th><th>Titular</th><th>Derecho</th><th>Canal</th><th>Estado</th><th><span class="sr-only">Abrir</span></th></tr>
+              <tr><th>N°</th><th>Vence</th><th>Titular</th><th>Derecho</th><th>Canal</th><th>Estado</th><th><span class="sr-only">Abrir</span></th></tr>
             </thead>
             <tbody>
               <% solicitudes.forEach(function(s) { %>
                 <tr>
-                  <td class="tiempo<%= s.dentroDePlazo ? '' : ' solicitud-pendiente' %>"><%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %><%= s.dentroDePlazo ? '' : ' (vencida)' %></td>
+                  <td><%= s.id %></td>
+                  <td class="tiempo<%= s.dentroDePlazo && !s.porVencer ? '' : ' solicitud-pendiente' %>">
+                    <%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %><%= s.dentroDePlazo ? (s.porVencer ? ' (por vencer)' : '') : ' (vencida)' %><%= s.prorrogadaEl ? ' · prorrogada' : '' %>
+                  </td>
                   <td><%= s.paciente %></td>
                   <td><%= DERECHOS[s.derecho] %></td>
                   <td><%= CANALES[s.canal] %></td>
@@ -38,7 +41,7 @@
                     <% if (s.pendienteDeVerificacion) { %>
                       <span class="badge badge-agendada">Pendiente de verificación</span>
                     <% } else { %>
-                      <span class="badge badge-atendido">Verificada</span>
+                      <span class="badge badge-atendido">En evaluación</span>
                     <% } %>
                   </td>
                   <td><a class="btn btn-neutro btn--auto btn--control" href="/solicitudes/<%= s.id %>">Abrir</a></td>

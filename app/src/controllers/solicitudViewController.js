@@ -29,6 +29,7 @@ async function index(req, res, next) {
       csrfToken: res.locals.csrfToken,
       solicitudes: await derechosService.listarPendientes(req.usuario),
       plazoDias: derechosService.PLAZO_RESPUESTA_DIAS,
+      prorrogaDias: derechosService.PRORROGA_MAXIMA_DIAS,
     });
   } catch (err) {
     next(err);
@@ -45,6 +46,7 @@ async function detalle(req, res, next) {
       ...datos,
       verificacion: await verificacionService.estadoParaVista(datos.paciente.id, req.usuario.id, datos.paciente.contacto),
       reautenticado: reautenticacionVigente(req),
+      prorrogaDias: derechosService.PRORROGA_MAXIMA_DIAS,
     });
   } catch (err) {
     next(err);
@@ -78,6 +80,15 @@ async function rechazar(req, res, next) {
   }
 }
 
+async function prorrogar(req, res, next) {
+  try {
+    const { venceEl } = await derechosService.prorrogar(idDe(req), req.usuario, req.body);
+    responderAccion(req, res, 'Plazo prorrogado: se avisó al titular', { venceEl });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function desbloquear(req, res, next) {
   try {
     await derechosService.desbloquear(idDe(req), req.usuario);
@@ -90,7 +101,7 @@ async function desbloquear(req, res, next) {
 async function nueva(req, res, next) {
   try {
     const { id } = await derechosService.registrarSolicitud(req.body, req.usuario, { origenSolicitudId: idDe(req) });
-    responderAccion(req, res, 'Solicitud registrada: verifica la identidad del titular para resolverla', { id });
+    responderAccion(req, res, `Solicitud número ${id} registrada: verifica la identidad del titular para resolverla`, { id });
   } catch (err) {
     next(err);
   }
@@ -116,10 +127,12 @@ async function descargar(req, res, next) {
     const id = idDe(req);
     const formato = validarFormato(req.body.formato);
     const archivo = await derechosService.exportarDatosTitular(id, req.usuario, { entrega: req.body.entrega, formato });
-    await enviarArchivo(res, archivo, formato, `datos-titular-${id}`);
+    // Al contacto registrado no se genera nada aquí: el titular lo descarga en el portal.
+    if (!archivo) return responderAccion(req, res, 'Se avisó al contacto registrado: el titular descarga su copia en el portal');
+    return await enviarArchivo(res, archivo, formato, `datos-titular-${id}`);
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { index, detalle, verificar, ejecutar, rechazar, desbloquear, nueva, reautenticar, descargar };
+module.exports = { index, detalle, verificar, ejecutar, rechazar, prorrogar, desbloquear, nueva, reautenticar, descargar };

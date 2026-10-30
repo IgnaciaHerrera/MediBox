@@ -11,6 +11,9 @@ const citaService = require('./citaService');
 const consentimientoService = require('./consentimientoService');
 const { registrarSupresion } = require('./supresionService');
 const { METODOS, exigirVerificacion } = require('./verificacionService');
+const { crearNotificacion } = require('./notificacionService');
+const canalEnvio = require('../lib/canalEnvio');
+const { isoLocal, fechaDMA } = require('../lib/fecha');
 
 // Derechos del titular (ARCO+, Hito 3). Los cinco pasos de la clase:
 //   1. Recepción: un funcionario registra la solicitud, por el canal por el
@@ -25,11 +28,18 @@ const DERECHOS = ['acceso', 'portabilidad', 'rectificacion', 'supresion', 'bloqu
 // opción para el personal: solo lo asigna el servidor.
 const CANAL_PORTAL = 'portal';
 
-// Plazo para responder, en días corridos desde la recepción. Ley 21.719
-// (rige desde el 01/12/2026): plazo de respuesta del responsable a una
-// solicitud de derechos; Ley 19.628, art. 16, para el régimen vigente.
-// a confirmar con la línea jurídica (plazo y si es prorrogable).
+// Plazos de respuesta de la Ley 21.719, art. 11 (rige desde el 01/12/2026):
+// 30 días corridos desde el ingreso, prorrogables una sola vez hasta por 30
+// días más; el bloqueo temporal se responde dentro de 2 días hábiles.
 const PLAZO_RESPUESTA_DIAS = 30;
+const PRORROGA_MAXIMA_DIAS = 30;
+const PLAZO_BLOQUEO_DIAS_HABILES = 2;
+// Cuándo avisar a privacidad que una solicitud está por vencer.
+const AVISO_VENCIMIENTO_DIAS = 3;
+// Lo que la ley exige decirle al titular en una denegación total o parcial
+// (art. 11): que puede reclamar ante la Agencia.
+const AVISO_RECLAMO =
+  'Si no está de acuerdo con esta respuesta, puede reclamar ante la Agencia de Protección de Datos Personales dentro de 30 días hábiles (Ley 21.719, art. 11).';
 
 // Qué método de verificación acepta cada derecho: una sola fuente para la
 // vista (qué ofrecer) y el servicio (qué aceptar). La supresión y el bloqueo
@@ -97,6 +107,50 @@ function sumarDias(fecha, dias) {
   return new Date(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
 }
 
+// ponytail: solo salta sábados y domingos, no los feriados; agregar una
+// tabla de feriados si un bloqueo pedido en víspera de feriado vence antes de lo debido.
+function sumarDiasHabiles(fecha, dias) {
+  let resultado = new Date(fecha);
+  let restantes = dias;
+  while (restantes > 0) {
+    resultado = sumarDias(resultado, 1);
+    if (resultado.getDay() !== 0 && resultado.getDay() !== 6) restantes -= 1;
+  }
+  return resultado;
+}
+
+/**
+ * Fecha límite para responder una solicitud recibida en una fecha.
+ *
+ * @param {string} derecho
+ * @param {Date} recibidaEl
+ * @returns {Date} 2 días hábiles para el bloqueo; 30 días corridos para el resto.
+ *
+ * Consumidores: crearSolicitud(), exportarDesdePortal(); tests.
+ */
+function calcularVencimiento(derecho, recibidaEl) {
+  return derecho === 'bloqueo' ? sumarDiasHabiles(recibidaEl, PLAZO_BLOQUEO_DIAS_HABILES) : sumarDias(recibidaEl, PLAZO_RESPUESTA_DIAS);
+}
+
+const NOMBRE_DERECHO = { acceso: 'acceso', portabilidad: 'portabilidad', rectificacion: 'rectificación', supresion: 'supresión', bloqueo: 'bloqueo', oposicion: 'oposición' };
+
+// Acuse de recibo (art. 11) al contacto que el titular ya tenía registrado,
+// aunque la solicitud llegue por otro canal: si no la presentó él, se entera.
+// Es un mejor esfuerzo: sin contacto, o si el envío falla, la solicitud sigue.
+async function acusarRecibo(pacienteId, { id, derecho, recibidaEl, venceEl }) {
+  const contacto = (await pacienteService.contactosParaProceso([pacienteId])).get(pacienteId);
+  if (!contacto) return false;
+  try {
+    await canalEnvio.enviar(
+      contacto,
+      `MediBox recibió el ${fechaDMA(isoLocal(recibidaEl).slice(0, 10))} una solicitud de ${NOMBRE_DERECHO[derecho]} de sus datos, con el número ${id}. Responderemos a más tardar el ${fechaDMA(isoLocal(venceEl).slice(0, 10))}. Si usted no la presentó, avise en admisión.`,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Registra una solicitud de derechos (paso 1). Queda 'recibida' y sin
  * verificar: verificar es un paso aparte, y una solicitud que no se puede
@@ -108,7 +162,8 @@ function sumarDias(fecha, dias) {
  * @param {{id: number, permisos: string[]}} solicitante - req.usuario.
  * @param {{origenSolicitudId?: number}} [opciones] - para privacidad: el
  *   titular es el de esa solicitud anterior (también si está bloqueado).
- * @returns {Promise<{id: number, venceEl: Date}>}
+ * @returns {Promise<{id: number, venceEl: Date, acuse: boolean}>} acuse: si se envió el
+ *   acuse de recibo al contacto registrado.
  * @throws {AppError} 400 si faltan datos o son inválidos; 404 si el
  *   paciente está fuera de su alcance.
  *
@@ -170,9 +225,11 @@ async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuar
       derecho: value.derecho,
       canal: value.canal,
       recibidaEl,
-      venceEl: sumarDias(recibidaEl, PLAZO_RESPUESTA_DIAS),
+      venceEl: calcularVencimiento(value.derecho, recibidaEl),
       recibidaPorId,
-      ...(verificacion ? { estado: 'verificada', identidadVerificada: true, metodoVerificacion: verificacion.metodo, verificacionId: verificacion.id } : {}),
+      ...(verificacion
+        ? { estado: 'verificada', identidadVerificada: true, metodoVerificacion: verificacion.metodo, verificacionId: verificacion.id, verificadaEl: recibidaEl }
+        : {}),
       solicitanteEsRepresentante: value.solicitanteEsRepresentante,
       solicitanteRelacion: value.solicitanteEsRepresentante ? value.solicitanteRelacion || null : null,
       solicitanteAcreditacion: acreditacion,
@@ -190,7 +247,8 @@ async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuar
     entidadId: pacienteId,
     detalle: { solicitudId: fila.id, derecho: value.derecho, canal: value.canal, ...(verificacion ? { metodo: verificacion.metodo } : {}) },
   });
-  return fila;
+  const acuse = await acusarRecibo(pacienteId, { ...fila, derecho: value.derecho, recibidaEl });
+  return { ...fila, acuse };
 }
 
 // Lo que el titular puede pedir en el portal. El acceso y la portabilidad
@@ -213,7 +271,7 @@ const solicitudPortalSchema = solicitudSchema.keys({
  * @param {object} cuerpo - derecho y, según el derecho, campo y valorPropuesto;
  *   solicitanteEsRepresentante y solicitanteRelacion para un menor de 14.
  * @param {number} verificacionId - el código con que ingresó.
- * @returns {Promise<{id: number, venceEl: Date, pendienteDeCedula: boolean}>}
+ * @returns {Promise<{id: number, venceEl: Date, acuse: boolean, pendienteDeCedula: boolean}>}
  * @throws {AppError} 400 si faltan datos o son inválidos.
  *
  * Consumidores: portalService.registrarSolicitud.
@@ -281,6 +339,7 @@ async function verificarSolicitud(solicitudId, solicitante, { pacienteId, docume
       metodoVerificacion: verificacion.metodo,
       verificacionId: verificacion.id,
       verificadaPorId: solicitante.id,
+      verificadaEl: new Date(),
       solicitanteAcreditacion: acreditacion,
     },
   });
@@ -389,10 +448,16 @@ function exigirVerificada(solicitud) {
 // así que de dos ejecuciones simultáneas (un doble clic) solo una la cierra y
 // la otra falla. Quien llama la hace antes de los efectos y en la misma
 // transacción: la segunda espera el bloqueo de la fila y no repite nada.
+//
+// El resultado se deduce del estado, salvo la supresión, que siempre es
+// parcial (lo clínico se conserva). Una denegación total o parcial lleva el
+// aviso de que el titular puede reclamar ante la Agencia (art. 11).
 async function cerrar(solicitud, solicitante, { estado, respuesta, entrega }, client = prisma) {
+  const resultado = estado === 'rechazada' ? 'rechazada' : solicitud.derecho === 'supresion' ? 'parcial' : 'atendida';
+  const texto = resultado === 'atendida' ? respuesta : `${respuesta} ${AVISO_RECLAMO}`;
   const { count } = await client.solicitudDerecho.updateMany({
     where: { id: solicitud.id, estado: 'verificada' },
-    data: { estado, respuestaCifrada: cifrar('solicitud.respuesta', respuesta), resueltaEl: new Date(), resueltaPorId: solicitante.id, ...(entrega ? { entrega } : {}) },
+    data: { estado, resultado, respuestaCifrada: cifrar('solicitud.respuesta', texto), resueltaEl: new Date(), resueltaPorId: solicitante.id, ...(entrega ? { entrega } : {}) },
   });
   if (count !== 1) throw new AppError('La solicitud ya se resolvió', 409);
   await registrar(
@@ -401,7 +466,7 @@ async function cerrar(solicitud, solicitante, { estado, respuesta, entrega }, cl
       accion: estado === 'resuelta' ? 'EJECUTAR_DERECHO' : 'RECHAZAR_DERECHO',
       entidad: 'Paciente',
       entidadId: solicitud.pacienteId,
-      detalle: { solicitudId: solicitud.id, derecho: solicitud.derecho },
+      detalle: { solicitudId: solicitud.id, derecho: solicitud.derecho, resultado },
     },
     client,
   );
@@ -431,10 +496,92 @@ async function listarPendientes(solicitante) {
   const filas = await prisma.solicitudDerecho.findMany({
     where: { estado: { in: ['recibida', 'verificada'] } },
     orderBy: { venceEl: 'asc' },
-    select: { id: true, pacienteId: true, derecho: true, estado: true, canal: true, recibidaEl: true, venceEl: true, metodoVerificacion: true },
+    select: { id: true, pacienteId: true, derecho: true, estado: true, canal: true, recibidaEl: true, venceEl: true, metodoVerificacion: true, prorrogadaEl: true },
   });
   const nombres = filas.length ? await pacienteService.nombresDe([...new Set(filas.map((f) => f.pacienteId))], solicitante.id) : new Map();
-  return filas.map((f) => ({ ...f, paciente: nombres.get(f.pacienteId), dentroDePlazo: new Date() <= f.venceEl, pendienteDeVerificacion: f.estado === 'recibida' }));
+  const ahora = new Date();
+  return filas.map((f) => ({
+    ...f,
+    paciente: nombres.get(f.pacienteId),
+    dentroDePlazo: ahora <= f.venceEl,
+    porVencer: ahora <= f.venceEl && f.venceEl <= sumarDias(ahora, AVISO_VENCIMIENTO_DIAS),
+    pendienteDeVerificacion: f.estado === 'recibida',
+  }));
+}
+
+const prorrogaSchema = Joi.object({
+  dias: Joi.number().integer().min(1).max(PRORROGA_MAXIMA_DIAS).required().messages({ 'number.max': `La prórroga es de hasta ${PRORROGA_MAXIMA_DIAS} días`, 'any.required': 'Indica cuántos días se prorroga' }),
+  motivo: Joi.string().trim().min(10).max(1000).required().messages({ 'any.required': 'Explica al titular por qué se prorroga', 'string.min': 'Explica al titular por qué se prorroga' }),
+}).unknown(true);
+
+/**
+ * Prorroga el plazo de una solicitud abierta, una sola vez y hasta por 30
+ * días (Ley 21.719, art. 11), con el motivo que se le informa al titular.
+ * El bloqueo no se prorroga: es temporal y su plazo es de 2 días hábiles.
+ *
+ * @param {number} solicitudId
+ * @param {{id: number}} solicitante - req.usuario (privacidad).
+ * @param {{dias: number, motivo: string}} datos
+ * @returns {Promise<{venceEl: Date}>} el nuevo vencimiento.
+ * @throws {AppError} 400 sin motivo o con más de 30 días; 409 si está
+ *   cerrada, ya se prorrogó, ya venció o es un bloqueo.
+ *
+ * Consumidores: solicitudViewController.prorrogar.
+ */
+async function prorrogar(solicitudId, solicitante, datos) {
+  const { error, value } = prorrogaSchema.validate(datos || {});
+  if (error) throw new AppError(error.details[0].message, 400);
+  const solicitud = await solicitudOError(solicitudId);
+  if (solicitud.derecho === 'bloqueo') throw new AppError('El bloqueo no se prorroga: se responde dentro de 2 días hábiles', 409);
+  // Se prorroga antes de vencer: después ya no hay plazo que extender.
+  if (solicitud.venceEl < new Date()) throw new AppError('El plazo ya venció: no se puede prorrogar', 409);
+  const venceEl = sumarDias(solicitud.venceEl, value.dias);
+  const { count } = await prisma.solicitudDerecho.updateMany({
+    where: { id: solicitudId, estado: { in: ['recibida', 'verificada'] }, prorrogadaEl: null },
+    data: { venceEl, prorrogadaEl: new Date(), prorrogaMotivoCifrado: cifrar('solicitud.prorroga', value.motivo) },
+  });
+  if (count !== 1) throw new AppError('La solicitud está cerrada o ya se prorrogó una vez', 409);
+  await registrar({ usuarioId: solicitante.id, accion: 'PRORROGAR_DERECHO', entidad: 'Paciente', entidadId: solicitud.pacienteId, detalle: { solicitudId, dias: value.dias } });
+  const contacto = (await pacienteService.contactosParaProceso([solicitud.pacienteId])).get(solicitud.pacienteId);
+  if (contacto) {
+    // El motivo no viaja en el mensaje: el titular lo ve en el portal o en su archivo.
+    await canalEnvio
+      .enviar(contacto, `MediBox: la respuesta a su solicitud número ${solicitudId} se prorrogó hasta el ${fechaDMA(isoLocal(venceEl).slice(0, 10))}. Puede ver el motivo en el portal del paciente.`)
+      .catch(() => {});
+  }
+  return { venceEl };
+}
+
+/**
+ * Avisa a quienes resuelven solicitudes (permiso derechos.gestionar) cuántas
+ * están vencidas y cuántas vencen en los próximos 3 días. El aviso no
+ * identifica a ningún titular.
+ *
+ * @param {Date} [ahora]
+ * @returns {Promise<{porVencer: number, vencidas: number, avisados: number}>}
+ *
+ * Consumidores: src/alertas.js (npm run alertas, diario).
+ */
+async function avisarVencimientos(ahora = new Date()) {
+  const abiertas = { estado: { in: ['recibida', 'verificada'] } };
+  const [porVencer, vencidas] = await Promise.all([
+    prisma.solicitudDerecho.count({ where: { ...abiertas, venceEl: { gte: ahora, lte: sumarDias(ahora, AVISO_VENCIMIENTO_DIAS) } } }),
+    prisma.solicitudDerecho.count({ where: { ...abiertas, venceEl: { lt: ahora } } }),
+  ]);
+  let avisados = 0;
+  if (porVencer + vencidas > 0) {
+    const responsables = await prisma.usuario.findMany({
+      where: { rol: { permisos: { some: { permiso: { clave: 'derechos.gestionar' } } } } },
+      select: { id: true },
+    });
+    for (const { id } of responsables) {
+      await crearNotificacion({ usuarioId: id, mensaje: `Solicitudes de derechos: ${vencidas} vencida${vencidas === 1 ? '' : 's'} y ${porVencer} por vencer en ${AVISO_VENCIMIENTO_DIAS} días. Revisa Solicitudes.` });
+      avisados += 1;
+    }
+  }
+  const resumen = { porVencer, vencidas, avisados };
+  await registrar({ actor: 'sistema', accion: 'AVISO_VENCIMIENTOS', entidad: 'Sistema', entidadId: 0, detalle: resumen });
+  return resumen;
 }
 
 /**
@@ -460,6 +607,7 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       ...solicitud,
       valorPropuesto: solicitud.valorPropuestoCifrado ? descifrar(`solicitud.valor.${solicitud.campo}`, solicitud.valorPropuestoCifrado) : null,
       respuesta: solicitud.respuestaCifrada ? descifrar('solicitud.respuesta', solicitud.respuestaCifrada) : null,
+      motivoProrroga: solicitud.prorrogaMotivoCifrado ? descifrar('solicitud.prorroga', solicitud.prorrogaMotivoCifrado) : null,
       metodosAceptados: METODOS_POR_DERECHO[solicitud.derecho],
       faltaAcreditar: exigeDocumento(solicitud) && !acreditada(solicitud),
     },
@@ -603,18 +751,21 @@ const ETIQUETA_ACTOR = { sistema: 'Sistema', titular: 'Usted, en el portal', por
 const ETIQUETA_ROL = { operador: 'Admisión', medico: 'Médico tratante', gestor: 'Gestión', privacidad: 'Protección de datos', consulta: 'Informaciones', admin: 'Administración' };
 
 /**
- * Genera el archivo del titular para el acceso o la portabilidad: un JSON
- * con todos sus datos y nada de otras personas ni datos internos (ids,
- * hashes o blobs). Marca la solicitud como resuelta con su entrega.
+ * Resuelve una solicitud de acceso o portabilidad: en persona, genera el
+ * archivo del titular (todos sus datos y nada de otras personas ni datos
+ * internos) para que el funcionario se lo entregue; al contacto registrado,
+ * no genera nada: le avisa que lo descargue en el portal. Marca la solicitud
+ * como resuelta con su entrega.
  *
  * @param {number} solicitudId
  * @param {{id: number}} solicitante - req.usuario.
  * @param {{entrega: ('contacto_registrado'|'presencial'), formato?: string}} opciones
  *   entrega: nunca el canal por el que llamaron, sino en persona o al
- *   contacto ya registrado. formato: 'excel' o 'pdf', para la auditoría.
- * @returns {Promise<object>}
+ *   contacto ya registrado. formato: 'excel', 'pdf' o 'json', para la auditoría.
+ * @returns {Promise<(object|null)>} el archivo, o null si se avisó al contacto.
  * @throws {AppError} 409 si no es acceso o portabilidad, si no está
- *   verificada, o si el contacto falta o cambió después de la solicitud.
+ *   verificada, si el contacto falta o cambió después de la solicitud, o si
+ *   no se le pudo avisar.
  *
  * Consumidores: solicitudViewController.descargar.
  */
@@ -631,14 +782,49 @@ async function exportarDatosTitular(solicitudId, solicitante, { entrega, formato
     if (!contacto || (cambio && cambio >= solicitud.recibidaEl)) {
       throw new AppError('El contacto falta o cambió después de la solicitud: entrega el archivo en persona', 409);
     }
+    // A distancia el archivo no pasa por el funcionario ni por su correo: se
+    // le avisa al contacto registrado que lo descargue en el portal, donde
+    // entra con un código de un solo uso y una sesión de 15 minutos
+    // (autenticación reciente y temporal, clase PR 05). Se genera con los
+    // datos vigentes al descargarlo.
+    try {
+      await canalEnvio.enviar(
+        contacto,
+        `MediBox: la copia de sus datos que pidió (solicitud número ${solicitudId}) está disponible en el portal del paciente. Ingrese con su RUT y el código que le llegará a este mismo contacto.`,
+      );
+    } catch {
+      throw new AppError('No se pudo avisar al contacto registrado (el portal solo envía códigos por correo): entrega el archivo en persona', 409);
+    }
+    await prisma.$transaction(async (tx) => {
+      await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: 'Se puso a su disposición una copia de sus datos en el portal del paciente, con aviso al contacto registrado.', entrega }, tx);
+      await registrar({ usuarioId: solicitante.id, accion: 'AVISAR_ENTREGA', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega } }, tx);
+    });
+    return null;
   }
 
   const archivo = await armarArchivoTitular(pacienteId);
   await prisma.$transaction(async (tx) => {
-    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: `Se entregó una copia de sus datos (${entrega === 'presencial' ? 'en persona' : 'al contacto registrado'}).`, entrega }, tx);
+    await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta: 'Se le entregó en persona una copia de sus datos.', entrega }, tx);
     await registrar({ usuarioId: solicitante.id, accion: 'EXPORT_TITULAR', entidad: 'Paciente', entidadId: pacienteId, detalle: { solicitudId, entrega, formato } }, tx);
   });
   return archivo;
+}
+
+// Cada cambio con su valor anterior y su valor nuevo. Solo se guarda el
+// anterior (cifrado): el nuevo es el anterior del cambio siguiente del mismo
+// dato, o el valor actual si es el último, así que no se duplica. Sin valor
+// si la supresión o la retención ya lo eliminaron.
+function conValorNuevo(historial, actual) {
+  const anteriores = historial.map((h) => (h.valorAnteriorCifrado ? descifrar(`historial.${h.campo}`, h.valorAnteriorCifrado) : null));
+  return historial.map((h, i) => {
+    const siguiente = historial.findIndex((o, j) => j > i && o.campo === h.campo);
+    return {
+      campo: h.campo,
+      cambiadoEl: h.cambiadoEl,
+      valorAnterior: anteriores[i],
+      valorNuevo: siguiente === -1 ? actual[h.campo] ?? null : anteriores[siguiente],
+    };
+  });
 }
 
 /**
@@ -663,7 +849,21 @@ async function armarArchivoTitular(pacienteId) {
     prisma.solicitudDerecho.findMany({
       where: { pacienteId },
       orderBy: { recibidaEl: 'asc' },
-      select: { derecho: true, estado: true, canal: true, campo: true, recibidaEl: true, venceEl: true, resueltaEl: true, respuestaCifrada: true },
+      select: {
+        id: true,
+        derecho: true,
+        estado: true,
+        resultado: true,
+        canal: true,
+        campo: true,
+        recibidaEl: true,
+        verificadaEl: true,
+        venceEl: true,
+        prorrogadaEl: true,
+        prorrogaMotivoCifrado: true,
+        resueltaEl: true,
+        respuestaCifrada: true,
+      },
     }),
     // Con el valor anterior: la rectificación conserva qué había, y ese dato
     // es del propio titular (no lo ve nadie más).
@@ -692,14 +892,15 @@ async function armarArchivoTitular(pacienteId) {
       revocadoEl: c.revocadoEl,
       canalRevocacion: c.revocacionCanal,
     })),
-    // La respuesta es lo que el hospital le contestó al titular: es suya.
-    solicitudes: solicitudes.map(({ respuestaCifrada, ...s }) => ({ ...s, respuesta: respuestaCifrada ? descifrar('solicitud.respuesta', respuestaCifrada) : null })),
-    // Sin valor anterior si la supresión o la retención ya lo eliminaron.
-    historialCambios: historial.map((h) => ({
-      campo: h.campo,
-      cambiadoEl: h.cambiadoEl,
-      valorAnterior: h.valorAnteriorCifrado ? descifrar(`historial.${h.campo}`, h.valorAnteriorCifrado) : null,
+    // La respuesta y el motivo de una prórroga son lo que el hospital le
+    // contestó al titular: son suyos. El id es su número de seguimiento.
+    solicitudes: solicitudes.map(({ id, respuestaCifrada, prorrogaMotivoCifrado, ...s }) => ({
+      numero: id,
+      ...s,
+      motivoProrroga: prorrogaMotivoCifrado ? descifrar('solicitud.prorroga', prorrogaMotivoCifrado) : null,
+      respuesta: respuestaCifrada ? descifrar('solicitud.respuesta', respuestaCifrada) : null,
     })),
+    historialCambios: conValorNuevo(historial, titular),
     accesos: accesos.map((a) => ({
       fecha: a.timestamp,
       accion: a.accion,
@@ -734,8 +935,10 @@ async function exportarDesdePortal(pacienteId, verificacionId, formato) {
         canal: CANAL_PORTAL,
         estado: 'resuelta',
         recibidaEl: ahora,
-        venceEl: sumarDias(ahora, PLAZO_RESPUESTA_DIAS),
+        venceEl: calcularVencimiento('portabilidad', ahora),
         identidadVerificada: true,
+        verificadaEl: ahora,
+        resultado: 'atendida',
         metodoVerificacion: METODOS.PORTAL,
         verificacionId,
         entrega: CANAL_PORTAL,
@@ -752,6 +955,11 @@ async function exportarDesdePortal(pacienteId, verificacionId, formato) {
 module.exports = {
   DERECHOS,
   PLAZO_RESPUESTA_DIAS,
+  PRORROGA_MAXIMA_DIAS,
+  AVISO_RECLAMO,
+  calcularVencimiento,
+  prorrogar,
+  avisarVencimientos,
   METODOS_POR_DERECHO,
   RELACIONES_SOLICITUD,
   registrarSolicitud,

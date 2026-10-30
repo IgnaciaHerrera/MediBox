@@ -34,6 +34,7 @@ router.get('/:id', controller.detalle);
 router.post('/:id/verificar', controller.verificar);
 router.post('/:id/ejecutar', controller.ejecutar);
 router.post('/:id/rechazar', controller.rechazar);
+router.post('/:id/prorrogar', controller.prorrogar);
 router.post('/:id/desbloquear', controller.desbloquear);
 router.post('/:id/nueva', controller.nueva);
 router.post('/:id/descargar', controller.descargar);

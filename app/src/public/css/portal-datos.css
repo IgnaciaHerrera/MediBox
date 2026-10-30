@@ -281,6 +281,11 @@
   gap: 1.25rem;
 }
 
+/* Tres formatos de descarga: JSON, Excel y PDF. */
+.portal-tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .portal-descarga-texto {
   margin: 0 0 1.1rem;
 }
@@ -296,7 +301,8 @@
 }
 
 @media (max-width: 760px) {
-  .portal-dos {
+  .portal-dos,
+  .portal-tres {
     grid-template-columns: minmax(0, 1fr);
   }
 
