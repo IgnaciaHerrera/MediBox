@@ -6,7 +6,7 @@
 --    rechazando todo UPDATE y TRUNCATE, y ahora acepta un DELETE solo de las
 --    filas que ya cumplieron los 15 años: nadie, ni el dueño de la base,
 --    puede borrar un rastro que todavía debe conservarse sin desactivar
---    antes el trigger (lo que queda en el log de PostgreSQL). La aplicación
+--    antes el trigger, algo que solo puede hacer el dueño. La aplicación
 --    (rol medibox_app) ni siquiera tiene DELETE: la purga la corre el dueño
 --    con `npm run auditoria:purgar` (services/auditService.purgarVencidos).
 CREATE OR REPLACE FUNCTION audit_log_solo_insercion() RETURNS trigger AS $$
