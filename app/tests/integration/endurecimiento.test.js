@@ -15,7 +15,7 @@ const haceHoras = (horas) => new Date(Date.now() - horas * 60 * 60 * 1000);
 
 // Pendientes técnicos del Hito 3 que quedaron como riesgos residuales: cada
 // caso es el que el informe declaraba abierto.
-describe('Endurecimiento de los pendientes del Hito 3', () => {
+describe('Endurecimiento de la verificación, los derechos y la contención', () => {
   const password = 'Password123!';
   let operador;
   let privacidad;
