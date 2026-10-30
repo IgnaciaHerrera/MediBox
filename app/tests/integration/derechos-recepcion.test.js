@@ -96,7 +96,7 @@ describe('Recepción y verificación de solicitudes de derechos', () => {
 
   it('para un menor de 14 exige que lo pida su representante', async () => {
     expect((await registrar(pacientes.nino, { derecho: 'acceso', canal: 'presencial' })).status).toBe(400);
-    const res = await registrar(pacientes.nino, { derecho: 'acceso', canal: 'presencial', solicitanteEsRepresentante: 'si', solicitanteRelacion: 'madre' });
+    const res = await registrar(pacientes.nino, { derecho: 'acceso', canal: 'presencial', solicitanteEsRepresentante: 'si', solicitanteRelacion: 'madre', solicitanteAcreditacion: 'certificado_nacimiento' });
     expect(res.status).toBe(200);
   });
 

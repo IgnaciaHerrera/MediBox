@@ -1,7 +1,7 @@
 const Joi = require('joi');
 const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
-const { cifrar } = require('../lib/cifrado');
+const { cifrar, descifrar } = require('../lib/cifrado');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
@@ -18,11 +18,18 @@ const { METODOS, exigirVerificacion } = require('./verificacionService');
 
 const METODOS_CONSENTIMIENTO = [METODOS.CEDULA, METODOS.CODIGO];
 const CANALES = ['presencial', 'telefono', 'correo'];
-// Menores de 14: consiente quien tiene su cuidado personal (Ley 21.719,
-// art. 16 quáter). De 14 a 17, el titular, con resguardo reforzado de los
-// datos sensibles.
+// Ley 21.719, art. 16 quáter: por un niño o niña (menor de 14) consiente
+// quien tiene su cuidado personal; un adolescente consiente él mismo, salvo
+// que la finalidad trate datos sensibles: entonces, hasta los 16 años,
+// también consiente su representante.
 const EDAD_CONSENTIMIENTO_PROPIO = 14;
+const EDAD_SENSIBLES_PROPIO = 16;
 const RELACIONES = ['madre', 'padre', 'tutor_legal', 'otro'];
+// Documento con que se acredita la representación (solo se guarda el tipo,
+// nunca una copia). 'declarada' cuando no se pudo ver: por teléfono, por
+// correo o en el portal. En admisión siempre se pide el documento.
+const DOCUMENTOS_REPRESENTACION = ['certificado_nacimiento', 'resolucion_judicial', 'poder_notarial'];
+const DECLARADA = 'declarada';
 
 const representanteSchema = Joi.object({
   nombre: Joi.string().trim().min(2).max(150).required(),
@@ -31,16 +38,38 @@ const representanteSchema = Joi.object({
     .required()
     .custom((valor, helpers) => (rutValido(valor) ? normalizarRut(valor) : helpers.message('El RUT del representante no es válido'))),
   relacion: Joi.string().valid(...RELACIONES).required(),
+  documento: Joi.string()
+    .valid(...DOCUMENTOS_REPRESENTACION, DECLARADA)
+    .required()
+    .messages({ 'any.only': 'indica con qué documento acreditó la representación', 'any.required': 'indica con qué documento acreditó la representación' }),
 });
 
 /**
- * @param {number} edad - años cumplidos del titular.
- * @returns {boolean} si el consentimiento debe darlo su representante.
+ * Si el consentimiento (o la solicitud) debe darlo el representante.
  *
- * Consumidores: otorgar(), pacienteViewController (formulario).
+ * @param {number} edad - años cumplidos del titular.
+ * @param {{datosSensibles?: boolean}} [finalidad] - la finalidad que se
+ *   consiente; sin ella (solicitudes de derechos) solo cuenta la regla de los 14.
+ * @returns {boolean}
+ *
+ * Consumidores: registrarOtorgamiento(), conRepresentante(),
+ *   derechosService.crearSolicitud, pacienteViewController.
  */
-function requiereRepresentante(edad) {
-  return edad < EDAD_CONSENTIMIENTO_PROPIO;
+function requiereRepresentante(edad, { datosSensibles = false } = {}) {
+  return edad < EDAD_CONSENTIMIENTO_PROPIO || (datosSensibles && edad < EDAD_SENSIBLES_PROPIO);
+}
+
+/**
+ * Marca en cada finalidad del estado si, a esa edad, la consiente el representante.
+ *
+ * @param {Array<object>} estado - lo que devuelve estadoPorPaciente().
+ * @param {number} edad
+ * @returns {Array<object>} el mismo estado, con requiereRepresentante en cada finalidad.
+ *
+ * Consumidores: pacienteViewController.detalle, portalService.misDatos.
+ */
+function conRepresentante(estado, edad) {
+  return estado.map((e) => ({ ...e, requiereRepresentante: requiereRepresentante(edad, e.finalidad) }));
 }
 
 function validarCanal(canal) {
@@ -68,7 +97,7 @@ function estadoDe(ultimo, versionVigente) {
  * permite el tratamiento hasta renovarlo.
  *
  * @param {number} pacienteId
- * @returns {Promise<Array<{finalidad: {clave: string, nombre: string},
+ * @returns {Promise<Array<{finalidad: {clave: string, nombre: string, datosSensibles: boolean},
  *   estado: ('vigente'|'revocado'|'a_renovar'|'sin_otorgar'), otorgadoEl: ?Date,
  *   revocadoEl: ?Date, version: ?number, versionVigente: number, canal: ?string,
  *   otorgadoPor: ?string, metodoVerificacion: ?string, registradoPor: ?string,
@@ -103,7 +132,7 @@ async function estadoPorPaciente(pacienteId) {
     const [vigente] = f.textos;
     const [ultimo] = f.consentimientos;
     return {
-      finalidad: { clave: f.clave, nombre: f.nombre },
+      finalidad: { clave: f.clave, nombre: f.nombre, datosSensibles: f.datosSensibles },
       estado: estadoDe(ultimo, vigente.version),
       otorgadoEl: ultimo ? ultimo.otorgadoEl : null,
       revocadoEl: ultimo ? ultimo.revocadoEl : null,
@@ -134,6 +163,11 @@ async function estadoPorPaciente(pacienteId) {
  */
 async function otorgar({ pacienteId, finalidadClave, textoId, canal, representante }, solicitante) {
   validarCanal(canal);
+  // En admisión el funcionario tiene el documento a la vista: no basta con
+  // declarar la representación.
+  if (canal === 'presencial' && representante && representante.documento === DECLARADA) {
+    throw new AppError('En admisión la representación se acredita con un documento: indica cuál viste', 400);
+  }
   const verificacion = await exigirVerificacion(pacienteId, solicitante.id, METODOS_CONSENTIMIENTO);
   return registrarOtorgamiento({ pacienteId, finalidadClave, textoId, canal, representante }, { usuarioId: solicitante.id, verificacionId: verificacion.id });
 }
@@ -163,9 +197,10 @@ async function registrarOtorgamiento({ pacienteId, finalidadClave, textoId, cana
 
   const edad = await pacienteService.edadDe(pacienteId);
   let representanteCifrado = null;
-  if (requiereRepresentante(edad)) {
+  if (requiereRepresentante(edad, finalidad)) {
     const { error, value } = representanteSchema.validate(representante || {});
-    if (error) throw new AppError(`El titular es menor de ${EDAD_CONSENTIMIENTO_PROPIO} años: ${error.details[0].message}`, 400);
+    const motivo = edad < EDAD_CONSENTIMIENTO_PROPIO ? `es menor de ${EDAD_CONSENTIMIENTO_PROPIO} años` : `es menor de ${EDAD_SENSIBLES_PROPIO} años y este uso trata datos sensibles`;
+    if (error) throw new AppError(`El titular ${motivo}: ${error.details[0].message}`, 400);
     representanteCifrado = cifrar('consentimiento.representante', JSON.stringify(value));
   }
 
@@ -277,11 +312,69 @@ async function pacientesConVigente(finalidadClave) {
   return ultimos.filter((c) => !c.revocadoEl && c.textoId === vigente.id).map((c) => c.pacienteId);
 }
 
+/**
+ * Historial completo de consentimientos de un paciente: cada otorgamiento y,
+ * si la hubo, su revocación, del más reciente al más antiguo. Del
+ * representante solo la relación y el documento: su nombre y RUT no hacen
+ * falta para seguir el historial.
+ *
+ * @param {number} pacienteId
+ * @returns {Promise<Array<{finalidad: string, version: number, otorgadoEl: Date,
+ *   canal: string, otorgadoPor: string, relacion: ?string, documento: ?string,
+ *   metodoVerificacion: string, registradoPor: string, revocadoEl: ?Date,
+ *   revocacionCanal: ?string, revocacionRegistradaPor: ?string}>>}
+ *
+ * Consumidores: pacienteViewController.detalle.
+ */
+async function historialPorPaciente(pacienteId) {
+  const filas = await prisma.consentimiento.findMany({
+    where: { pacienteId },
+    orderBy: { id: 'desc' },
+    select: {
+      otorgadoEl: true,
+      canal: true,
+      otorgadoPor: true,
+      representanteCifrado: true,
+      revocadoEl: true,
+      revocacionCanal: true,
+      finalidad: { select: { nombre: true } },
+      texto: { select: { version: true } },
+      verificacion: { select: { metodo: true } },
+      registradoPor: { select: { nombre: true } },
+      revocacionRegistradaPor: { select: { nombre: true } },
+    },
+  });
+  const enPortal = 'el titular, en el portal';
+  return filas.map((f) => {
+    const rep = f.representanteCifrado ? JSON.parse(descifrar('consentimiento.representante', f.representanteCifrado)) : null;
+    return {
+      finalidad: f.finalidad.nombre,
+      version: f.texto.version,
+      otorgadoEl: f.otorgadoEl,
+      canal: f.canal,
+      otorgadoPor: f.otorgadoPor,
+      relacion: rep ? rep.relacion : null,
+      // Los otorgados antes de exigir el documento no lo tienen.
+      documento: rep ? rep.documento || DECLARADA : null,
+      metodoVerificacion: f.verificacion.metodo,
+      registradoPor: f.registradoPor ? f.registradoPor.nombre : enPortal,
+      revocadoEl: f.revocadoEl,
+      revocacionCanal: f.revocacionCanal,
+      revocacionRegistradaPor: f.revocadoEl ? (f.revocacionRegistradaPor ? f.revocacionRegistradaPor.nombre : enPortal) : null,
+    };
+  });
+}
+
 module.exports = {
   CANALES,
   pacientesConVigente,
   RELACIONES,
+  DOCUMENTOS_REPRESENTACION,
+  DECLARADA,
   EDAD_CONSENTIMIENTO_PROPIO,
+  EDAD_SENSIBLES_PROPIO,
+  conRepresentante,
+  historialPorPaciente,
   METODOS_CONSENTIMIENTO,
   requiereRepresentante,
   estadoPorPaciente,

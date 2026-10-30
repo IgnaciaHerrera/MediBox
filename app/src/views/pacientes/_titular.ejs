@@ -11,7 +11,7 @@
   <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
 
   <% if (consentimientos) { %>
-    <%- include('_consentimientos', { paciente, consentimientos, consentimiento, csrfToken }) %>
+    <%- include('_consentimientos', { paciente, consentimientos, historialConsentimientos, consentimiento, csrfToken }) %>
   <% } %>
 
   <% if (solicitudes) { %>

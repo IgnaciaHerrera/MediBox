@@ -124,7 +124,7 @@ describe('Consentimiento por finalidad', () => {
     await expect(consentimiento.otorgar(base, solicitante)).rejects.toMatchObject({ statusCode: 400 });
 
     const rut = rutAleatorio();
-    const { id } = await consentimiento.otorgar({ ...base, representante: { nombre: 'Marta Representante', rut, relacion: 'madre' } }, solicitante);
+    const { id } = await consentimiento.otorgar({ ...base, representante: { nombre: 'Marta Representante', rut, relacion: 'madre', documento: 'certificado_nacimiento' } }, solicitante);
     const fila = await prisma.consentimiento.findUnique({ where: { id } });
     expect(fila.otorgadoPor).toBe('representante');
     const crudo = Buffer.from(fila.representanteCifrado).toString('latin1');

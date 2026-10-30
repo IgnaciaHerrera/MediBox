@@ -179,7 +179,7 @@
     <% } %>
 
     <% if (verificacion) { %>
-      <%- include('_titular', { paciente, consentimientos, solicitudes, verificacion, consentimiento, csrfToken }) %>
+      <%- include('_titular', { paciente, consentimientos, historialConsentimientos, solicitudes, verificacion, consentimiento, csrfToken }) %>
     <% } %>
 
     <%- include('_historial', { historial }) %>

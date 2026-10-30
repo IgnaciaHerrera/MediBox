@@ -45,6 +45,11 @@ const METODOS_POR_DERECHO = {
   bloqueo: [METODOS.CEDULA],
 };
 
+// Quien presenta una solicitud a nombre del titular: su representante legal
+// (un menor de 14) o un apoderado con poder notarial (el mandatario de la
+// Ley 21.719, art. 11 letra a).
+const RELACIONES_SOLICITUD = [...consentimientoService.RELACIONES, 'apoderado'];
+
 // Formato de cada valor que puede proponer una rectificación, igual que al
 // registrar o editar un paciente.
 const VALOR_POR_CAMPO = {
@@ -71,8 +76,22 @@ const solicitudSchema = Joi.object({
     'any.required': 'Indica a qué uso se opone',
   }),
   solicitanteEsRepresentante: Joi.boolean().truthy('si').falsy('').default(false),
-  solicitanteRelacion: Joi.string().valid(...consentimientoService.RELACIONES).empty(''),
+  solicitanteRelacion: Joi.string().valid(...RELACIONES_SOLICITUD).empty(''),
+  solicitanteAcreditacion: Joi.string().valid(...consentimientoService.DOCUMENTOS_REPRESENTACION, consentimientoService.DECLARADA).empty(''),
 });
+
+// Verificación doble de un representante: su identidad y la representación.
+// Lo irreversible, o lo que pide un apoderado de un adulto (que no recibe el
+// código del titular), solo se ejecuta con la representación acreditada con
+// un documento; para lo demás basta con declararla, porque la verificación
+// del código llega igual al contacto registrado del titular.
+function exigeDocumento(solicitud) {
+  return solicitud.solicitanteEsRepresentante && (IRREVERSIBLES.includes(solicitud.derecho) || solicitud.solicitanteRelacion === 'apoderado');
+}
+
+function acreditada(solicitud) {
+  return Boolean(solicitud.solicitanteAcreditacion) && solicitud.solicitanteAcreditacion !== consentimientoService.DECLARADA;
+}
 
 function sumarDias(fecha, dias) {
   return new Date(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
@@ -130,6 +149,19 @@ async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuar
       throw new AppError(`El titular es menor de ${consentimientoService.EDAD_CONSENTIMIENTO_PROPIO} años: la solicitud la presenta su representante (indica la relación)`, 400);
     }
   }
+  let acreditacion = null;
+  if (value.solicitanteEsRepresentante) {
+    if (!value.solicitanteRelacion) throw new AppError('Indica la relación de quien presenta la solicitud con el titular', 400);
+    // Por teléfono, por correo o en el portal no se puede ver un documento:
+    // la representación queda declarada. En admisión se acredita.
+    acreditacion = value.solicitanteAcreditacion || consentimientoService.DECLARADA;
+    if (value.canal === 'presencial' && acreditacion === consentimientoService.DECLARADA) {
+      throw new AppError('En admisión la representación se acredita con un documento: indica cuál viste', 400);
+    }
+    if (value.solicitanteRelacion === 'apoderado' && ![consentimientoService.DECLARADA, 'poder_notarial'].includes(acreditacion)) {
+      throw new AppError('Un apoderado acredita su representación con un poder notarial', 400);
+    }
+  }
 
   const recibidaEl = new Date();
   const fila = await prisma.solicitudDerecho.create({
@@ -143,6 +175,7 @@ async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuar
       ...(verificacion ? { estado: 'verificada', identidadVerificada: true, metodoVerificacion: verificacion.metodo, verificacionId: verificacion.id } : {}),
       solicitanteEsRepresentante: value.solicitanteEsRepresentante,
       solicitanteRelacion: value.solicitanteEsRepresentante ? value.solicitanteRelacion || null : null,
+      solicitanteAcreditacion: acreditacion,
       campo: value.campo || null,
       valorPropuestoCifrado,
       finalidadClave: value.finalidadClave || null,
@@ -167,6 +200,8 @@ const DERECHOS_PORTAL = ['rectificacion', 'supresion', 'bloqueo'];
 const solicitudPortalSchema = solicitudSchema.keys({
   derecho: Joi.string().valid(...DERECHOS_PORTAL).required().messages({ 'any.only': 'Elige qué quiere pedir', 'any.required': 'Elige qué quiere pedir' }),
   canal: Joi.any().strip(),
+  // En el portal nadie ve un documento: la representación queda declarada.
+  solicitanteAcreditacion: Joi.any().strip(),
 });
 
 /**
@@ -199,21 +234,36 @@ async function registrarDesdePortal(pacienteId, cuerpo, verificacionId) {
  * Adjunta a la solicitud la verificación de identidad vigente del
  * funcionario (paso 2), si su método es uno que acepta ese derecho. Un
  * código solo vale si el contacto no cambió después de recibir la solicitud.
+ * Si la presentó un representante y lo que pide exige la representación
+ * acreditada (exigeDocumento), aquí se registra el documento que el
+ * funcionario vio.
  *
  * @param {number} solicitudId
  * @param {{id: number}} solicitante - req.usuario.
- * @param {{pacienteId?: number}} [opciones] - el paciente de la ruta: la
- *   solicitud debe ser suya.
+ * @param {{pacienteId?: number, documento?: string}} [opciones] - pacienteId:
+ *   el paciente de la ruta (la solicitud debe ser suya); documento: el que
+ *   acredita la representación, si hace falta.
  * @returns {Promise<void>}
  * @throws {AppError} 403 sin una verificación aceptada; 409 si ya estaba
- *   verificada o cerrada; 404 si no existe o es de otro paciente.
+ *   verificada o cerrada, o si falta acreditar la representación; 404 si no
+ *   existe o es de otro paciente.
  *
  * Consumidores: pacienteViewController.verificarSolicitud, solicitudViewController.
  */
-async function verificarSolicitud(solicitudId, solicitante, { pacienteId } = {}) {
+async function verificarSolicitud(solicitudId, solicitante, { pacienteId, documento } = {}) {
   const solicitud = await prisma.solicitudDerecho.findUnique({ where: { id: solicitudId } });
   if (!solicitud || (pacienteId !== undefined && solicitud.pacienteId !== pacienteId)) throw new AppError('Solicitud no encontrada', 404);
   if (solicitud.estado !== 'recibida') throw new AppError('La solicitud ya está verificada o cerrada', 409);
+  let acreditacion = solicitud.solicitanteAcreditacion;
+  if (exigeDocumento(solicitud) && !acreditada(solicitud)) {
+    if (!consentimientoService.DOCUMENTOS_REPRESENTACION.includes(documento)) {
+      throw new AppError('La presenta un representante: indica el documento con que acreditó la representación', 409);
+    }
+    if (solicitud.solicitanteRelacion === 'apoderado' && documento !== 'poder_notarial') {
+      throw new AppError('Un apoderado acredita su representación con un poder notarial', 409);
+    }
+    acreditacion = documento;
+  }
 
   const verificacion = await exigirVerificacion(solicitud.pacienteId, solicitante.id, METODOS_POR_DERECHO[solicitud.derecho]);
   if (verificacion.metodo === METODOS.CODIGO) {
@@ -225,7 +275,14 @@ async function verificarSolicitud(solicitudId, solicitante, { pacienteId } = {})
 
   await prisma.solicitudDerecho.update({
     where: { id: solicitudId },
-    data: { estado: 'verificada', identidadVerificada: true, metodoVerificacion: verificacion.metodo, verificacionId: verificacion.id, verificadaPorId: solicitante.id },
+    data: {
+      estado: 'verificada',
+      identidadVerificada: true,
+      metodoVerificacion: verificacion.metodo,
+      verificacionId: verificacion.id,
+      verificadaPorId: solicitante.id,
+      solicitanteAcreditacion: acreditacion,
+    },
   });
   await registrar({
     usuarioId: solicitante.id,
@@ -251,13 +308,28 @@ async function listarPorPaciente(pacienteId) {
   const filas = await prisma.solicitudDerecho.findMany({
     where: { pacienteId },
     orderBy: { recibidaEl: 'desc' },
-    select: { id: true, derecho: true, estado: true, canal: true, recibidaEl: true, venceEl: true, resueltaEl: true, campo: true, metodoVerificacion: true },
+    select: {
+      id: true,
+      derecho: true,
+      estado: true,
+      canal: true,
+      recibidaEl: true,
+      venceEl: true,
+      resueltaEl: true,
+      campo: true,
+      metodoVerificacion: true,
+      solicitanteEsRepresentante: true,
+      solicitanteRelacion: true,
+      solicitanteAcreditacion: true,
+    },
   });
   return filas.map((f) => ({
     ...f,
     dentroDePlazo: (f.resueltaEl || new Date()) <= f.venceEl,
     pendienteDeVerificacion: f.estado === 'recibida',
     metodosAceptados: METODOS_POR_DERECHO[f.derecho],
+    // Al verificarla hay que indicar el documento de la representación.
+    faltaAcreditar: exigeDocumento(f) && !acreditada(f),
   }));
 }
 
@@ -307,6 +379,9 @@ function exigirVerificada(solicitud) {
   }
   if (!METODOS_POR_DERECHO[solicitud.derecho].includes(solicitud.metodoVerificacion)) {
     throw new AppError('Este derecho exige verificar la identidad con la cédula en persona', 409);
+  }
+  if (exigeDocumento(solicitud) && !acreditada(solicitud)) {
+    throw new AppError('La presenta un representante: falta acreditar la representación con un documento', 409);
   }
 }
 
@@ -386,7 +461,9 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       valorPropuesto: solicitud.valorPropuestoCifrado ? descifrar(`solicitud.valor.${solicitud.campo}`, solicitud.valorPropuestoCifrado) : null,
       respuesta: solicitud.respuestaCifrada ? descifrar('solicitud.respuesta', solicitud.respuestaCifrada) : null,
       metodosAceptados: METODOS_POR_DERECHO[solicitud.derecho],
+      faltaAcreditar: exigeDocumento(solicitud) && !acreditada(solicitud),
     },
+    documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
     paciente: {
       ...paciente,
       motivoBloqueo: paciente.bloqueado ? await motivoBloqueoDe(solicitud.pacienteId) : null,
@@ -676,6 +753,7 @@ module.exports = {
   DERECHOS,
   PLAZO_RESPUESTA_DIAS,
   METODOS_POR_DERECHO,
+  RELACIONES_SOLICITUD,
   registrarSolicitud,
   verificarSolicitud,
   listarPorPaciente,

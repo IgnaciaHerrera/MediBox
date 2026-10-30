@@ -89,7 +89,8 @@ async function detalle(req, res, next) {
     // Lo mismo con las solicitudes de derechos: las ve quien las recibe.
     const gestionaConsentimientos = req.usuario.permisos.includes('consentimiento.write');
     const recibeSolicitudes = req.usuario.permisos.includes('derechos.registrar');
-    const consentimientos = gestionaConsentimientos ? await consentimientoService.estadoPorPaciente(id) : null;
+    const consentimientos = gestionaConsentimientos ? consentimientoService.conRepresentante(await consentimientoService.estadoPorPaciente(id), paciente.edad) : null;
+    const historialConsentimientos = gestionaConsentimientos ? await consentimientoService.historialPorPaciente(id) : null;
     const solicitudes = recibeSolicitudes ? await derechosService.listarPorPaciente(id) : null;
     const verificacion = gestionaConsentimientos || recibeSolicitudes ? await verificacionService.estadoParaVista(id, req.usuario.id, paciente.contacto) : null;
     res.render('pacientes/detalle', {
@@ -100,13 +101,18 @@ async function detalle(req, res, next) {
       citas,
       historial,
       consentimientos,
+      historialConsentimientos,
       solicitudes,
       verificacion,
       consentimiento: {
         canales: consentimientoService.CANALES,
         relaciones: consentimientoService.RELACIONES,
+        relacionesSolicitud: derechosService.RELACIONES_SOLICITUD,
+        documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
+        // Para las solicitudes de derechos: las presenta el representante de un menor de 14.
         requiereRepresentante: consentimientoService.requiereRepresentante(paciente.edad),
         esAdolescente: paciente.edad >= consentimientoService.EDAD_CONSENTIMIENTO_PROPIO && paciente.edad < 18,
+        edadSensibles: consentimientoService.EDAD_SENSIBLES_PROPIO,
       },
       puedeAgendar: req.usuario.permisos.includes('agenda.write'),
       puedeEditar: req.usuario.permisos.includes('paciente.write'),
@@ -223,6 +229,7 @@ const otorgarSchema = Joi.object({
   representanteNombre: Joi.string().trim().allow(''),
   representanteRut: Joi.string().trim().allow(''),
   representanteRelacion: Joi.string().trim().allow(''),
+  representanteDocumento: Joi.string().trim().allow(''),
 }).unknown(true);
 
 const revocarSchema = Joi.object({
@@ -239,7 +246,7 @@ async function otorgarConsentimiento(req, res, next) {
   try {
     const value = validar(otorgarSchema, req.body);
     const representante = value.representanteNombre || value.representanteRut || value.representanteRelacion
-      ? { nombre: value.representanteNombre, rut: value.representanteRut, relacion: value.representanteRelacion }
+      ? { nombre: value.representanteNombre, rut: value.representanteRut, relacion: value.representanteRelacion, documento: value.representanteDocumento }
       : undefined;
     await consentimientoService.otorgar(
       { pacienteId: Number(req.params.id), finalidadClave: req.params.clave, textoId: value.textoId, canal: value.canal, representante },
@@ -272,7 +279,7 @@ async function registrarSolicitud(req, res, next) {
 
 async function verificarSolicitud(req, res, next) {
   try {
-    await derechosService.verificarSolicitud(Number(req.params.sid), req.usuario, { pacienteId: Number(req.params.id) });
+    await derechosService.verificarSolicitud(Number(req.params.sid), req.usuario, { pacienteId: Number(req.params.id), documento: req.body.documento });
     responderAccion(req, res, 'Solicitud verificada');
   } catch (err) {
     next(err);

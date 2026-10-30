@@ -16,6 +16,7 @@
     "minimizacion:migrar": "node prisma/migrar-minimizacion.js",
     "retencion": "node src/retencion.js",
     "recordatorios": "node src/recordatorios.js",
+    "encuestas": "node src/encuestas.js",
     "supresiones:reaplicar": "node src/supresiones.js",
     "alertas": "node src/alertas.js",
     "incidente:alcance": "node src/incidente.js",

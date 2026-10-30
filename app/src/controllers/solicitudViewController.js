@@ -53,7 +53,7 @@ async function detalle(req, res, next) {
 
 async function verificar(req, res, next) {
   try {
-    await derechosService.verificarSolicitud(idDe(req), req.usuario);
+    await derechosService.verificarSolicitud(idDe(req), req.usuario, { documento: req.body.documento });
     responderAccion(req, res, 'Solicitud verificada');
   } catch (err) {
     next(err);

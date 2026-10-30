@@ -232,8 +232,8 @@
             <form class="consentimiento-form" method="POST" action="/portal/consentimientos/<%= c.finalidad.clave %>/otorgar" data-consentimiento>
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <input type="hidden" name="textoId" value="<%= c.textoVigente.id %>" />
-              <% if (datos.requiereRepresentante) { %>
-                <p class="aviso">El paciente es menor de 14 años: acepta quien tiene su cuidado personal.</p>
+              <% if (c.requiereRepresentante) { %>
+                <p class="aviso"><%= datos.requiereRepresentante ? 'El paciente es menor de 14 años' : 'El paciente es menor de 16 años y este uso trata datos de salud' %>: acepta quien tiene su cuidado personal.</p>
                 <div class="form-grid form-grid--tres">
                   <div class="field"><label for="rep-nombre-<%= c.finalidad.clave %>">Nombre del representante</label><input id="rep-nombre-<%= c.finalidad.clave %>" name="representanteNombre" maxlength="150" required /></div>
                   <div class="field"><label for="rep-rut-<%= c.finalidad.clave %>">RUT del representante</label><input id="rep-rut-<%= c.finalidad.clave %>" name="representanteRut" maxlength="12" required /></div>

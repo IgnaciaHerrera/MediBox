@@ -8,6 +8,7 @@
   const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
   const METODOS = { cedula_presencial: 'cédula en persona', codigo_contacto: 'código al contacto registrado', codigo_portal: 'código ingresado por el titular en el portal' };
   const ESTADOS = { recibida: 'Pendiente de verificación', verificada: 'Verificada', resuelta: 'Resuelta', rechazada: 'Rechazada' };
+  const DOCUMENTOS = { certificado_nacimiento: 'Certificado de nacimiento', resolucion_judicial: 'Resolución judicial', poder_notarial: 'Poder notarial' };
   const QUE_HACE = {
     acceso: 'Genera una copia de todos los datos del titular, en PDF o en Excel.',
     portabilidad: 'Genera una copia de todos los datos del titular en Excel, para llevarlos a otro responsable (o en PDF, para leerla).',
@@ -39,7 +40,13 @@
     <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Qué pide</h2></div>
       <p><%= QUE_HACE[s.derecho] %></p>
-      <% if (s.solicitanteEsRepresentante) { %><p class="aviso">La presenta su representante (<%= s.solicitanteRelacion %>).</p><% } %>
+      <% if (s.solicitanteEsRepresentante) { %>
+        <p class="aviso">
+          La presenta su <%= s.solicitanteRelacion === 'apoderado' ? 'apoderado' : 'representante (' + s.solicitanteRelacion + ')' %>;
+          representación <%= s.solicitanteAcreditacion === 'declarada' ? 'declarada, sin documento' : 'acreditada con ' + DOCUMENTOS[s.solicitanteAcreditacion].toLowerCase() %>.
+          <% if (s.faltaAcreditar) { %>Para ejecutarla falta que acredite la representación con un documento.<% } %>
+        </p>
+      <% } %>
       <% if (s.derecho === 'rectificacion') { %>
         <p><strong><%= CAMPOS[s.campo] %></strong>: el valor propuesto es <strong><%= s.valorPropuesto %></strong>. Revísalo antes de aplicarlo.</p>
       <% } %>
@@ -53,8 +60,14 @@
       <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Verificar la identidad</h2></div>
         <%- include('../partials/verificacion', { pacienteId: paciente.id, verificacion, csrfToken }) %>
-        <form method="POST" action="/solicitudes/<%= s.id %>/verificar">
+        <form method="POST" action="/solicitudes/<%= s.id %>/verificar" class="consentimiento-fila">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <% if (s.faltaAcreditar) { %>
+            <select name="documento" required aria-label="Documento que acredita la representación">
+              <option value="">Documento del representante…</option>
+              <% documentos.forEach(function(d) { %><option value="<%= d %>"><%= DOCUMENTOS[d] %></option><% }) %>
+            </select>
+          <% } %>
           <button type="submit" class="btn btn-primary btn--auto btn--control">Adjuntar la verificación a la solicitud</button>
         </form>
         <p class="ayuda">Si no se puede verificar ahora, la solicitud queda pendiente hasta la próxima visita del titular. No se rechaza por eso.</p>

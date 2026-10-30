@@ -18,7 +18,8 @@
   };
   const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo', portal: 'En el portal' };
   const CAMPOS = { nombre: 'Nombre', rut: 'RUT', fechaNacimiento: 'Fecha de nacimiento', contacto: 'Contacto' };
-  const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro' };
+  const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro', apoderado: 'Apoderado (poder notarial)' };
+  const DOCUMENTOS = { certificado_nacimiento: 'Certificado de nacimiento', resolucion_judicial: 'Resolución judicial', poder_notarial: 'Poder notarial', declarada: 'declarada, sin documento' };
   const METODOS = { cedula_presencial: 'cédula', codigo_contacto: 'código', codigo_portal: 'código en el portal' };
 %>
 <div class="titular-bloque" id="solicitudes">
@@ -72,7 +73,11 @@
       </label>
       <select name="solicitanteRelacion" aria-label="Relación del representante">
         <option value="">Relación…</option>
-        <% consentimiento.relaciones.forEach(function(r) { %><option value="<%= r %>"><%= RELACIONES[r] %></option><% }) %>
+        <% consentimiento.relacionesSolicitud.forEach(function(r) { %><option value="<%= r %>"><%= RELACIONES[r] %></option><% }) %>
+      </select>
+      <select name="solicitanteAcreditacion" aria-label="Documento que acredita la representación">
+        <option value="">Documento que vi…</option>
+        <% consentimiento.documentos.forEach(function(d) { %><option value="<%= d %>"><%= DOCUMENTOS[d] %></option><% }) %>
       </select>
       <button type="submit" class="btn btn-primary btn--auto btn--control">Registrar solicitud</button>
     </div>
@@ -100,8 +105,14 @@
               <td class="tiempo<%= s.dentroDePlazo ? '' : ' solicitud-pendiente' %>"><%= fechaDMA(isoLocal(s.venceEl).slice(0, 10)) %></td>
               <td>
                 <% if (s.pendienteDeVerificacion) { %>
-                  <form method="POST" action="/pacientes/<%= paciente.id %>/solicitudes/<%= s.id %>/verificar">
+                  <form method="POST" action="/pacientes/<%= paciente.id %>/solicitudes/<%= s.id %>/verificar" class="consentimiento-fila">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <% if (s.faltaAcreditar) { %>
+                      <select name="documento" required aria-label="Documento que acredita la representación">
+                        <option value="">Documento del representante…</option>
+                        <% consentimiento.documentos.forEach(function(d) { %><option value="<%= d %>"><%= DOCUMENTOS[d] %></option><% }) %>
+                      </select>
+                    <% } %>
                     <button type="submit" class="btn btn-neutro btn--auto btn--control" title="Acepta: <%= s.metodosAceptados.map(function(m) { return METODOS[m]; }).join(' o ') %>">Verificar</button>
                   </form>
                 <% } %>

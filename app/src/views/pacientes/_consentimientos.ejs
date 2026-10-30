@@ -12,6 +12,8 @@
   const CANALES = { presencial: 'En admisión', telefono: 'Por teléfono', correo: 'Por correo', portal: 'En el portal' };
   const RELACIONES = { madre: 'Madre', padre: 'Padre', tutor_legal: 'Tutor legal', otro: 'Otro' };
   const METODOS = { cedula_presencial: 'cédula', codigo_contacto: 'código', codigo_portal: 'código en el portal' };
+  const DOCUMENTOS = { certificado_nacimiento: 'Certificado de nacimiento', resolucion_judicial: 'Resolución judicial (tuición o curaduría)', poder_notarial: 'Poder notarial', declarada: 'Declarada, sin documento' };
+  const algunoConRepresentante = consentimientos.some(function(c) { return c.requiereRepresentante; });
 %>
 <div class="titular-bloque" id="consentimientos">
   <h3 class="titular-subtitulo">Consentimientos</h3>
@@ -20,7 +22,9 @@
   </p>
 
   <% if (consentimiento.requiereRepresentante) { %>
-    <p class="aviso">El paciente tiene menos de 14 años: el consentimiento lo da quien tiene su cuidado personal, y se registran sus datos.</p>
+    <p class="aviso">El paciente tiene menos de 14 años: el consentimiento lo da quien tiene su cuidado personal, que acredita la representación con un documento.</p>
+  <% } else if (algunoConRepresentante) { %>
+    <p class="aviso">El paciente tiene menos de <%= consentimiento.edadSensibles %> años: en los usos que tratan datos de salud consiente quien tiene su cuidado personal (Ley 21.719, art. 16 quáter).</p>
   <% } else if (consentimiento.esAdolescente) { %>
     <p class="aviso">Paciente adolescente: otorga él mismo. Explícale el texto con especial cuidado, porque involucra datos de salud.</p>
   <% } %>
@@ -54,9 +58,9 @@
               <input type="hidden" name="textoId" value="<%= c.textoVigente.id %>" />
               <label class="casilla">
                 <input type="checkbox" name="acepta" value="si" required />
-                El <%= consentimiento.requiereRepresentante ? 'representante' : 'titular' %> aceptó este texto
+                El <%= c.requiereRepresentante ? 'representante' : 'titular' %> aceptó este texto
               </label>
-              <% if (consentimiento.requiereRepresentante) { %>
+              <% if (c.requiereRepresentante) { %>
                 <div class="form-grid">
                   <div class="field">
                     <label for="rep-nombre-<%= c.finalidad.clave %>">Nombre del representante</label>
@@ -73,7 +77,16 @@
                       <% consentimiento.relaciones.forEach(function(r) { %><option value="<%= r %>"><%= RELACIONES[r] %></option><% }) %>
                     </select>
                   </div>
+                  <div class="field">
+                    <label for="rep-doc-<%= c.finalidad.clave %>">Acredita la representación con</label>
+                    <select id="rep-doc-<%= c.finalidad.clave %>" name="representanteDocumento" required>
+                      <option value="">Elige…</option>
+                      <% consentimiento.documentos.forEach(function(d) { %><option value="<%= d %>"><%= DOCUMENTOS[d] %></option><% }) %>
+                      <option value="declarada">Sin documento (por teléfono o correo)</option>
+                    </select>
+                  </div>
                 </div>
+                <p class="ayuda">Se guarda solo el tipo de documento, nunca una copia. En admisión, revisa la cédula del representante y el documento.</p>
               <% } %>
               <div class="consentimiento-fila">
                 <select name="canal" required aria-label="Canal de la petición">
@@ -98,4 +111,32 @@
       </article>
     <% }) %>
   </div>
+
+  <details class="consentimiento-texto" id="historial-consentimientos">
+    <summary>Historial de consentimientos (<%= historialConsentimientos.length %>)</summary>
+    <% if (historialConsentimientos.length === 0) { %>
+      <p class="panel-lista-vacio">El titular no ha otorgado ningún consentimiento.</p>
+    <% } else { %>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr><th>Uso</th><th>Versión</th><th>Otorgado</th><th>Por</th><th>Registró</th><th>Revocado</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            <% historialConsentimientos.forEach(function(h) { %>
+              <tr>
+                <td><%= h.finalidad %></td>
+                <td>v<%= h.version %></td>
+                <td class="tiempo"><%= fechaDMA(isoLocal(h.otorgadoEl).slice(0, 16)) %> · <%= CANALES[h.canal].toLowerCase() %> · <%= METODOS[h.metodoVerificacion] %></td>
+                <td><%= h.otorgadoPor === 'representante' ? 'Representante (' + RELACIONES[h.relacion].toLowerCase() + '; ' + DOCUMENTOS[h.documento].toLowerCase() + ')' : 'Titular' %></td>
+                <td><%= h.registradoPor %></td>
+                <td class="tiempo"><%= h.revocadoEl ? fechaDMA(isoLocal(h.revocadoEl).slice(0, 16)) + ' · ' + CANALES[h.revocacionCanal].toLowerCase() + ' · ' + h.revocacionRegistradaPor : '—' %></td>
+                <td><span class="badge <%= h.revocadoEl ? 'badge-anulada' : 'badge-atendido' %>"><%= h.revocadoEl ? 'Revocado' : 'Otorgado' %></span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </details>
 </div>

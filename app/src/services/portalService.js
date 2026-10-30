@@ -155,7 +155,7 @@ async function misDatos({ pacienteId }) {
   await registrar({ actor: 'titular', accion: 'READ', entidad: 'Paciente', entidadId: pacienteId, detalle: { motivo: 'portal' } });
   return {
     ...archivo,
-    estadoConsentimientos: consentimientos.map((c) => ({
+    estadoConsentimientos: consentimientoService.conRepresentante(consentimientos, edad).map((c) => ({
       finalidad: c.finalidad,
       estado: c.estado,
       textoVigente: c.textoVigente,
@@ -163,7 +163,9 @@ async function misDatos({ pacienteId }) {
       otorgadoEl: c.otorgadoEl,
       revocadoEl: c.revocadoEl,
       otorgadoPor: c.otorgadoPor,
+      requiereRepresentante: c.requiereRepresentante,
     })),
+    // Para las solicitudes: las presenta el representante de un menor de 14.
     requiereRepresentante: consentimientoService.requiereRepresentante(edad),
   };
 }
@@ -196,8 +198,10 @@ function descargar({ pacienteId, verificacionId }, formato) {
  */
 function otorgar({ pacienteId, verificacionId }, { finalidadClave, textoId, acepto, representante }) {
   if (acepto !== 'si') throw new AppError('Marque la casilla para aceptar el texto: sin ella no se registra nada', 400);
+  // En el portal nadie ve un documento: la representación queda declarada.
+  const declarado = representante ? { ...representante, documento: consentimientoService.DECLARADA } : undefined;
   return consentimientoService.registrarOtorgamiento(
-    { pacienteId, finalidadClave: String(finalidadClave || ''), textoId, canal: derechosService.CANAL_PORTAL, representante },
+    { pacienteId, finalidadClave: String(finalidadClave || ''), textoId, canal: derechosService.CANAL_PORTAL, representante: declarado },
     { usuarioId: null, verificacionId, actor: 'titular' },
   );
 }

@@ -198,6 +198,9 @@ model Finalidad {
   nombre          String
   descripcion     String
   activa          Boolean               @default(true)
+  // Si trata datos sensibles: entonces un menor de 16 (no de 14) consiente
+  // por medio de su representante (Ley 21.719, art. 16 quáter).
+  datosSensibles  Boolean               @default(false) @map("datos_sensibles")
   textos          TextoConsentimiento[]
   consentimientos Consentimiento[]
 
@@ -339,6 +342,10 @@ model SolicitudDerecho {
   recibidaPorId              Int?      @map("recibida_por")
   solicitanteEsRepresentante Boolean   @default(false) @map("solicitante_es_representante")
   solicitanteRelacion        String?   @map("solicitante_relacion")
+  // Documento con que el representante acreditó la representación (solo el
+  // tipo, nunca una copia): certificado_nacimiento | resolucion_judicial |
+  // poder_notarial, o 'declarada' si no lo mostró (portal, teléfono).
+  solicitanteAcreditacion    String?   @map("solicitante_acreditacion")
   campo                      String? // rectificación: nombre | rut | fechaNacimiento | contacto
   valorPropuestoCifrado      Bytes?    @map("valor_propuesto_cifrado")
   finalidadClave             String?   @map("finalidad_clave") // oposición
