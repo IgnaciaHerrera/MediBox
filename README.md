@@ -52,11 +52,21 @@ incidente; dentro de Docker se corren con `docker compose exec -T app ...`):
 ```bash
 npm run retencion              # plazos de conservación (diario)
 npm run recordatorios          # recordatorios de citas, solo con consentimiento vigente (diario)
-npm run alertas                # reglas de accesos anómalos; avisa a los gestores (diario u horario)
+npm run encuestas              # invitación a la encuesta de ayer, solo con consentimiento "encuestas" (diario)
+npm run alertas                # reglas de accesos anómalos y solicitudes por vencer; avisa a gestores y privacidad (diario u horario)
 npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
 npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids]
+npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
 npm run llaves:rotar -- --variable PACIENTE_IDENTIDAD_KEY   # ver "Rotación de llaves"
 npm run sesiones:cerrar -- --correo cuenta@dominio          # cierra todas las sesiones de una cuenta comprometida
+npm run cuenta:suspender -- --correo cuenta@dominio [--reactivar]  # suspende la cuenta (no vuelve a entrar) y cierra sus sesiones
+```
+
+La auditoría vencida (más de 15 años) la elimina el dueño de la base, porque
+la aplicación no tiene permiso para borrarla:
+
+```bash
+docker compose run --rm migraciones npm run auditoria:purgar
 ```
 
 ### Variables de entorno para tests locales
