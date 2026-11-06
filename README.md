@@ -53,14 +53,25 @@ incidente; dentro de Docker se corren con `docker compose exec -T app ...`):
 npm run retencion              # plazos de conservación (diario)
 npm run recordatorios          # recordatorios de citas, solo con consentimiento vigente (diario)
 npm run encuestas              # invitación a la encuesta de ayer, solo con consentimiento "encuestas" (diario)
-npm run alertas                # reglas de accesos anómalos y solicitudes por vencer; avisa a gestores y privacidad (diario u horario)
+npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer (cada hora)
+npm run auditoria:copiar       # copia la auditoría nueva a AUDITORIA_COPIA_DIR, con su SHA-256 (cada 15 minutos)
+npm run auditoria:verificar    # compara la auditoría con su copia; si no coincide, sale con 1 y levanta una alerta crítica (diario)
 npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
-npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids]
-npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
+npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids] [--incidente N]
+npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--incidente N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
+npm run incidente:reconstruir -- --correo cuenta@dominio --desde AAAA-MM-DD[THH:MM] --hasta AAAA-MM-DD[THH:MM] [--incidente N] [--json]  # lo que hizo una cuenta, en orden
 npm run llaves:rotar -- --variable PACIENTE_IDENTIDAD_KEY   # ver "Rotación de llaves"
-npm run sesiones:cerrar -- --correo cuenta@dominio          # cierra todas las sesiones de una cuenta comprometida
-npm run cuenta:suspender -- --correo cuenta@dominio [--reactivar]  # suspende la cuenta (no vuelve a entrar) y cierra sus sesiones
+npm run sesiones:cerrar -- --correo cuenta@dominio [--incidente N]  # cierra todas las sesiones de una cuenta comprometida
+npm run cuenta:suspender -- --correo cuenta@dominio [--reactivar] [--incidente N]  # suspende la cuenta (no vuelve a entrar) y cierra sus sesiones
 ```
+
+Con `--incidente N`, la acción queda en la bitácora de ese incidente
+(`/incidentes/N`).
+
+`AUDITORIA_COPIA_DIR` debe apuntar a un almacenamiento de otro equipo que los
+administradores de la base no puedan modificar (un servidor de respaldos o un
+bucket con bloqueo de objetos). Por omisión es `registro/auditoria-copia`, que
+solo sirve para desarrollo: en el mismo servidor no delata a quien lo controla.
 
 La auditoría vencida (más de 15 años) la elimina el dueño de la base, porque
 la aplicación no tiene permiso para borrarla:
@@ -257,6 +268,8 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 | Sesiones | 8 horas (las del portal del paciente, 15 minutos) | vencen solas; `npm run sesiones:cerrar` cierra las de una cuenta |
 | Respaldos | 30 días | `ops/respaldar-db.sh` rota los anteriores |
 | Logs de los contenedores | 3 archivos de 10 MB | rotación de Docker (`docker-compose.yml`) |
+| Copia externa de la auditoría | 15 años, como la auditoría | la retención la fija el almacenamiento externo (bloqueo de objetos); MediBox no puede borrarla |
+| Alertas, incidentes y su bitácora | igual que la auditoría | no se eliminan; la bitácora es de solo inserción para la aplicación |
 
 `npm run retencion` es idempotente y está pensado para el cron diario del
 servidor:
@@ -290,10 +303,24 @@ las hace el propio titular en el **portal del paciente** (ver más abajo).
   titular en Excel (estructurado: sirve para la portabilidad) o en PDF (para
   leerlo), con reautenticación del funcionario, entregado en persona o al
   contacto registrado.
-- **Auditoría y alertas**: la auditoría registra actor (`usuario`, `sistema`,
-  `titular` o `portal`), resultado e IP sin datos personales; `/alertas`
-  (gestor) aplica las reglas de monitoreo, incluidas un inicio de sesión desde
-  una IP que la cuenta no usaba y el abuso del portal.
+- **Auditoría**: registra quién (actor `usuario`, `sistema`, `titular` o
+  `portal`), qué, sobre qué, cuándo, desde qué IP y con qué resultado, nunca el
+  contenido de los datos. Las acciones posibles están en el catálogo
+  `app/src/lib/eventosAuditoria.js`: `registrar()` rechaza una acción que no
+  esté ahí o un detalle con un correo, un RUT o un texto largo. Leer la
+  auditoría también se audita. Una copia en otro sistema
+  (`npm run auditoria:copiar`) permite detectar si alguien con acceso a la base
+  alteró el original (`npm run auditoria:verificar`).
+- **Alertas** (`/alertas`, gestor y privacidad): reglas de accesos anómalos
+  con severidad, rol responsable y plazo de revisión. Cada alerta se guarda,
+  se avisa a su responsable y se revisa dentro del plazo: se descarta con el
+  motivo o se escala a un incidente; nadie revisa una alerta sobre su propia
+  cuenta. Las que vencen sin revisarse se avisan a privacidad.
+- **Incidentes** (`/incidentes`): además del registro, la ficha reconstruye
+  desde la auditoría lo que hizo la cuenta involucrada en el período, lleva la
+  bitácora del equipo de respuesta y sugiere la gravedad según el criterio del
+  plan. El simulacro reproducible está en
+  `app/tests/integration/simulacro-incidente.test.js`.
 - **Política de tratamiento**: pública en `/privacidad`.
 
 ### Portal del paciente (`/portal`)
