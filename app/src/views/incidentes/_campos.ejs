@@ -11,6 +11,10 @@
   const completo = Boolean(v.id);
 %>
 <p class="aviso">No escribas datos de pacientes (nombres, RUT, contactos): solo qué pasó, conteos y categorías.</p>
+<% if (v.alertaId) { %>
+  <input type="hidden" name="alertaId" value="<%= v.alertaId %>" />
+  <p class="ayuda">Se escala la alerta N° <%= v.alertaId %>: al registrar el incidente, la alerta queda revisada y enlazada a él.</p>
+<% } %>
 <div class="form-grid">
   <div class="field">
     <label for="inc-titulo">Título</label>
@@ -41,10 +45,20 @@
   <label for="inc-descripcion">Qué ocurrió</label>
   <textarea id="inc-descripcion" name="descripcion" rows="3" maxlength="4000" required><%= v.descripcion || '' %></textarea>
 </div>
+<div class="form-grid">
+  <div class="field"><label for="inc-desde">Ocurrió desde</label><input id="inc-desde" type="datetime-local" name="ocurridoDesde" value="<%= fecha(v.ocurridoDesde) %>" /></div>
+  <div class="field"><label for="inc-hasta">Ocurrió hasta</label><input id="inc-hasta" type="datetime-local" name="ocurridoHasta" value="<%= fecha(v.ocurridoHasta) %>" /></div>
+  <div class="field">
+    <label for="inc-cuenta">Cuenta involucrada</label>
+    <select id="inc-cuenta" name="cuentaInvolucradaId" aria-describedby="inc-cuenta-ayuda">
+      <option value="">Ninguna o desconocida</option>
+      <% (opciones.cuentas || []).forEach(function(c) { %><option value="<%= c.id %>" <%= v.cuentaInvolucradaId === c.id ? 'selected' : '' %>><%= c.nombre %> (<%= c.rol %>)</option><% }) %>
+    </select>
+    <span class="ayuda" id="inc-cuenta-ayuda">La comprometida o la atacada: con ella y el período se reconstruye lo ocurrido.</span>
+  </div>
+</div>
 <% if (completo) { %>
   <div class="form-grid">
-    <div class="field"><label for="inc-desde">Ocurrió desde</label><input id="inc-desde" type="datetime-local" name="ocurridoDesde" value="<%= fecha(v.ocurridoDesde) %>" /></div>
-    <div class="field"><label for="inc-hasta">Ocurrió hasta</label><input id="inc-hasta" type="datetime-local" name="ocurridoHasta" value="<%= fecha(v.ocurridoHasta) %>" /></div>
     <div class="field"><label for="inc-titulares">Titulares afectados (aprox.)</label><input id="inc-titulares" type="number" min="0" name="titularesAfectados" value="<%= v.titularesAfectados ?? '' %>" /></div>
   </div>
   <fieldset class="field">

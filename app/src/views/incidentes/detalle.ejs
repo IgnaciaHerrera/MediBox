@@ -7,6 +7,12 @@
   const ESTADOS = { alerta: 'Alerta', sospechoso: 'Evento sospechoso', confirmado: 'Incidente confirmado', descartado: 'Descartado', cerrado: 'Cerrado' };
   const ACCIONES = { sospechoso: 'No se pudo descartar: pasar a sospechoso', confirmado: 'Hay evidencia: confirmar el incidente', descartado: 'Descartar (falso positivo)', cerrado: 'Cerrar el caso' };
   const abierto = i.siguientes.length > 0;
+  const SEVERIDADES = { baja: 'Baja', media: 'Media', alta: 'Alta', critica: 'Crítica' };
+  const FASES = { deteccion: 'Detección y análisis', contencion: 'Contención', erradicacion: 'Erradicación', recuperacion: 'Recuperación', notificacion: 'Notificación', lecciones: 'Lecciones aprendidas' };
+  const RESULTADOS = { exito: 'Permitida', denegado: 'Denegada', fallido: 'Fallida' };
+  const fechaHora = (d) => fechaDMA(isoLocal(d).slice(0, 16));
+  const conSegundos = (d) => fechaDMA(isoLocal(d).slice(0, 10)) + ' ' + isoLocal(d).slice(11, 19);
+  const ahora = isoLocal().slice(0, 16).replace(' ', 'T');
 %>
 </head>
 <body>
@@ -20,6 +26,15 @@
         <p class="page-sub">
           <%= ESTADOS[i.estado] %> · detectado el <%= fechaDMA(isoLocal(i.detectadoEl).slice(0, 16)) %>
           <% if (i.cerradoEl) { %> · cerrado el <%= fechaDMA(isoLocal(i.cerradoEl).slice(0, 16)) %><% } %>
+        </p>
+        <p class="page-sub">
+          Gravedad registrada: <strong><%= SEVERIDADES[i.severidad] %></strong>.
+          <% if (i.severidadSugerida.severidad !== i.severidad) { %>
+            El criterio del plan sugiere <strong><%= SEVERIDADES[i.severidadSugerida.severidad] %></strong> (<%= i.severidadSugerida.motivo %>): revísala.
+          <% } else { %>
+            Coincide con el criterio del plan (<%= i.severidadSugerida.motivo %>).
+          <% } %>
+          <% if (i.alertas.length > 0) { %> · Origen: <% i.alertas.forEach(function(a, n) { %><%= n ? ', ' : '' %>alerta N° <%= a.id %><% }) %>.<% } %>
         </p>
       </div>
     </div>
@@ -68,6 +83,89 @@
         <% if (i.sinNotificacionMotivo) { %><p><strong>Sin notificación a la Agencia:</strong> <%= i.sinNotificacionMotivo %></p><% } %>
       </section>
     <% } %>
+
+    <section class="panel-card panel-lista panel-texto" id="reconstruccion">
+      <div class="panel-lista-head"><h2>Reconstrucción desde la auditoría</h2></div>
+      <% if (!reconstruccion) { %>
+        <p class="ayuda">Indica la cuenta involucrada y el período en que ocurrió para reconstruir, desde la auditoría, qué hizo esa cuenta y qué intentos hubo contra ella.</p>
+      <% } else if (reconstruccion.error) { %>
+        <p class="aviso"><%= reconstruccion.error %></p>
+      <% } else { %>
+        <% const r = reconstruccion.resumen; %>
+        <p>
+          <strong><%= r.total %></strong> eventos entre el <%= r.primera ? conSegundos(r.primera) : '—' %> y el <%= r.ultima ? conSegundos(r.ultima) : '—' %>:
+          <strong><%= r.pacientesDistintos %></strong> pacientes distintos con datos expuestos, <%= r.denegados %> intentos denegados y <%= r.fallidos %> fallidos.
+          IP de origen: <%= r.ips.length ? r.ips.join(', ') : 'ninguna registrada' %>.
+        </p>
+        <% if (reconstruccion.truncado) { %><p class="aviso">Se muestran los primeros 2.000 eventos: acota el período para ver el resto.</p><% } %>
+        <details class="consentimiento-texto">
+          <summary>Ver los <%= reconstruccion.eventos.length %> eventos en orden</summary>
+          <div class="tabla-scroll">
+            <table class="tabla">
+              <thead><tr><th>Hora</th><th>Quién</th><th>Qué hizo</th><th>Sobre qué</th><th>Resultado</th><th>Desde</th></tr></thead>
+              <tbody>
+                <% reconstruccion.eventos.forEach(function(e) { %>
+                  <tr>
+                    <td class="tiempo sin-corte"><%= conSegundos(e.timestamp) %></td>
+                    <td><%= e.quien %></td>
+                    <td><%= e.accion %><br /><span class="ayuda"><%= e.descripcion %></span></td>
+                    <td><%= e.entidad %><%= e.entidadId ? ' ' + e.entidadId : '' %><%= e.sensible ? ' (datos de paciente)' : '' %></td>
+                    <td><%= RESULTADOS[e.resultado] || e.resultado %></td>
+                    <td><%= e.ip || '—' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      <% } %>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto" id="bitacora">
+      <div class="panel-lista-head"><h2>Bitácora de la respuesta</h2></div>
+      <p class="ayuda">Cada acción del equipo, con la hora y quién la hizo. Lo hecho en MediBox aparece solo (con <code>--incidente <%= i.id %></code> en los comandos de contención); lo de fuera se anota aquí. No se edita ni se borra.</p>
+      <% if (bitacora.length === 0) { %>
+        <p class="panel-lista-vacio">Sin acciones registradas.</p>
+      <% } else { %>
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead><tr><th>Hora</th><th>Fase</th><th>Acción</th><th>Quién</th></tr></thead>
+            <tbody>
+              <% bitacora.forEach(function(b) { %>
+                <tr>
+                  <td class="tiempo sin-corte"><%= fechaHora(b.el) %></td>
+                  <td><%= b.fase ? FASES[b.fase] : 'En MediBox' %></td>
+                  <td><%= b.descripcion %></td>
+                  <td><%= b.quien %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+      <% if (abierto) { %>
+        <form class="consentimiento-form" method="POST" action="/incidentes/<%= i.id %>/acciones">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <div class="form-grid">
+            <div class="field">
+              <label for="acc-fase">Fase</label>
+              <select id="acc-fase" name="fase" required>
+                <% opciones.fases.forEach(function(f) { %><option value="<%= f %>"><%= FASES[f] %></option><% }) %>
+              </select>
+            </div>
+            <div class="field">
+              <label for="acc-el">Cuándo se hizo</label>
+              <input id="acc-el" type="datetime-local" name="realizadaEl" max="<%= ahora %>" value="<%= ahora %>" required />
+            </div>
+          </div>
+          <div class="field">
+            <label for="acc-descripcion">Qué se hizo (sin datos de pacientes)</label>
+            <textarea id="acc-descripcion" name="descripcion" rows="2" minlength="5" maxlength="2000" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-neutro btn--auto btn--control">Anotar en la bitácora</button>
+        </form>
+      <% } %>
+    </section>
 
     <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Borrador de la notificación</h2></div>

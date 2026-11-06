@@ -43,7 +43,7 @@
     </section>
 
     <section class="panel-card panel-lista panel-texto">
-      <div class="panel-lista-head"><h2>Registrar una alerta o un reporte</h2></div>
+      <div class="panel-lista-head"><h2><%= sugerido.alertaId ? 'Escalar la alerta N° ' + sugerido.alertaId + ' a un incidente' : 'Registrar una alerta o un reporte' %></h2></div>
       <form class="consentimiento-form" method="POST" action="/incidentes">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <%- include('_campos', { valores: sugerido, opciones }) %>

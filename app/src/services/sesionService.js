@@ -15,18 +15,19 @@ async function tablaExiste() {
  * de quien hace el cambio.
  *
  * @param {number} usuarioId - la cuenta.
- * @param {{excepto?: string, actor?: ('usuario'|'sistema'), solicitanteId?: number}} [opciones]
+ * @param {{excepto?: string, actor?: ('usuario'|'sistema'), solicitanteId?: number, incidenteId?: number}} [opciones]
  *   excepto: id de sesión que se conserva (la propia, al cambiar la propia
- *   contraseña).
+ *   contraseña). incidenteId: el incidente que se contiene; la acción
+ *   aparece en su bitácora.
  * @returns {Promise<number>} cuántas sesiones se cerraron.
  *
  * Consumidores: usuarioService.cambiarPassword, src/sesiones.js
  *   (npm run sesiones:cerrar).
  */
-async function cerrarSesionesDe(usuarioId, { excepto = '', actor = 'usuario', solicitanteId = null } = {}) {
+async function cerrarSesionesDe(usuarioId, { excepto = '', actor = 'usuario', solicitanteId = null, incidenteId = null } = {}) {
   if (!(await tablaExiste())) return 0;
   const cerradas = await prisma.$executeRaw`DELETE FROM "session" WHERE sess->>'usuarioId' = ${String(usuarioId)} AND sid <> ${excepto}`;
-  await registrar({ actor, usuarioId: solicitanteId, accion: 'CERRAR_SESIONES', entidad: 'Usuario', entidadId: usuarioId, detalle: { cerradas } });
+  await registrar({ actor, usuarioId: solicitanteId, accion: 'CERRAR_SESIONES', entidad: 'Usuario', entidadId: usuarioId, detalle: { cerradas, ...(incidenteId ? { incidenteId } : {}) } });
   return cerradas;
 }
 

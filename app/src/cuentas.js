@@ -2,17 +2,19 @@
 // la suspende, para que no pueda volver a iniciar sesión aunque el atacante
 // conozca la contraseña, y cierra sus sesiones abiertas. Con --reactivar, la
 // devuelve a la normalidad cuando el incidente se cerró. Uso:
-//   docker compose exec -T app npm run cuenta:suspender -- --correo operador@medibox.local [--reactivar]
+//   docker compose exec -T app npm run cuenta:suspender -- --correo operador@medibox.local [--reactivar] [--incidente N]
+// Con --incidente, la acción aparece en la bitácora de ese incidente.
 require('dotenv').config();
 const { prisma } = require('./lib/prisma');
 const { logger } = require('./lib/logger');
 const { cambiarSuspension } = require('./services/usuarioService');
+const { incidenteDeArgumentos } = require('./lib/argumentos');
 
 const i = process.argv.indexOf('--correo');
 const correo = i === -1 ? '' : String(process.argv[i + 1] || '').trim().toLowerCase();
 const reactivar = process.argv.includes('--reactivar');
 if (!correo) {
-  process.stderr.write('Uso: npm run cuenta:suspender -- --correo cuenta@dominio [--reactivar]\n');
+  process.stderr.write('Uso: npm run cuenta:suspender -- --correo cuenta@dominio [--reactivar] [--incidente N]\n');
   process.exit(2);
 }
 
@@ -24,7 +26,7 @@ prisma.usuario
       process.exitCode = 1;
       return;
     }
-    const { cerradas } = await cambiarSuspension(usuario.id, !reactivar, { actor: 'sistema' });
+    const { cerradas } = await cambiarSuspension(usuario.id, !reactivar, { actor: 'sistema', incidenteId: incidenteDeArgumentos() });
     process.stdout.write(reactivar ? 'Cuenta reactivada\n' : `Cuenta suspendida; sesiones cerradas: ${cerradas}\n`);
   })
   .catch((err) => {

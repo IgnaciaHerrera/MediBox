@@ -116,19 +116,20 @@ async function cambiarPassword(id, nuevaPassword, solicitanteId, { sesionActual 
  *
  * @param {number} id - la cuenta.
  * @param {boolean} suspendida - true para suspender, false para reactivar.
- * @param {{actor?: ('usuario'|'sistema'), solicitanteId?: number}} [opciones]
+ * @param {{actor?: ('usuario'|'sistema'), solicitanteId?: number, incidenteId?: number}} [opciones]
+ *   incidenteId: el incidente que se contiene (queda en su bitácora).
  * @returns {Promise<{cerradas: number}>} cuántas sesiones se cerraron.
  * @throws {AppError} 404 si la cuenta no existe.
  *
  * Consumidores: src/cuentas.js (npm run cuenta:suspender).
  */
-async function cambiarSuspension(id, suspendida, { actor = 'usuario', solicitanteId = null } = {}) {
+async function cambiarSuspension(id, suspendida, { actor = 'usuario', solicitanteId = null, incidenteId = null } = {}) {
   await obtenerPorId(id);
   await prisma.$transaction(async (tx) => {
     await tx.usuario.update({ where: { id }, data: { suspendida, suspendidaEl: suspendida ? new Date() : null } });
-    await registrar({ actor, usuarioId: solicitanteId, accion: suspendida ? 'SUSPENDER_CUENTA' : 'REACTIVAR_CUENTA', entidad: 'Usuario', entidadId: id }, tx);
+    await registrar({ actor, usuarioId: solicitanteId, accion: suspendida ? 'SUSPENDER_CUENTA' : 'REACTIVAR_CUENTA', entidad: 'Usuario', entidadId: id, ...(incidenteId ? { detalle: { incidenteId } } : {}) }, tx);
   });
-  const cerradas = suspendida ? await cerrarSesionesDe(id, { actor, solicitanteId }) : 0;
+  const cerradas = suspendida ? await cerrarSesionesDe(id, { actor, solicitanteId, incidenteId }) : 0;
   return { cerradas };
 }
 

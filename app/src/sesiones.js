@@ -1,16 +1,18 @@
 // Contención de una cuenta comprometida (plan de respuesta, Hito 3): cierra
 // todas las sesiones abiertas de esa cuenta, sin cerrar las del resto del
 // personal. Uso:
-//   docker compose exec -T app npm run sesiones:cerrar -- --correo operador@medibox.local
+//   docker compose exec -T app npm run sesiones:cerrar -- --correo operador@medibox.local [--incidente N]
+// Con --incidente, la acción aparece en la bitácora de ese incidente.
 require('dotenv').config();
 const { prisma } = require('./lib/prisma');
 const { logger } = require('./lib/logger');
 const { cerrarSesionesDe } = require('./services/sesionService');
+const { incidenteDeArgumentos } = require('./lib/argumentos');
 
 const i = process.argv.indexOf('--correo');
 const correo = i === -1 ? '' : String(process.argv[i + 1] || '').trim().toLowerCase();
 if (!correo) {
-  process.stderr.write('Uso: npm run sesiones:cerrar -- --correo cuenta@dominio\n');
+  process.stderr.write('Uso: npm run sesiones:cerrar -- --correo cuenta@dominio [--incidente N]\n');
   process.exit(2);
 }
 
@@ -22,7 +24,7 @@ prisma.usuario
       process.exitCode = 1;
       return;
     }
-    const cerradas = await cerrarSesionesDe(usuario.id, { actor: 'sistema' });
+    const cerradas = await cerrarSesionesDe(usuario.id, { actor: 'sistema', incidenteId: incidenteDeArgumentos() });
     process.stdout.write(`Sesiones cerradas: ${cerradas}\n`);
   })
   .catch((err) => {

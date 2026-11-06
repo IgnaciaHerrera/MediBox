@@ -14,5 +14,6 @@ router.post('/', controller.crear);
 router.get('/:id', controller.detalle);
 router.post('/:id', controller.actualizar);
 router.post('/:id/estado', controller.cambiarEstado);
+router.post('/:id/acciones', controller.anotar);
 
 module.exports = router;

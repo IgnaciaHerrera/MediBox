@@ -21,6 +21,7 @@
     "alertas": "node src/alertas.js",
     "incidente:alcance": "node src/incidente.js",
     "incidente:evidencia": "node src/evidencia.js",
+    "incidente:reconstruir": "node src/reconstruir.js",
     "auditoria:purgar": "node src/auditoria-purgar.js",
     "cuenta:suspender": "node src/cuentas.js",
     "llaves:rotar": "node src/rotar-llaves.js",
