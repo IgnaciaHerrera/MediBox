@@ -15,6 +15,7 @@ const PERMISOS = [
   'consentimiento.write',
   'derechos.registrar', 'derechos.gestionar',
   'incidentes.gestionar',
+  'alertas.revisar',
   'notificaciones.read',
   'auditoria.read',
   'data.import', 'data.export',
@@ -31,8 +32,9 @@ const PERMISOS = [
 //     de derechos, y verifica la identidad del titular (Hito 3).
 //   - privacidad (Hito 3): resuelve las solicitudes de derechos; lee a un
 //     paciente solo a través de una solicitud.
-//   - gestor y privacidad llevan el registro de incidentes: el gestor
-//     detecta y privacidad coordina la respuesta.
+//   - gestor y privacidad llevan el registro de incidentes y revisan las
+//     alertas: el gestor detecta y privacidad coordina la respuesta (y revisa
+//     las alertas de extracción de datos y de cambios de acceso).
 //   - admin: cuentas, roles y configuración. Custodia las llaves, así que no
 //     lee los datos que protegen ni audita los accesos (separación de
 //     funciones): eso lo hace el gestor.
@@ -40,9 +42,9 @@ const ROLES = {
   consulta: ['dashboard.read', 'agenda.read', 'box.read', 'box.detalle.read', 'medicos.read', 'notificaciones.read'],
   operador: ['dashboard.read', 'agenda.read', 'agenda.write', 'box.read', 'box.write', 'box.detalle.read', 'medicos.read', 'paciente.read', 'paciente.write', 'consentimiento.write', 'derechos.registrar', 'notificaciones.read'],
   medico: ['dashboard.read', 'agenda.read', 'agenda.estado.propias', 'medicos.read', 'paciente.read.propios', 'notificaciones.read'],
-  gestor: ['dashboard.read', 'dashboard.write', 'agenda.read', 'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write', 'medicos.read', 'notificaciones.read', 'auditoria.read', 'data.import', 'data.export', 'incidentes.gestionar'],
+  gestor: ['dashboard.read', 'dashboard.write', 'agenda.read', 'box.read', 'box.write', 'box.detalle.read', 'box.detalle.write', 'medicos.read', 'notificaciones.read', 'auditoria.read', 'data.import', 'data.export', 'incidentes.gestionar', 'alertas.revisar'],
   admin: ['dashboard.read', 'medicos.read', 'notificaciones.read', 'admin.users', 'admin.roles', 'admin.system'],
-  privacidad: ['dashboard.read', 'notificaciones.read', 'derechos.registrar', 'derechos.gestionar', 'incidentes.gestionar'],
+  privacidad: ['dashboard.read', 'notificaciones.read', 'derechos.registrar', 'derechos.gestionar', 'incidentes.gestionar', 'alertas.revisar'],
 };
 
 const ESPECIALIDADES = ['Cardiología', 'Pediatría', 'Ginecología', 'Traumatología', 'Dermatología', 'Neurología'];

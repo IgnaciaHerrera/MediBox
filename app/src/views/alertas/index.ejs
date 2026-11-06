@@ -2,6 +2,14 @@
 <html lang="es">
 <head>
 <%- include('../partials/head', { titulo }) %>
+<%
+  const SEVERIDADES = { critica: { texto: 'Crítica', clase: 'badge-anulada' }, alta: { texto: 'Alta', clase: 'badge-anulada' }, media: { texto: 'Media', clase: 'badge-agendada' }, baja: { texto: 'Baja', clase: '' } };
+  const ESTADOS = { pendiente: 'Pendientes', descartada: 'Descartadas', escalada: 'Escaladas a incidente', todas: 'Todas' };
+  const RESPONSABLES = { gestor: 'Gestor', privacidad: 'Privacidad' };
+  const verAuditoria = usuario.permisos.includes('auditoria.read');
+  const escala = usuario.permisos.includes('incidentes.gestionar');
+  const fechaHora = (d) => '<span class="sin-corte">' + fechaDMA(isoLocal(d).slice(0, 16)) + '</span>';
+%>
 </head>
 <body>
   <%- include('../partials/topbar', { usuario, csrfToken, activo: 'alertas' }) %>
@@ -10,41 +18,61 @@
     <div class="page-head">
       <div>
         <h1>Alertas de accesos anómalos</h1>
-        <p class="page-sub">Reglas fijas sobre el registro de auditoría. Ninguna alerta muestra datos de pacientes: el detalle se revisa en Auditoría.</p>
+        <p class="page-sub">Cada hora, MediBox aplica las reglas a la auditoría y avisa al responsable de cada alerta. Revísala dentro de su plazo: descártala con el motivo o escálala a un incidente. Ninguna alerta muestra datos de pacientes.</p>
       </div>
     </div>
 
-    <form class="panel-card consentimiento-fila" method="GET" action="/alertas">
-      <label for="desde">Desde</label>
-      <input id="desde" type="date" name="desde" value="<%= filtros.desde %>" />
-      <label for="hasta">Hasta</label>
-      <input id="hasta" type="date" name="hasta" value="<%= filtros.hasta %>" />
-      <button type="submit" class="btn btn-neutro btn--auto btn--control">Revisar</button>
-      <span class="ayuda">Hasta <%= diasMaximos %> días por consulta.</span>
-    </form>
+    <nav class="panel-card consentimiento-fila" aria-label="Filtrar alertas">
+      <% Object.keys(ESTADOS).forEach(function(e) { %>
+        <a class="chip-filtro" href="/alertas?estado=<%= e %>" <%= filtros.estado === e ? 'aria-current=page' : '' %>><%= ESTADOS[e] %></a>
+      <% }) %>
+    </nav>
 
     <section class="panel-card panel-lista">
       <% if (alertas.length === 0) { %>
-        <p class="panel-lista-vacio">Sin alertas entre el <%= fechaDMA(filtros.desde) %> y el <%= fechaDMA(filtros.hasta) %>.</p>
+        <p class="panel-lista-vacio"><%= filtros.estado === 'pendiente' ? 'No hay alertas pendientes de revisión.' : 'No hay alertas en esta vista.' %></p>
       <% } else { %>
         <div class="tabla-scroll">
           <table class="tabla">
             <thead>
-              <tr><th>Regla</th><th>Usuario</th><th>Cantidad</th><th>Entre</th><th><span class="sr-only">Revisar</span></th></tr>
+              <tr><th>N°</th><th>Severidad</th><th>Regla</th><th>Cuenta</th><th>Cantidad</th><th>Entre</th><th>Responsable</th><th>Revisar antes de</th><th>Revisión</th></tr>
             </thead>
             <tbody>
               <% alertas.forEach(function(a) { %>
                 <tr>
-                  <td><strong><%= a.nombre %></strong><br /><span class="ayuda"><%= a.descripcion %></span></td>
-                  <td><%= a.usuarioNombre || 'Sin cuenta (correo intentado)' %></td>
+                  <td><%= a.id %></td>
+                  <td><span class="badge <%= SEVERIDADES[a.severidad].clase %>"><%= SEVERIDADES[a.severidad].texto %></span></td>
+                  <td class="alerta-regla"><strong><%= a.nombre %></strong><br /><span class="ayuda"><%= a.descripcion %></span></td>
+                  <td><%= a.usuarioNombre || (a.sujeto === 'portal' ? 'Portal del paciente' : a.sujeto === 'sistema' ? 'Sistema' : 'Sin cuenta (correo intentado)') %></td>
                   <td><%= a.cantidad %></td>
-                  <td class="tiempo"><%= fechaDMA(isoLocal(a.desde)) %><br /><%= fechaDMA(isoLocal(a.hasta)) %></td>
+                  <td class="tiempo"><%- fechaHora(a.desde) %><br /><%- fechaHora(a.hasta) %></td>
+                  <td><%= RESPONSABLES[a.responsable] || a.responsable %></td>
+                  <td class="tiempo<%= a.vencida ? ' solicitud-pendiente' : '' %>"><%- fechaHora(a.revisarAntesDe) %><% if (a.vencida) { %><br /><strong>Vencida</strong><% } %></td>
                   <td>
-                    <% if (a.usuarioId) { %>
-                      <a class="btn btn-neutro btn--auto btn--control" href="/auditoria?usuarioId=<%= a.usuarioId %>&desde=<%= isoLocal(a.desde).slice(0, 10) %>&hasta=<%= isoLocal(a.hasta).slice(0, 10) %>">Ver en auditoría</a>
-                    <% } %>
-                    <% if (usuario.permisos.includes('incidentes.gestionar')) { %>
-                      <a class="btn btn-neutro btn--auto btn--control" href="/incidentes?titulo=<%= encodeURIComponent('Alerta: ' + a.nombre) %>">Registrar incidente</a>
+                    <% if (a.estado === 'pendiente') { %>
+                      <% if (verAuditoria && a.usuarioId) { %>
+                        <a class="btn btn-neutro btn--auto btn--control" href="/auditoria?usuarioId=<%= a.usuarioId %>&desde=<%= isoLocal(a.desde).slice(0, 10) %>&hasta=<%= isoLocal(a.hasta).slice(0, 10) %>">Ver en auditoría</a>
+                      <% } %>
+                      <% if (a.usuarioId === usuario.id) { %>
+                        <span class="ayuda">Es sobre tu cuenta: la revisa otra persona.</span>
+                      <% } else { %>
+                        <% if (escala) { %><a class="btn btn-primary btn--auto btn--control" href="/incidentes?alerta=<%= a.id %>">Escalar a incidente</a><% } %>
+                        <details class="consentimiento-texto">
+                          <summary>Descartar</summary>
+                          <form method="POST" action="/alertas/<%= a.id %>/descartar" class="consentimiento-form">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                            <label for="motivo-<%= a.id %>">Motivo (sin datos de pacientes)</label>
+                            <textarea id="motivo-<%= a.id %>" name="motivo" minlength="10" maxlength="500" required rows="2"></textarea>
+                            <button type="submit" class="btn btn-neutro btn--auto btn--control">Descartar alerta</button>
+                          </form>
+                        </details>
+                      <% } %>
+                    <% } else if (a.estado === 'escalada') { %>
+                      <a href="/incidentes/<%= a.incidenteId %>">Incidente N° <%= a.incidenteId %></a>
+                      <span class="ayuda"><%= a.revisadaPorNombre %>, <%- fechaHora(a.revisadaEl) %></span>
+                    <% } else { %>
+                      Descartada: <%= a.motivo %>
+                      <span class="ayuda"><%= a.revisadaPorNombre %>, <%- fechaHora(a.revisadaEl) %></span>
                     <% } %>
                   </td>
                 </tr>
@@ -56,10 +84,36 @@
     </section>
 
     <section class="panel-card panel-lista panel-texto">
+      <div class="panel-lista-head"><h2>Analizar un período</h2></div>
+      <p class="ayuda">Para investigar un período anterior (por ejemplo, el de un incidente): aplica las reglas y guarda las alertas que encuentre. Hasta <%= diasMaximos %> días.</p>
+      <form class="consentimiento-fila" method="POST" action="/alertas/analizar">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label for="desde">Desde</label>
+        <input id="desde" type="date" name="desde" max="<%= filtros.hoy %>" required />
+        <label for="hasta">Hasta</label>
+        <input id="hasta" type="date" name="hasta" max="<%= filtros.hoy %>" required />
+        <button type="submit" class="btn btn-neutro btn--auto btn--control">Analizar</button>
+      </form>
+    </section>
+
+    <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Reglas</h2></div>
-      <ul>
-        <% Object.values(reglas).forEach(function(r) { %><li><strong><%= r.nombre %>:</strong> <%= r.descripcion %></li><% }) %>
-      </ul>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead><tr><th>Regla</th><th>Se dispara con</th><th>Severidad</th><th>Revisa</th><th>Plazo</th></tr></thead>
+          <tbody>
+            <% Object.values(reglas).forEach(function(r) { %>
+              <tr>
+                <td><strong><%= r.nombre %></strong></td>
+                <td><%= r.descripcion %></td>
+                <td><span class="badge <%= SEVERIDADES[r.severidad].clase %>"><%= SEVERIDADES[r.severidad].texto %></span></td>
+                <td><%= RESPONSABLES[r.responsable] || r.responsable %></td>
+                <td><%= r.plazoHoras %> h</td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 </body>

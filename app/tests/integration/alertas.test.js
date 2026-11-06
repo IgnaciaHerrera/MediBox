@@ -107,6 +107,15 @@ describe('Alertas de accesos anómalos', () => {
     expect(texto).not.toMatch(/entidadId|pacienteId|emailIndice/);
   });
 
+  it('el período de cada alerta va de la primera a la última fila, aunque mezcle acciones', async () => {
+    const desordenado = await usuarioDePrueba(`alertas-desordenado-${crypto.randomBytes(4).toString('hex')}@medibox.local`, 'consulta', password);
+    // Dos acciones distintas: cada una llega ordenada por su índice, pero no el conjunto.
+    for (const minuto of [10, 50]) await fila({ usuarioId: desordenado.id, accion: 'EXPORT', entidadId: 0, timestamp: enUtc(18, minuto) });
+    for (const minuto of [20, 40]) await fila({ usuarioId: desordenado.id, accion: 'EXPORT_TITULAR', entidadId: 5, timestamp: enUtc(18, minuto) });
+    const [alerta] = de('VOLUMEN_EXPORTACIONES', desordenado, await alertas.detectar(ventana));
+    expect(alerta).toEqual(expect.objectContaining({ desde: enUtc(18, 10), hasta: enUtc(18, 50) }));
+  });
+
   it('no acepta una ventana de más de 31 días', async () => {
     await expect(alertas.detectar({ desde: dia, hasta: enUtc(24 * 40) })).rejects.toMatchObject({ statusCode: 400 });
   });
@@ -116,21 +125,28 @@ describe('Alertas de accesos anómalos', () => {
     const operador = await usuarioDePrueba('alertas-operador@medibox.local', 'operador', password);
     const { agent } = await loginAgent(app, { email: gestor.email, password });
     const fechaDia = dia.toISOString().slice(0, 10);
-    const res = await agent.get(`/alertas?desde=${fechaDia}&hasta=${fechaDia}`).set('Accept', 'text/html');
+    const res = await agent.post('/alertas/analizar').send({ desde: fechaDia, hasta: fechaDia });
     expect(res.status).toBe(200);
-    expect(res.text).toContain('Fuera de horario');
+    expect(res.body.detectadas).toBeGreaterThan(0);
+    const pagina = await agent.get('/alertas?estado=todas').set('Accept', 'text/html');
+    expect(pagina.status).toBe(200);
+    expect(pagina.text).toContain('Fuera de horario');
     const { agent: agentOperador } = await loginAgent(app, { email: operador.email, password });
     expect((await agentOperador.get('/alertas')).status).toBe(403);
   });
 
   it('notificarAlertas avisa a los gestores sin identificar a nadie', async () => {
     const gestor = await usuarioDePrueba('alertas-gestor@medibox.local', 'gestor', password);
-    await fila({ usuarioId: usuarios.curioso.id, accion: 'READ', resultado: 'denegado', entidadId: 98 });
+    // Una cuenta nueva en cada corrida: las alertas se guardan, y la misma
+    // actividad de una corrida anterior ya no es una alerta nueva.
+    const curioso = await usuarioDePrueba(`alertas-curioso-${crypto.randomBytes(4).toString('hex')}@medibox.local`, 'consulta', password);
+    await fila({ usuarioId: curioso.id, accion: 'READ', resultado: 'denegado', entidadId: 98 });
     const antes = new Date();
-    const { alertas: cantidad } = await alertas.notificarAlertas();
+    const { alertas: cantidad, nuevas } = await alertas.notificarAlertas();
     expect(cantidad).toBeGreaterThan(0);
+    expect(nuevas).toBeGreaterThan(0);
     const aviso = await prisma.notificacion.findFirst({ where: { usuarioId: gestor.id, createdAt: { gte: antes } } });
-    expect(aviso.mensaje).toMatch(/alerta/);
+    expect(aviso.mensaje).toMatch(/^Alerta (baja|media|alta|crítica) N° \d+: .+ antes del /);
     expect(aviso.mensaje).not.toMatch(/Paciente|RUT/);
     await prisma.notificacion.deleteMany({ where: { usuarioId: gestor.id, createdAt: { gte: antes } } });
   });

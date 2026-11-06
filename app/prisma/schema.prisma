@@ -11,12 +11,12 @@ datasource db {
 }
 
 model Usuario {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   nombre       String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  rolId        Int      @map("rol_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  rolId        Int       @map("rol_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
   // Contención de una cuenta comprometida: no inicia sesión y sus sesiones
   // abiertas se cortan en la petición siguiente.
   suspendida   Boolean   @default(false)
@@ -35,6 +35,10 @@ model Usuario {
   solicitudesVerificadas     SolicitudDerecho[]      @relation("SolicitudVerificadaPor")
   solicitudesResueltas       SolicitudDerecho[]      @relation("SolicitudResueltaPor")
   incidentesRegistrados      Incidente[]
+  incidentesInvolucrada      Incidente[]             @relation("IncidenteCuentaInvolucrada")
+  alertas                    Alerta[]                @relation("AlertaUsuario")
+  alertasRevisadas           Alerta[]                @relation("AlertaRevisor")
+  accionesIncidente          IncidenteAccion[]
 
   @@map("usuarios")
 }
@@ -409,10 +413,63 @@ model Incidente {
   notificadoCsirtEl     DateTime? @map("notificado_csirt_el")
   cerradoEl             DateTime? @map("cerrado_el")
   registradoPorId       Int       @map("registrado_por")
+  // La cuenta comprometida o atacada: con ella y el período se reconstruye lo ocurrido.
+  cuentaInvolucradaId   Int?      @map("cuenta_involucrada_id")
   actualizadoEl         DateTime  @default(now()) @updatedAt @map("actualizado_el")
 
-  registradoPor Usuario @relation(fields: [registradoPorId], references: [id], onDelete: Restrict)
+  registradoPor     Usuario           @relation(fields: [registradoPorId], references: [id], onDelete: Restrict)
+  cuentaInvolucrada Usuario?          @relation("IncidenteCuentaInvolucrada", fields: [cuentaInvolucradaId], references: [id], onDelete: Restrict)
+  alertas           Alerta[]
+  acciones          IncidenteAccion[]
 
   @@index([estado])
   @@map("incidentes")
+}
+
+// Alerta de acceso anómalo detectada por una regla (services/alertasService.js),
+// con su responsable y su plazo de revisión. Sin datos de pacientes.
+model Alerta {
+  id               Int       @id @default(autoincrement())
+  regla            String
+  // u:<usuario> | e:<prefijo del HMAC del correo> | p:<paciente> | portal | sistema
+  sujeto           String
+  usuarioId        Int?      @map("usuario_id")
+  cantidad         Int
+  desde            DateTime
+  hasta            DateTime
+  severidad        String // baja | media | alta | critica
+  responsable      String // nombre del rol que la revisa
+  detectadaEl      DateTime  @default(now()) @map("detectada_el")
+  revisarAntesDe   DateTime  @map("revisar_antes_de")
+  vencidaAvisadaEl DateTime? @map("vencida_avisada_el")
+  estado           String    @default("pendiente") // pendiente | descartada | escalada
+  revisadaPorId    Int?      @map("revisada_por")
+  revisadaEl       DateTime? @map("revisada_el")
+  motivo           String?
+  incidenteId      Int?      @map("incidente_id")
+
+  usuario     Usuario?   @relation("AlertaUsuario", fields: [usuarioId], references: [id], onDelete: Restrict)
+  revisadaPor Usuario?   @relation("AlertaRevisor", fields: [revisadaPorId], references: [id], onDelete: Restrict)
+  incidente   Incidente? @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+
+  @@index([estado, revisarAntesDe], map: "alertas_estado_plazo_idx")
+  @@index([regla, sujeto, hasta], map: "alertas_regla_sujeto_idx")
+  @@map("alertas")
+}
+
+// Bitácora del equipo de respuesta de un incidente: de solo inserción.
+model IncidenteAccion {
+  id              Int      @id @default(autoincrement())
+  incidenteId     Int      @map("incidente_id")
+  fase            String // deteccion | contencion | erradicacion | recuperacion | notificacion | lecciones
+  descripcion     String
+  realizadaEl     DateTime @map("realizada_el")
+  registradaEl    DateTime @default(now()) @map("registrada_el")
+  registradaPorId Int      @map("registrada_por")
+
+  incidente     Incidente @relation(fields: [incidenteId], references: [id], onDelete: Restrict)
+  registradaPor Usuario   @relation(fields: [registradaPorId], references: [id], onDelete: Restrict)
+
+  @@index([incidenteId, realizadaEl], map: "incidente_acciones_incidente_idx")
+  @@map("incidente_acciones")
 }

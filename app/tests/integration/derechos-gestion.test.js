@@ -118,7 +118,7 @@ describe('Gestión de solicitudes de derechos (rol privacidad)', () => {
 
   it('el rol privacidad tiene exactamente sus cinco permisos', async () => {
     const rol = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'privacidad' }, include: { permisos: { include: { permiso: true } } } });
-    expect(rol.permisos.map((p) => p.permiso.clave).sort()).toEqual(['dashboard.read', 'derechos.gestionar', 'derechos.registrar', 'incidentes.gestionar', 'notificaciones.read']);
+    expect(rol.permisos.map((p) => p.permiso.clave).sort()).toEqual(['alertas.revisar', 'dashboard.read', 'derechos.gestionar', 'derechos.registrar', 'incidentes.gestionar', 'notificaciones.read']);
   });
 
   it('cada ejecución queda en la auditoría', async () => {

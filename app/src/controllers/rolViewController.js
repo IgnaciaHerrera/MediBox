@@ -42,6 +42,7 @@ const ETIQUETAS_PERMISO = {
   'derechos.registrar': 'Recibir solicitudes de derechos y verificar al titular',
   'derechos.gestionar': 'Resolver solicitudes de derechos (privacidad)',
   'incidentes.gestionar': 'Llevar el registro de incidentes de seguridad',
+  'alertas.revisar': 'Revisar las alertas de accesos anómalos',
   'notificaciones.read': 'Ver notificaciones',
   'auditoria.read': 'Ver registro de auditoría',
   'data.import': 'Importar datos',

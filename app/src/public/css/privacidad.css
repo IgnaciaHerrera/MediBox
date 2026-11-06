@@ -205,3 +205,13 @@
   color: var(--ink);
   font-size: 0.85rem;
 }
+
+/* Fecha y hora en una sola línea en las tablas angostas (alertas, bitácora). */
+.sin-corte {
+  white-space: nowrap;
+}
+
+/* La regla de una alerta lleva su descripción: que no quede en una columna de tres palabras. */
+.alerta-regla {
+  min-width: 14rem;
+}

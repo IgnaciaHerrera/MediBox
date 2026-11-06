@@ -73,6 +73,13 @@ describe('rol de la aplicación en la base (medibox_app)', () => {
     expect(await codigoAlEjecutar('TRUNCATE "audit_log"')).toBe('42501');
   });
 
+  it('la bitácora de un incidente es de solo inserción, y las alertas no se borran', async () => {
+    expect(await codigoAlEjecutar(`UPDATE "incidente_acciones" SET descripcion = 'X' WHERE id = -1`)).toBe('42501');
+    expect(await codigoAlEjecutar('DELETE FROM "incidente_acciones" WHERE id = -1')).toBe('42501');
+    expect(await codigoAlEjecutar('DELETE FROM "alertas" WHERE id = -1')).toBe('42501');
+    expect(await codigoAlEjecutar(`UPDATE "alertas" SET estado = 'pendiente' WHERE id = -1`)).toBeNull();
+  });
+
   it('no puede desactivar el trigger de la auditoría ni cambiar el esquema', async () => {
     expect(await codigoAlEjecutar('ALTER TABLE "audit_log" DISABLE TRIGGER ALL')).toBe('42501');
     expect(await codigoAlEjecutar('DROP TABLE "citas"')).toBe('42501');
