@@ -11,7 +11,10 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
   let rolSoloImport;
   let pacienteId;
 
+  // Un solo hash para los cinco usuarios: calcular cinco bcrypt de costo 12
+  // bajo la suite completa pasaba los 5 s y dejaba al paciente sin borrar.
   beforeAll(async () => {
+    const passwordHash = await bcrypt.hash(password, 12);
     // El gestor exporta e importa: no lee la identidad de los pacientes, y
     // ninguna exportación la contiene.
     const rolGestor = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'gestor' } });
@@ -42,27 +45,27 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
     usuarioExportador = await prisma.usuario.upsert({
       where: { email: 'datos-exportador-test@medibox.local' },
       update: {},
-      create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolGestor.id },
+      create: { nombre: 'Exportador Datos Test', email: 'datos-exportador-test@medibox.local', passwordHash, rolId: rolGestor.id },
     });
     await prisma.usuario.upsert({
       where: { email: 'datos-sinpermisos-test@medibox.local' },
       update: {},
-      create: { nombre: 'Sin Permisos Datos Test', email: 'datos-sinpermisos-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolConsulta.id },
+      create: { nombre: 'Sin Permisos Datos Test', email: 'datos-sinpermisos-test@medibox.local', passwordHash, rolId: rolConsulta.id },
     });
     await prisma.usuario.upsert({
       where: { email: 'datos-soloexport-test@medibox.local' },
       update: {},
-      create: { nombre: 'Solo Export Test', email: 'datos-soloexport-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolSoloExport.id },
+      create: { nombre: 'Solo Export Test', email: 'datos-soloexport-test@medibox.local', passwordHash, rolId: rolSoloExport.id },
     });
     await prisma.usuario.upsert({
       where: { email: 'datos-soloimport-test@medibox.local' },
       update: {},
-      create: { nombre: 'Solo Import Test', email: 'datos-soloimport-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolSoloImport.id },
+      create: { nombre: 'Solo Import Test', email: 'datos-soloimport-test@medibox.local', passwordHash, rolId: rolSoloImport.id },
     });
     await prisma.usuario.upsert({
       where: { email: 'datos-operador-test@medibox.local' },
       update: {},
-      create: { nombre: 'Operador Datos Test', email: 'datos-operador-test@medibox.local', passwordHash: await bcrypt.hash(password, 12), rolId: rolOperador.id },
+      create: { nombre: 'Operador Datos Test', email: 'datos-operador-test@medibox.local', passwordHash, rolId: rolOperador.id },
     });
 
     const { agent } = await loginAgent(app, { email: 'datos-operador-test@medibox.local', password });
@@ -70,7 +73,7 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
       nombre: 'Paciente Export Test', rut: '17171717-5', fechaNacimiento: '1990-05-05', contacto: '+56900009999',
     });
     pacienteId = pacienteRes.body.id;
-  });
+  }, 30000);
 
   afterAll(async () => {
     // Los usuarios de prueba (y sus roles) se conservan y se reutilizan con
@@ -165,7 +168,8 @@ describe('Importación y exportación de datos (data.export / data.import)', () 
       orderBy: { id: 'desc' },
     });
     expect(auditoria).not.toBeNull();
-  });
+    // Exporta la auditoría completa de medibox_test, que crece con cada corrida.
+  }, 30000);
 
   it('imports espacios from CSV, is idempotent on re-import, and rejects malformed rows atomically', async () => {
     const { agent, loginRes } = await loginAgent(app, { email: 'datos-exportador-test@medibox.local', password });

@@ -9,6 +9,11 @@ const alertas = require('../../src/services/alertasService');
 // rastro. Las pruebas corren con el dueño de la base, que es quien podría
 // desactivar el trigger de solo inserción: justo el caso que la copia cubre.
 describe('copia externa de la auditoría', () => {
+  // Cada prueba copia y verifica la auditoría completa de medibox_test, que
+  // crece con cada corrida y no se limpia (es de solo inserción). Con unas 25
+  // mil filas una prueba ya roza los 5 s por defecto bajo la suite completa.
+  // ponytail: el costo crece con cada corrida, recrear medibox_test si vuelve a acercarse a este límite.
+  jest.setTimeout(30000);
   const dirOriginal = process.env.AUDITORIA_COPIA_DIR;
   let dir;
 
