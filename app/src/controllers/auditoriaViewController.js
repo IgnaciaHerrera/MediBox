@@ -8,7 +8,7 @@ async function index(req, res, next) {
     const { accion, entidad, usuarioId, desde, hasta } = req.query;
 
     const [{ items: registros, total }, acciones, entidades, usuarios] = await Promise.all([
-      auditService.listar({ page, pageSize, accion, entidad, usuarioId, desde, hasta }),
+      auditService.listar({ page, pageSize, accion, entidad, usuarioId, desde, hasta }, req.usuario.id),
       auditService.listarAccionesDistintas(),
       auditService.listarEntidadesDistintas(),
       usuarioService.listar(),

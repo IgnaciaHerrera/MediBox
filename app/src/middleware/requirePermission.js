@@ -25,8 +25,9 @@ function requirePermission(clave) {
  *
  * @param {...string} claves - permisos aceptados.
  * @returns {Function} middleware de Express que responde 403 si no tiene ninguno.
- *   Si los permisos protegen datos de pacientes, el intento negado queda en la
- *   auditoría como READ 'denegado' sobre el paciente de la ruta (o 0).
+ *   Todo intento negado queda en la auditoría: si los permisos protegen
+ *   datos de pacientes, como READ 'denegado' sobre el paciente de la ruta (o
+ *   0); si no, como ACCESO_DENEGADO con los permisos y la ruta base.
  *
  * Consumidores: requirePermission(), routes/pacientes.js,
  *   routes/pacienteViews.js, routes/citas.js, routes/agendaViews.js.
@@ -44,6 +45,17 @@ function requireAnyPermission(...claves) {
           entidad: 'Paciente',
           entidadId: Number.isInteger(pacienteId) ? pacienteId : 0,
           resultado: 'denegado',
+        });
+      } else if (req.usuario) {
+        // Fuera de los pacientes, un intento negado sobre cuentas, roles o
+        // auditoría es la señal de un escalamiento de privilegios.
+        await registrar({
+          usuarioId: req.usuario.id,
+          accion: 'ACCESO_DENEGADO',
+          entidad: 'Sistema',
+          entidadId: 0,
+          resultado: 'denegado',
+          detalle: { permisos: claves, metodo: req.method, ruta: req.baseUrl || '/' },
         });
       }
     } catch (err) {

@@ -23,6 +23,8 @@
     "incidente:evidencia": "node src/evidencia.js",
     "incidente:reconstruir": "node src/reconstruir.js",
     "auditoria:purgar": "node src/auditoria-purgar.js",
+    "auditoria:copiar": "node src/auditoria-copiar.js",
+    "auditoria:verificar": "node src/auditoria-verificar.js",
     "cuenta:suspender": "node src/cuentas.js",
     "llaves:rotar": "node src/rotar-llaves.js",
     "sesiones:cerrar": "node src/sesiones.js",

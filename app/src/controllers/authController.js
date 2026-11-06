@@ -3,6 +3,7 @@ const { autenticar, buscarIdPorEmail } = require('../services/authService');
 const { registrar, indiceEmail } = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
 const { issueCsrfToken } = require('../middleware/csrf');
+const { logger } = require('../lib/logger');
 
 const loginSchema = Joi.object({
   // tlds: { allow: false } porque el proyecto usa dominios internos ".local"
@@ -68,8 +69,22 @@ async function login(req, res, next) {
   }
 }
 
-function logout(req, res, next) {
-  req.session.destroy((err) => {
+/**
+ * Cierra la sesión y lo audita (LOGOUT), para reconstruir cuándo dejó de
+ * usarse una cuenta. Cerrar la sesión protege más que registrar el cierre:
+ * si la auditoría falla, la sesión se cierra igual y el error queda en el
+ * log de la aplicación.
+ *
+ * Consumidores: routes/auth.js (POST /auth/logout).
+ */
+async function logout(req, res, next) {
+  const usuarioId = req.session && req.session.usuarioId;
+  if (usuarioId) {
+    await registrar({ usuarioId, accion: 'LOGOUT', entidad: 'Usuario', entidadId: usuarioId }).catch((err) =>
+      logger.error({ err }, 'No se pudo auditar el cierre de sesión'),
+    );
+  }
+  return req.session.destroy((err) => {
     if (err) return next(err);
     res.clearCookie('connect.sid');
     if (req.accepts('html') && !req.is('json')) {

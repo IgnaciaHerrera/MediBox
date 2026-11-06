@@ -1,6 +1,9 @@
+const Joi = require('joi');
 const { prisma } = require('../lib/prisma');
+const { AppError } = require('../lib/AppError');
 const { ipActual } = require('../lib/contexto');
 const { indiceCiego } = require('../lib/cifrado');
+const { validarEvento } = require('../lib/eventosAuditoria');
 
 // Lo que sale de la auditoría hacia la API, la pantalla y el CSV. De quien
 // actuó basta su nombre: la fila completa del usuario incluye el hash de su
@@ -38,6 +41,8 @@ const SELECT_REGISTRO = {
  * @param {object} [evento.detalle] - conteos o ids internos, sin datos personales.
  * @param {object} [client] - prisma o la transacción en curso.
  * @returns {Promise<void>}
+ * @throws {Error} si la acción o la entidad no están en el catálogo
+ *   (lib/eventosAuditoria.js) o si el detalle parece traer datos personales.
  *
  * Consumidores: todos los servicios que leen o modifican datos personales,
  *   authController, routes/auth.js, middleware/requirePermission.js.
@@ -46,6 +51,7 @@ async function registrar(
   { usuarioId = null, accion, entidad, entidadId, actor = 'usuario', resultado = 'exito', emailIndice = null, detalle },
   client = prisma,
 ) {
+  validarEvento({ accion, entidad, detalle });
   await client.auditLog.create({
     data: { usuarioId, accion, entidad, entidadId, actor, resultado, ip: ipActual(), emailIndice, detalle },
   });
@@ -78,8 +84,38 @@ function construirWhere({ accion, entidad, usuarioId, desde, hasta } = {}) {
   };
 }
 
-async function listar({ page = 1, pageSize = 20, accion, entidad, usuarioId, desde, hasta } = {}) {
+const fechaFiltro = Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).empty('');
+const filtrosSchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  pageSize: Joi.number().integer().min(1).max(100).default(20),
+  accion: Joi.string().pattern(/^[A-Z_]{1,40}$/).empty(''),
+  entidad: Joi.string().pattern(/^[A-Za-z]{1,40}$/).empty(''),
+  usuarioId: Joi.number().integer().positive().empty(''),
+  desde: fechaFiltro,
+  hasta: fechaFiltro,
+});
+
+/**
+ * Una página de la auditoría, con filtros. Quien la consulta también queda
+ * registrado (LIST sobre AuditLog): los registros dicen qué hizo cada cuenta
+ * y desde qué IP, así que leerlos también se audita.
+ *
+ * @param {object} [filtrosEntrada] - page, pageSize, accion, entidad, usuarioId, desde, hasta.
+ * @param {number} [lectorId] - quien consulta; sin él (procesos internos) no se audita.
+ * @returns {Promise<{items: object[], total: number, page: number, pageSize: number}>}
+ * @throws {AppError} 400 si un filtro es inválido.
+ *
+ * Consumidores: auditoriaController.index, auditoriaViewController.index.
+ */
+async function listar(filtrosEntrada = {}, lectorId) {
+  const { error, value } = filtrosSchema.validate(filtrosEntrada, { stripUnknown: true });
+  if (error) throw new AppError('Filtros de auditoría inválidos', 400);
+  const { page, pageSize, accion, entidad, usuarioId, desde, hasta } = value;
   const where = construirWhere({ accion, entidad, usuarioId, desde, hasta });
+  if (lectorId) {
+    const filtros = JSON.parse(JSON.stringify({ page, accion, entidad, usuarioId, desde, hasta }));
+    await registrar({ usuarioId: lectorId, accion: 'LIST', entidad: 'AuditLog', entidadId: 0, detalle: filtros });
+  }
   const [items, total] = await Promise.all([
     prisma.auditLog.findMany({
       where,

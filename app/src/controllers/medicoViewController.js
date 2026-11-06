@@ -114,7 +114,7 @@ async function crearMedico(req, res, next) {
   try {
     const { error, value } = medicoSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
-    await medicoService.crear(value);
+    await medicoService.crear(value, req.usuario.id);
     toast(req, 'Médico agregado');
     return res.redirect('/medicos');
   } catch (err) {
@@ -126,7 +126,7 @@ async function crearMedico(req, res, next) {
 async function eliminarMedico(req, res, next) {
   try {
     const id = Number(req.params.id);
-    await medicoService.eliminar(id);
+    await medicoService.eliminar(id, req.usuario.id);
     toast(req, 'Médico eliminado');
     return res.redirect('/medicos');
   } catch (err) {
@@ -140,7 +140,7 @@ async function editarMedico(req, res, next) {
     const id = Number(req.params.id);
     const { error, value } = medicoSchema.validate(req.body);
     if (error) return renderIndex(req, res, { error: error.details[0].message, status: 400 });
-    await medicoService.actualizar(id, value);
+    await medicoService.actualizar(id, value, req.usuario.id);
     toast(req, 'Médico actualizado');
     return res.redirect('/medicos');
   } catch (err) {

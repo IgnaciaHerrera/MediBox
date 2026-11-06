@@ -40,7 +40,7 @@ async function store(req, res, next) {
   try {
     const { error, value } = crearSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    const medico = await medicoService.crear(value);
+    const medico = await medicoService.crear(value, req.usuario.id);
     res.status(201).json(medico);
   } catch (err) {
     next(err);
@@ -52,7 +52,7 @@ async function update(req, res, next) {
     const id = Number(req.params.id);
     const { error, value } = crearSchema.validate(req.body);
     if (error) throw new AppError(error.details[0].message, 400);
-    res.json(await medicoService.actualizar(id, { ...value, usuarioId: value.usuarioId || null }));
+    res.json(await medicoService.actualizar(id, { ...value, usuarioId: value.usuarioId || null }, req.usuario.id));
   } catch (err) {
     next(err);
   }
@@ -61,7 +61,7 @@ async function update(req, res, next) {
 async function destroy(req, res, next) {
   try {
     const id = Number(req.params.id);
-    await medicoService.eliminar(id);
+    await medicoService.eliminar(id, req.usuario.id);
     res.status(204).send();
   } catch (err) {
     next(err);

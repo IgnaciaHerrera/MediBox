@@ -19,3 +19,5 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '..', '..', 
 process.env.EVIDENCIAS_DIR = process.env.EVIDENCIAS_DIR || require('path').join(require('os').tmpdir(), `medibox-evidencias-test-${process.pid}`);
 process.env.SUPRESIONES_ARCHIVO =
   process.env.SUPRESIONES_ARCHIVO || require('path').join(require('os').tmpdir(), `medibox-supresiones-test-${process.pid}.jsonl`);
+process.env.AUDITORIA_COPIA_DIR =
+  process.env.AUDITORIA_COPIA_DIR || require('path').join(require('os').tmpdir(), `medibox-auditoria-copia-test-${process.pid}`);
