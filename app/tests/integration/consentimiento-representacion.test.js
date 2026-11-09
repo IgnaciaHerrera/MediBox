@@ -1,5 +1,5 @@
 const { prisma } = require('../../src/lib/prisma');
-const { usuarioDePrueba, pacienteDePrueba, rutAleatorio } = require('../helpers/datos');
+const { usuarioDePrueba, pacienteDePrueba, rutAleatorio, haceAnios: aniosAtras } = require('../helpers/datos');
 const { limpiarPacientes } = require('../helpers/derechos');
 const consentimiento = require('../../src/services/consentimientoService');
 const verificacion = require('../../src/services/verificacionService');
@@ -18,12 +18,8 @@ describe('Consentimiento: adolescentes, representación, historial y encuestas',
   const pacientes = {};
   const citas = [];
 
-  const haceAnios = (anios) => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - anios);
-    d.setDate(d.getDate() - 10);
-    return d.toISOString().slice(0, 10);
-  };
+  // 10 días de margen: no cae justo en el cumpleaños.
+  const haceAnios = (anios) => aniosAtras(anios, 10);
   const representante = (documento = 'certificado_nacimiento') => ({ nombre: 'Rosa Representante', rut: rutAleatorio(), relacion: 'madre', documento });
 
   async function textoDe(paciente, clave) {

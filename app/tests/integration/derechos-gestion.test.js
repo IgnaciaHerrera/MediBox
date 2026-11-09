@@ -6,6 +6,8 @@ const { solicitudDePrueba, limpiarPacientes } = require('../helpers/derechos');
 const { descifrar } = require('../../src/lib/cifrado');
 const consentimiento = require('../../src/services/consentimientoService');
 const verificacion = require('../../src/services/verificacionService');
+const canalEnvio = require('../../src/lib/canalEnvio');
+const { enviarRecordatorios } = require('../../src/services/recordatorioService');
 
 const haceHoras = (horas) => new Date(Date.now() - horas * 60 * 60 * 1000);
 
@@ -25,7 +27,7 @@ describe('Gestión de solicitudes de derechos (rol privacidad)', () => {
     operador = await usuarioDePrueba('derechos-gestion-operador@medibox.local', 'operador', password);
     privacidad = await usuarioDePrueba('derechos-gestion-privacidad@medibox.local', 'privacidad', password);
     ({ agent: agente } = await loginAgent(app, { email: privacidad.email, password }));
-    for (const clave of ['supresion', 'codigo', 'rectificacion', 'pendiente']) {
+    for (const clave of ['supresion', 'codigo', 'rectificacion', 'pendiente', 'oposicion']) {
       pacientes[clave] = await pacienteDePrueba({ nombre: `Gestion ${clave}`, contacto: `+5697400${String(Object.keys(pacientes).length).padStart(4, '0')}`, createdAt: haceHoras(72) });
     }
   });
@@ -99,6 +101,47 @@ describe('Gestión de solicitudes de derechos (rol privacidad)', () => {
     expect(despues.rutIndice).not.toEqual(paciente.rutIndice);
     const historial = await prisma.historialCambio.findFirst({ where: { pacienteId: paciente.id, campo: 'rut' } });
     expect(historial.solicitudId).toBe(solicitud.id);
+  });
+
+  it('la oposición revoca solo el uso pedido y detiene ese tratamiento, sin bloquear al paciente', async () => {
+    const paciente = pacientes.oposicion;
+    const FECHA = '2099-07-20';
+    const solicitanteOperador = { id: operador.id, permisos: ['paciente.read', 'consentimiento.write'] };
+    await verificacion.verificarConCedula(paciente.id, solicitanteOperador);
+    const estados = await consentimiento.estadoPorPaciente(paciente.id);
+    for (const clave of ['recordatorios', 'encuestas']) {
+      const { textoVigente } = estados.find((e) => e.finalidad.clave === clave);
+      await consentimiento.otorgar({ pacienteId: paciente.id, finalidadClave: clave, textoId: textoVigente.id, canal: 'presencial' }, solicitanteOperador);
+    }
+    const medico = await prisma.medico.findFirstOrThrow();
+    const box = await prisma.box.findFirstOrThrow();
+    await prisma.cita.create({ data: { pacienteId: paciente.id, medicoId: medico.id, boxId: box.id, fecha: new Date(FECHA), horaInicio: '03:00', horaFin: '03:15' } });
+    const contacto = descifrar('paciente.contacto', (await prisma.paciente.findUnique({ where: { id: paciente.id } })).contactoCifrado);
+
+    // Con el consentimiento vigente, el recordatorio sale.
+    expect((await enviarRecordatorios({ fecha: FECHA })).enviados).toBe(1);
+    expect(canalEnvio.ultimo(contacto).mensaje).toMatch(/^Recordatorio de MediBox/);
+
+    const solicitud = await solicitudDePrueba(paciente, operador, { derecho: 'oposicion', finalidadClave: 'recordatorios' }, { metodo: 'cedula' });
+    const res = await agente.post(`/solicitudes/${solicitud.id}/ejecutar`).send({ respuesta: 'No se le enviarán más recordatorios.' });
+    expect(res.status).toBe(200);
+
+    const filas = await prisma.consentimiento.findMany({ where: { pacienteId: paciente.id }, include: { finalidad: true } });
+    const recordatorios = filas.find((f) => f.finalidad.clave === 'recordatorios');
+    const encuestas = filas.find((f) => f.finalidad.clave === 'encuestas');
+    expect(recordatorios.revocadoEl).not.toBeNull();
+    expect(recordatorios).toMatchObject({ revocacionCanal: 'presencial', revocacionRegistradaPorId: privacidad.id, revocacionVerificacionId: solicitud.verificacionId });
+    // Oponerse a un uso no toca los demás ni bloquea al paciente.
+    expect(encuestas.revocadoEl).toBeNull();
+    expect((await prisma.paciente.findUnique({ where: { id: paciente.id } })).bloqueado).toBe(false);
+    expect(await prisma.solicitudDerecho.findUnique({ where: { id: solicitud.id } })).toMatchObject({ estado: 'resuelta', resultado: 'atendida' });
+
+    // El tratamiento se detiene de verdad: el proceso ya no le envía nada. (El
+    // último mensaje es el acuse de recibo de la solicitud, no un recordatorio.)
+    const ultimo = canalEnvio.ultimo(contacto);
+    expect((await enviarRecordatorios({ fecha: FECHA })).enviados).toBe(0);
+    expect(canalEnvio.ultimo(contacto)).toBe(ultimo);
+    expect(await prisma.auditLog.count({ where: { usuarioId: privacidad.id, accion: 'REVOCAR', entidadId: paciente.id } })).toBe(1);
   });
 
   it('la lista de privacidad muestra las pendientes con su vencimiento', async () => {

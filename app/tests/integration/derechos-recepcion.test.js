@@ -1,7 +1,7 @@
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
 const { loginAgent } = require('../helpers/csrf');
-const { usuarioDePrueba, pacienteDePrueba } = require('../helpers/datos');
+const { usuarioDePrueba, pacienteDePrueba, haceAnios } = require('../helpers/datos');
 const canalEnvio = require('../../src/lib/canalEnvio');
 const verificacion = require('../../src/services/verificacionService');
 
@@ -35,9 +35,7 @@ describe('Recepción y verificación de solicitudes de derechos', () => {
     ({ agent: agente } = await loginAgent(app, { email: operador.email, password }));
     pacientes.adulto = await pacienteDePrueba({ nombre: 'Titular Recepcion', contacto: '+56973000001', createdAt: haceHoras(72) });
     pacientes.otro = await pacienteDePrueba({ nombre: 'Titular Otro', contacto: '+56973000002', createdAt: haceHoras(72) });
-    const nino = new Date();
-    nino.setFullYear(nino.getFullYear() - 8);
-    pacientes.nino = await pacienteDePrueba({ nombre: 'Titular Nino', fechaNacimiento: nino.toISOString().slice(0, 10) });
+    pacientes.nino = await pacienteDePrueba({ nombre: 'Titular Nino', fechaNacimiento: haceAnios(8) });
   });
 
   afterAll(async () => {

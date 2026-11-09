@@ -1,6 +1,6 @@
 const app = require('../../src/app');
 const { prisma } = require('../../src/lib/prisma');
-const { pacienteDePrueba, usuarioDePrueba } = require('../helpers/datos');
+const { pacienteDePrueba, usuarioDePrueba, haceAnios } = require('../helpers/datos');
 const { limpiarPacientes } = require('../helpers/derechos');
 const { ingresarAlPortal, agentePortal } = require('../helpers/portal');
 const { loginAgent } = require('../helpers/csrf');
@@ -9,11 +9,6 @@ const consentimientoService = require('../../src/services/consentimientoService'
 const derechos = require('../../src/services/derechosService');
 
 const haceHoras = (horas) => new Date(Date.now() - horas * 60 * 60 * 1000);
-const haceAnios = (anios) => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - anios);
-  return d.toISOString().slice(0, 10);
-};
 
 // Lo que el titular hace en el portal: ve y descarga sus datos (acceso y
 // portabilidad), otorga y revoca consentimientos con un clic, y pide una

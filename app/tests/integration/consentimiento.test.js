@@ -1,5 +1,5 @@
 const { prisma } = require('../../src/lib/prisma');
-const { usuarioDePrueba, pacienteDePrueba, rutAleatorio } = require('../helpers/datos');
+const { usuarioDePrueba, pacienteDePrueba, rutAleatorio, haceAnios } = require('../helpers/datos');
 const consentimiento = require('../../src/services/consentimientoService');
 const verificacion = require('../../src/services/verificacionService');
 const canalEnvio = require('../../src/lib/canalEnvio');
@@ -15,12 +15,6 @@ describe('Consentimiento por finalidad', () => {
   let solicitante;
   const pacientes = {};
   const citas = [];
-
-  const haceAnios = (anios) => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - anios);
-    return d.toISOString().slice(0, 10);
-  };
 
   async function textoVigente(clave) {
     const estado = await consentimiento.estadoPorPaciente(pacientes.adulto.id);

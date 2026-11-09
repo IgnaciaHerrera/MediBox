@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { prisma } = require('../../src/lib/prisma');
 const { cifrarPaciente } = require('../../src/services/pacienteService');
+const { isoLocal } = require('../../src/lib/fecha');
 
 /**
  * RUT con su dígito verificador correcto (la API lo valida).
@@ -63,4 +64,21 @@ function pacienteDePrueba({ nombre = 'Paciente Prueba', fechaNacimiento = '1990-
   });
 }
 
-module.exports = { rutConDv, rutAleatorio, usuarioDePrueba, pacienteDePrueba };
+/**
+ * Fecha de nacimiento de alguien que cumplió `anios` años hace `dias` días.
+ * Usa el día local, como la app al calcular la edad: con toISOString() (UTC),
+ * pasadas las 21:00 en Chile el día ya es el siguiente y la edad queda un año
+ * menor de la que el test espera.
+ *
+ * @param {number} anios
+ * @param {number} [dias] - días extra hacia atrás, para no caer en el cumpleaños.
+ * @returns {string} "AAAA-MM-DD".
+ */
+function haceAnios(anios, dias = 0) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - anios);
+  d.setDate(d.getDate() - dias);
+  return isoLocal(d).slice(0, 10);
+}
+
+module.exports = { rutConDv, rutAleatorio, usuarioDePrueba, pacienteDePrueba, haceAnios };
