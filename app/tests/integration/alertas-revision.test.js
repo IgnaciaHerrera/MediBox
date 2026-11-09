@@ -9,6 +9,12 @@ const alertas = require('../../src/services/alertasService');
 // se revisa dentro del plazo (descartada con motivo o escalada a un
 // incidente) y, si vence, se escala a privacidad.
 describe('revisión de alertas', () => {
+  // notificarAlertas() analiza las últimas 24 horas de medibox_test y avisa a
+  // cada gestor y cada privacidad de la base, que se acumulan corrida tras
+  // corrida: tras varias corridas el mismo día, una sola llamada inserta miles
+  // de avisos y pasa los 5 s por defecto.
+  // ponytail: el costo crece con cada corrida, recrear medibox_test si vuelve a acercarse a este límite.
+  jest.setTimeout(30000);
   const password = 'Password123!';
   const sufijo = crypto.randomBytes(4).toString('hex');
   let gestor;
