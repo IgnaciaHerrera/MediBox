@@ -1,4 +1,4 @@
-const { secciones, aExcel } = require('../../src/lib/archivoTitular');
+const { secciones, aExcel, aPdf, anchosPdf } = require('../../src/lib/archivoTitular');
 const { textoDelExcel } = require('../helpers/archivo');
 
 // Hora local: el archivo muestra las marcas de tiempo en la hora del servidor.
@@ -14,6 +14,44 @@ const archivo = {
   accesos: [{ fecha: alas('2026-10-19T15:45:00'), rol: 'operador', accion: 'READ', resultado: 'exito' }],
   tratamiento: { datos: [], destinatarios: 'Nadie', responsable: 'Hospital', comoEjercerlos: 'Portal' },
 };
+
+// A4 apaisado con márgenes de 36: el ancho útil de cada tabla del PDF.
+const ANCHO_UTIL = 842 - 2 * 36;
+
+describe('archivo del titular: anchos de columna del PDF', () => {
+  const suma = (anchos) => anchos.reduce((total, ancho) => total + ancho, 0);
+
+  it('a cada columna de texto largo le queda espacio, en todas las secciones', () => {
+    for (const { titulo, columnas } of secciones(archivo)) {
+      const anchos = anchosPdf(columnas, ANCHO_UTIL);
+      expect(anchos).toHaveLength(columnas.length);
+      const fijos = anchos.filter((ancho) => ancho !== '*');
+      const largas = anchos.length - fijos.length;
+      // Lo que sobra para las largas (la Respuesta del hospital, el motivo de
+      // una prórroga) no puede ser cero ni negativo: se verían como letras apiladas.
+      if (largas > 0) expect({ titulo, alcanza: (ANCHO_UTIL - suma(fijos)) / largas >= 100 }).toEqual({ titulo, alcanza: true });
+      fijos.forEach((ancho) => expect(ancho).toBeGreaterThanOrEqual(40));
+    }
+  });
+
+  it('la tabla de solicitudes, con 12 columnas, deja leer la respuesta y el motivo de la prórroga', () => {
+    const { columnas } = secciones(archivo).find((s) => s.columnas.includes('Respuesta'));
+    const anchos = anchosPdf(columnas, ANCHO_UTIL);
+    expect(anchos[columnas.indexOf('Respuesta')]).toBe('*');
+    expect(anchos[columnas.indexOf('Motivo de la prórroga')]).toBe('*');
+    expect(suma(anchos.filter((ancho) => ancho !== '*'))).toBeLessThanOrEqual(ANCHO_UTIL - 2 * 100);
+  });
+
+  it('sin columnas largas, el espacio se reparte por igual', () => {
+    expect(anchosPdf(['Dato', 'Valor'], ANCHO_UTIL)).toEqual(['*', '*']);
+  });
+
+  it('genera el PDF de un titular con una respuesta larga', async () => {
+    const largo = { ...archivo, solicitudes: [{ ...archivo.solicitudes[0], respuesta: 'Se corrigió el dato que pidió. '.repeat(20) }] };
+    const pdf = await aPdf(largo);
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+});
 
 describe('archivo del titular: fechas', () => {
   const celdas = secciones(archivo).flatMap((s) => s.filas.flat());

@@ -173,6 +173,35 @@ function aExcel(archivo) {
   return writeExcelFile(hojas).toBuffer();
 }
 
+// Ancho, en puntos, de las columnas "normales" de una tabla del PDF con texto
+// largo: lo que quepa entre un mínimo legible y un máximo, para que las
+// columnas largas conserven al menos su espacio mínimo.
+const ANCHO_NORMAL_MAXIMO = 78;
+const ANCHO_NORMAL_MINIMO = 40;
+const ANCHO_LARGA_MINIMO = 120;
+
+/**
+ * Ancho de cada columna de una tabla del PDF. Sin columnas de texto largo,
+ * todas se reparten el espacio por igual ('*'). Con ellas, las normales
+ * se achican lo necesario para dejarles a las largas al menos 120 puntos
+ * cada una: con 12 columnas (la tabla de solicitudes) un ancho fijo de 78 las
+ * dejaba sin espacio y la respuesta del hospital se veía como letras apiladas.
+ *
+ * @param {string[]} columnas - los encabezados de la sección.
+ * @param {number} anchoUtil - ancho de la página sin márgenes, en puntos.
+ * @returns {Array<(number|'*')>} un ancho fijo por columna normal y '*' por
+ *   cada larga, que se reparten lo que sobra.
+ *
+ * Consumidores: aPdf().
+ */
+function anchosPdf(columnas, anchoUtil) {
+  const largas = columnas.filter((c) => LARGAS.includes(c)).length;
+  if (largas === 0) return columnas.map(() => '*');
+  const normales = columnas.length - largas;
+  const normal = normales === 0 ? 0 : Math.floor(Math.max(ANCHO_NORMAL_MINIMO, Math.min(ANCHO_NORMAL_MAXIMO, (anchoUtil - largas * ANCHO_LARGA_MINIMO) / normales)));
+  return columnas.map((c) => (LARGAS.includes(c) ? '*' : normal));
+}
+
 /**
  * @param {object} archivo - ver secciones().
  * @returns {Promise<Buffer>} un PDF con una tabla por sección.
@@ -195,10 +224,10 @@ function aPdf(archivo) {
       if (s.filas.length === 0) {
         doc.text('Sin registros.');
       } else {
-        const conLargas = s.columnas.some((c) => LARGAS.includes(c));
+        const anchos = anchosPdf(s.columnas, doc.page.width - doc.page.margins.left - doc.page.margins.right);
         doc.table({
           // Si la sección tiene texto largo, ese se lleva el ancho sobrante; si no, todas por igual.
-          columnStyles: (i) => ({ width: !conLargas || LARGAS.includes(s.columnas[i]) ? '*' : 78 }),
+          columnStyles: (i) => ({ width: anchos[i] }),
           rowStyles: (i) => (i === 0 ? { font: { src: 'Helvetica-Bold' }, backgroundColor: '#eeeeee' } : {}),
           data: [s.columnas, ...s.filas.map((fila) => fila.map((valor) => String(valor ?? '')))],
         });
@@ -265,4 +294,4 @@ async function enviarArchivo(res, archivo, formato, nombre) {
   res.send(contenido);
 }
 
-module.exports = { ETIQUETAS, secciones, aExcel, aPdf, aJson, validarFormato, enviarArchivo };
+module.exports = { ETIQUETAS, secciones, aExcel, aPdf, anchosPdf, aJson, validarFormato, enviarArchivo };
