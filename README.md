@@ -335,7 +335,12 @@ las hace el propio titular en el **portal del paciente** (ver más abajo).
   resuelve en `/solicitudes`. Acceso y portabilidad generan el archivo del
   titular en Excel (estructurado: sirve para la portabilidad) o en PDF (para
   leerlo), con reautenticación del funcionario, entregado en persona o al
-  contacto registrado.
+  contacto registrado. La **oposición** a un uso con consentimiento
+  (recordatorios, investigación, encuestas) lo revoca. La oposición a lo que
+  el hospital hace por ley (la atención, los avisos de citas, el registro de
+  accesos) no procede: se registra igual, y privacidad la rechaza con la base
+  legal ya redactada (`TRATAMIENTOS_POR_LEY` en `app/src/lib/tratamiento.js`) y
+  el aviso de que puede reclamar ante la Agencia.
 - **Auditoría**: registra quién (actor `usuario`, `sistema`, `titular` o
   `portal`), qué, sobre qué, cuándo, desde qué IP y con qué resultado, nunca el
   contenido de los datos. Las acciones posibles están en el catálogo

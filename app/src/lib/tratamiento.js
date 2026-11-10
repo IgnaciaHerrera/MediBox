@@ -84,4 +84,26 @@ function textoEjercicio({ canales, condiciones }) {
 
 TRATAMIENTO.comoEjercerlos = textoEjercicio(TRATAMIENTO.ejercicio);
 
-module.exports = { TRATAMIENTO };
+// Lo que el hospital trata por ley y no depende del consentimiento: la
+// oposición no procede (Ley 21.719, art. 20). Se registra igual, y se responde
+// con un rechazo fundado con la base legal de cada uno (las mismas de la
+// política de arriba). La clave es la que llega en la solicitud de oposición.
+const TRATAMIENTOS_POR_LEY = {
+  atencion: {
+    nombre: 'La atención de salud y la agenda',
+    fundamento:
+      'El hospital trata su identificación y los datos de sus citas como órgano público de salud, en sus funciones legales (Ley 19.628, art. 20; Ley 21.719, art. 20), y debe conservar el registro clínico al menos 15 años (Ley 20.584, art. 13).',
+  },
+  avisos: {
+    nombre: 'Los avisos de cambios o anulaciones de citas',
+    fundamento:
+      'Forman parte de la atención: sin ellos el hospital no puede avisarle que una cita cambió o se anuló. Se hacen como órgano público, en sus funciones legales (Ley 21.719, art. 20).',
+  },
+  trazabilidad: {
+    nombre: 'El registro de quién accedió a sus datos',
+    fundamento:
+      'Es una obligación legal de resguardar los datos (Ley 19.628, art. 11; Ley 21.719, art. 14 quinquies) y es lo que le permite a usted saber quién accedió a ellos. Se conserva al menos 15 años, igual que su registro clínico.',
+  },
+};
+
+module.exports = { TRATAMIENTO, TRATAMIENTOS_POR_LEY };
