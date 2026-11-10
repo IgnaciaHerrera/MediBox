@@ -1,6 +1,9 @@
+const path = require('path');
 const { revisarLlaves } = require('./cifrado');
 
 const LARGO_MINIMO_SECRETO_SESION = 32;
+// La carpeta de la aplicación (app/): lo que viva dentro está en el mismo servidor.
+const RAIZ_APLICACION = path.resolve(__dirname, '..', '..');
 const MARCADOR_DE_EJEMPLO = /change-me/i;
 
 /**
@@ -10,7 +13,7 @@ const MARCADOR_DE_EJEMPLO = /change-me/i;
  *
  * @returns {string[]} problemas encontrados; vacío si se puede arrancar.
  *
- * Consumidores: src/server.js.
+ * Consumidores: src/server.js, src/tareas.js.
  */
 function revisarEntorno() {
   const env = process.env;
@@ -27,7 +30,34 @@ function revisarEntorno() {
     problemas.push(`SESSION_SECRET debe ser un valor aleatorio de al menos ${LARGO_MINIMO_SECRETO_SESION} caracteres`);
   }
 
+  const copia = problemaCopiaAuditoria(env);
+  if (copia) problemas.push(copia);
+
   return [...problemas, ...revisarLlaves()];
+}
+
+/**
+ * La copia externa de la auditoría solo delata a quien altere la original si
+ * vive en otro equipo. En producción, sin AUDITORIA_COPIA_DIR (o con una ruta
+ * dentro de la aplicación) caería en el mismo servidor, donde quien administra
+ * la base también podría alterarla: no se acepta. Fuera de producción sirve la
+ * carpeta de desarrollo.
+ *
+ * @param {object} [env] - por omisión, process.env.
+ * @returns {(string|null)} el problema, o null si está bien.
+ *
+ * Consumidores: revisarEntorno(), auditoriaCopiaService.directorio().
+ */
+function problemaCopiaAuditoria(env = process.env) {
+  if (env.NODE_ENV !== 'production') return null;
+  const dir = env.AUDITORIA_COPIA_DIR;
+  if (!dir) return 'AUDITORIA_COPIA_DIR no está definida: la copia de la auditoría debe ir a un almacenamiento de otro equipo';
+  if (!path.isAbsolute(dir)) return 'AUDITORIA_COPIA_DIR debe ser una ruta absoluta';
+  const relativa = path.relative(RAIZ_APLICACION, path.resolve(dir));
+  if (relativa === '' || (!relativa.startsWith('..') && !path.isAbsolute(relativa))) {
+    return 'AUDITORIA_COPIA_DIR está dentro de la aplicación: la copia debe ir a un almacenamiento de otro equipo';
+  }
+  return null;
 }
 
 /**
@@ -54,4 +84,4 @@ async function revisarRolBase(prisma) {
   return [];
 }
 
-module.exports = { revisarEntorno, revisarRolBase };
+module.exports = { revisarEntorno, revisarRolBase, problemaCopiaAuditoria };

@@ -46,14 +46,15 @@ npm run test:integration
 npm run seed         # datos de catálogo + usuario admin de desarrollo
 ```
 
-Procesos de operación (pensados para el cron del servidor o para un
-incidente; dentro de Docker se corren con `docker compose exec -T app ...`):
+Procesos de operación. En producción los corre solos el servicio `tareas`
+(ver "Procesos programados" abajo); a mano, o durante un incidente, dentro de
+Docker se corren con `docker compose exec -T app ...`:
 
 ```bash
 npm run retencion              # plazos de conservación (diario)
 npm run recordatorios          # recordatorios de citas, solo con consentimiento vigente (diario)
 npm run encuestas              # invitación a la encuesta de ayer, solo con consentimiento "encuestas" (diario)
-npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer (cada hora)
+npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer; con --solo-alertas o --solo-vencimientos, una de las dos (cada hora y a diario, respectivamente)
 npm run auditoria:copiar       # copia la auditoría nueva a AUDITORIA_COPIA_DIR, con su SHA-256 (cada 15 minutos)
 npm run auditoria:verificar    # compara la auditoría con su copia; si no coincide, sale con 1 y levanta una alerta crítica (diario)
 npm run supresiones:reaplicar  # vuelve a aplicar supresiones, bloqueos y revocaciones (lo corre ops/restaurar-db.sh)
@@ -72,6 +73,33 @@ Con `--incidente N`, la acción queda en la bitácora de ese incidente
 administradores de la base no puedan modificar (un servidor de respaldos o un
 bucket con bloqueo de objetos). Por omisión es `registro/auditoria-copia`, que
 solo sirve para desarrollo: en el mismo servidor no delata a quien lo controla.
+Por eso, **en producción es obligatoria**: la aplicación y las tareas no arrancan
+sin ella, y `auditoria:copiar` y `auditoria:verificar` se niegan a correr sin
+una ruta absoluta y fuera de la aplicación.
+
+### Procesos programados
+
+El servicio `tareas` de `docker-compose.yml` (`app/src/lib/programador.js`)
+ejecuta los procesos de arriba a su hora, cada uno en su propio proceso y sin
+cron ni dependencias nuevas. Las horas son las de Chile (`TZ`).
+
+| Tarea | Cuándo | Qué hace |
+|---|---|---|
+| `auditoria:copiar` | cada 15 minutos | copia la auditoría nueva a `AUDITORIA_COPIA_DIR` |
+| `alertas` | cada hora | evalúa las reglas de accesos anómalos y avisa a su responsable |
+| `vencimientos` | 08:00 | avisa a privacidad de las solicitudes de derechos vencidas o por vencer |
+| `retencion` | 02:00 | aplica los plazos de conservación y poda las anotaciones |
+| `auditoria:verificar` | 03:00 | compara la auditoría con su copia; si no coincide, alerta crítica |
+| `encuestas` | 09:00 | invita a la encuesta a quienes se atendieron ayer, con consentimiento |
+| `recordatorios` | 18:00 | recuerda las citas de mañana, con consentimiento |
+
+Una tarea que falla o no termina en 30 minutos se registra y no detiene a las
+demás; si la anterior sigue en curso, la siguiente se omite. En producción, el
+servicio se activa con `COMPOSE_PROFILES=operacion` en `.env` y arranca con
+`docker compose up -d`; es un perfil opcional porque en desarrollo la app y
+las pruebas comparten la base y no conviene que corran solos. Para verlos
+trabajar: `docker compose --profile operacion up -d tareas` y
+`docker compose logs -f tareas`.
 
 La auditoría vencida (más de 15 años) la elimina el dueño de la base, porque
 la aplicación no tiene permiso para borrarla:

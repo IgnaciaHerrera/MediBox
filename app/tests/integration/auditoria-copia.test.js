@@ -164,6 +164,20 @@ describe('copia externa de la auditoría', () => {
     );
   });
 
+  it('en producción se niega a copiar y a verificar sin una copia fuera de la aplicación', async () => {
+    const entorno = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      delete process.env.AUDITORIA_COPIA_DIR;
+      await expect(copia.copiar()).rejects.toThrow(/AUDITORIA_COPIA_DIR no está definida/);
+      await expect(copia.verificar()).rejects.toThrow(/AUDITORIA_COPIA_DIR no está definida/);
+      process.env.AUDITORIA_COPIA_DIR = path.join(__dirname, '..', '..', 'registro', 'auditoria-copia');
+      await expect(copia.copiar()).rejects.toThrow(/dentro de la aplicación/);
+    } finally {
+      process.env.NODE_ENV = entorno;
+    }
+  });
+
   it('una verificación fallida se vuelve una alerta crítica que revisa privacidad', async () => {
     const vieja = await filaVieja();
     await copia.copiar({ margenMinutos: 0 });
