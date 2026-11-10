@@ -57,7 +57,8 @@ npm run encuestas              # invitación a la encuesta de ayer, solo con con
 npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer; con --solo-alertas o --solo-vencimientos, una de las dos (cada hora y a diario, respectivamente)
 npm run auditoria:copiar       # copia la auditoría nueva a AUDITORIA_COPIA_DIR, con su SHA-256 (cada 15 minutos)
 npm run auditoria:verificar    # compara la auditoría con su copia; si no coincide, sale con 1 y levanta una alerta crítica (diario)
-npm run supresiones:reaplicar  # vuelve a aplicar supresiones, bloqueos y revocaciones (lo corre ops/restaurar-db.sh)
+npm run supresiones:reaplicar  # vuelve a aplicar depuraciones, supresiones, bloqueos y revocaciones (lo corre ops/restaurar-db.sh, con el dueño de la base)
+npm run depuracion             # lista los pacientes bloqueados que cumplieron 15 años desde su última atención; con --confirmar --autoriza <correo> los elimina (con el dueño de la base: ver "Depuración de lo bloqueado")
 npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids] [--incidente N]
 npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--incidente N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
 npm run incidente:reconstruir -- --correo cuenta@dominio --desde AAAA-MM-DD[THH:MM] --hasta AAAA-MM-DD[THH:MM] [--incidente N] [--json]  # lo que hizo una cuenta, en orden
@@ -107,6 +108,39 @@ la aplicación no tiene permiso para borrarla:
 ```bash
 docker compose run --rm migraciones npm run auditoria:purgar
 ```
+
+### Depuración de lo bloqueado
+
+La supresión y el bloqueo dejan la ficha clínica bloqueada porque la Ley 20.584,
+art. 13, obliga a conservarla al menos 15 años. Cumplido el plazo ya no hay
+obligación que lo justifique, y lo que se conserva sin finalidad se elimina. El
+plazo cuenta **desde la última atención** (la última cita que no se anuló) o, si
+el paciente nunca tuvo una, desde su alta. Conviene confirmar este criterio con
+la línea jurídica.
+
+Como la aplicación no puede borrar pacientes, la depuración la corre el dueño de
+la base, en dos pasos. Primero lista los candidatos, sin nombres y sin eliminar
+nada: pacientes **bloqueados**, con más de 15 años desde su última atención y sin
+una solicitud de derechos abierta. Después, con la cuenta de privacidad que la
+autoriza, los elimina:
+
+```bash
+docker compose run --rm migraciones npm run depuracion
+docker compose run --rm migraciones npm run depuracion -- --confirmar --autoriza privacidad@medibox.local [--solo 12,15]
+```
+
+Se elimina el paciente y todo lo que lo referencia (citas, consentimientos,
+solicitudes, historial y verificaciones), en una transacción por paciente. La
+auditoría no se toca: solo guarda ids y sigue su propio plazo de 15 años. Cada
+eliminación queda en la auditoría (`DEPURAR_PACIENTE`, con quien la autorizó) y
+anotada en `registro/supresiones.jsonl`: si se restaura un respaldo anterior
+(hasta 30 días), `ops/restaurar-db.sh` la vuelve a aplicar con el dueño de la
+base (`REAPLICAR_DEPURACION`).
+
+Un paciente que **no** está bloqueado no se depura aquí, aunque haya cumplido el
+plazo: nadie pidió su supresión, y eliminarlo corresponde a un procedimiento del
+hospital (qué fichas se descartan, con qué acta y quién lo autoriza) que todavía
+no está definido.
 
 ### Variables de entorno para tests locales
 
@@ -290,6 +324,7 @@ al terminar:
 
 | Se anota | Al restaurar |
 |---|---|
+| Depuración | el paciente se elimina otra vez, con todo lo que lo referencia (solo lo puede hacer el dueño de la base: el script usa el servicio `migraciones`) |
 | Supresión | contacto eliminado, consentimientos revocados, sin representante, bloqueado y sin citas futuras |
 | Bloqueo y desbloqueo | queda como lo dejó el último de los dos; un bloqueo anula las citas futuras |
 | Revocación u oposición | se cierra el consentimiento de ese uso, solo si se otorgó antes de la revocación (uno nuevo se respeta) |
@@ -319,9 +354,10 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 
 | Dato | Plazo | Cómo se aplica |
 |---|---|---|
-| Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan; la auditoría es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE) |
+| Pacientes y citas | al menos 15 años (Ley 20.584, art. 13) | no se eliminan por plazo; solo los bloqueados se depuran al cumplirse (ver "Depuración de lo bloqueado") |
+| Auditoría | 15 años | es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE); `npm run auditoria:purgar` elimina lo que cumplió el plazo |
 | Historial de cambios, consentimientos y solicitudes de derechos | igual que la ficha | no se eliminan: son la prueba de lo que pidió el titular |
-| Paciente bloqueado (bloqueo o supresión) | igual que la ficha | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante |
+| Paciente bloqueado (bloqueo o supresión) | 15 años desde la última atención | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante; cumplido el plazo, `npm run depuracion` elimina al paciente y todo lo que lo referencia |
 | Códigos de verificación y del portal | 10 minutos, un solo uso | solo se guarda su hash; `npm run retencion` borra el hash y la sal al día siguiente (la fila queda como respaldo de lo que verificó) |
 | Anotaciones de supresiones, bloqueos y revocaciones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores (30 días) | fuera de la base; `ops/restaurar-db.sh` las reaplica y `npm run retencion` las poda |
 | Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |

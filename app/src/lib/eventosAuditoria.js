@@ -201,7 +201,19 @@ const EVENTOS = {
   ANOTAR_RESTRICCION: {
     categoria: 'derechos',
     entidades: ['Paciente'],
-    descripcion: 'Falla al anotar un bloqueo o una revocación para reaplicarlos tras restaurar un respaldo.',
+    descripcion: 'Falla al anotar un bloqueo, una revocación o una depuración para reaplicarlos tras restaurar un respaldo.',
+  },
+  DEPURAR_PACIENTE: {
+    categoria: 'derechos',
+    entidades: ['Paciente'],
+    descripcion: 'Eliminación definitiva de un paciente bloqueado que cumplió el plazo legal de conservación (15 años).',
+    sensible: true,
+  },
+  REAPLICAR_DEPURACION: {
+    categoria: 'derechos',
+    entidades: ['Paciente'],
+    descripcion: 'Eliminación de un paciente depurado que volvió al restaurar un respaldo anterior.',
+    sensible: true,
   },
   REAPLICAR_RESTRICCION: {
     categoria: 'derechos',

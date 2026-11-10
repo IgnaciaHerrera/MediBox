@@ -34,7 +34,9 @@ echo "Base restaurada desde $archivo"
 
 # Un respaldo anterior a un pedido del titular lo desharía: se vuelven a aplicar
 # las supresiones, los bloqueos y las revocaciones anotados fuera de la base
-# (registro/supresiones.jsonl).
-docker compose -f "$raiz/docker-compose.yml" exec -T app npm run supresiones:reaplicar
+# (registro/supresiones.jsonl). Se corre con el dueño de la base (servicio
+# `migraciones`): volver a eliminar un paciente depurado es algo que la
+# aplicación, con su rol de mínimo privilegio, no puede hacer.
+docker compose -f "$raiz/docker-compose.yml" run --rm -T migraciones npm run supresiones:reaplicar
 echo "Supresiones, bloqueos y revocaciones reaplicados"
 

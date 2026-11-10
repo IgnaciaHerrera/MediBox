@@ -16,10 +16,11 @@ const { registrar } = require('./auditService');
 // Una línea por anotación (JSON):
 //   - supresión:  { pacienteId, fecha, solicitudId }        (sin `tipo`, como siempre)
 //   - bloqueo, desbloqueo, revocacion: { tipo, pacienteId, fecha, solicitudId?, finalidad?, canal? }
+//   - depuracion (eliminación de un paciente al cumplirse el plazo legal): { tipo, pacienteId, fecha }
 // La rectificación no se anota: reaplicarla exigiría guardar el valor nuevo,
 // un dato personal fuera de la base. Se revisa desde la auditoría.
 
-const TIPOS = ['supresion', 'bloqueo', 'desbloqueo', 'revocacion'];
+const TIPOS = ['supresion', 'bloqueo', 'desbloqueo', 'revocacion', 'depuracion'];
 const DIAS_RESPALDO_POR_OMISION = 30;
 const MS_DIA = 24 * 60 * 60 * 1000;
 
@@ -54,21 +55,22 @@ function registrarSupresion(pacienteId, solicitudId) {
 }
 
 /**
- * Anota un bloqueo, su levantamiento o una revocación de consentimiento,
- * para reaplicarlo si se restaura un respaldo anterior. Se llama cuando el
+ * Anota un bloqueo, su levantamiento, una revocación de consentimiento o una
+ * depuración, para reaplicarlo si se restaura un respaldo anterior. Se llama cuando el
  * cambio ya se confirmó en la base: nunca dentro de su transacción, o una
  * anulada dejaría anotado algo que no ocurrió. Un fallo no se le devuelve a
  * quien ejerció su derecho (ya está aplicado y respondido): queda en el log y
  * en la auditoría como fallido, para que el administrador lo anote a mano
  * antes de cualquier restauración.
  *
- * @param {{tipo: ('bloqueo'|'desbloqueo'|'revocacion'), pacienteId: number,
+ * @param {{tipo: ('bloqueo'|'desbloqueo'|'revocacion'|'depuracion'), pacienteId: number,
  *   solicitudId?: number, finalidad?: string, canal?: string}} datos -
  *   finalidad vacía en una revocación significa todas las finalidades.
  * @returns {Promise<boolean>} si quedó anotada.
  *
  * Consumidores: derechosService.ejecutar y desbloquear,
- *   consentimientoService.revocar, portalService.revocar.
+ *   consentimientoService.revocar, portalService.revocar,
+ *   depuracionService.depurar.
  */
 async function anotarRestriccion({ tipo, pacienteId, solicitudId, finalidad, canal }) {
   try {

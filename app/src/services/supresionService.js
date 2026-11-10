@@ -2,6 +2,7 @@ const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
 const { borrarContactosAnteriores } = require('./pacienteService');
 const { registrarSupresion, leerAnotaciones } = require('./anotacionService');
+const { eliminarPaciente } = require('./depuracionService');
 
 // Reaplicación de lo que el titular ya pidió, tras restaurar un respaldo
 // anterior (Hito 3). Qué se anota y por qué: ver anotacionService.js.
@@ -67,8 +68,20 @@ async function reaplicarRestricciones(pacienteId, anotaciones, tx) {
   return true;
 }
 
+// Depuración: el paciente se eliminó al cumplirse el plazo legal, y un respaldo
+// anterior lo trae de vuelta. Se elimina otra vez, con todo lo que lo referencia.
+// Borrar pacientes solo puede el dueño de la base: ops/restaurar-db.sh corre
+// esto con el servicio `migraciones`.
+async function reaplicarDepuracion(pacienteId, tx) {
+  const eliminado = await eliminarPaciente(tx, pacienteId);
+  if (!eliminado) return false;
+  await registrar({ actor: 'sistema', accion: 'REAPLICAR_DEPURACION', entidad: 'Paciente', entidadId: pacienteId, detalle: eliminado }, tx);
+  return true;
+}
+
 /**
- * Vuelve a aplicar todo lo anotado: las supresiones (contacto en NULL,
+ * Vuelve a aplicar todo lo anotado: las depuraciones (el paciente se vuelve a
+ * eliminar, con todo lo que lo referencia), las supresiones (contacto en NULL,
  * consentimientos revocados, sin representante, bloqueado y sin citas
  * futuras) y, para quien no ejerció la supresión, el último bloqueo o
  * desbloqueo y las revocaciones de consentimiento. Es idempotente: solo toca
@@ -86,8 +99,12 @@ async function reaplicar() {
 
   for (const pacienteId of ids) {
     const delPaciente = anotaciones.filter((a) => a.pacienteId === pacienteId);
+    const depurado = delPaciente.some((a) => a.tipo === 'depuracion');
     const suprimido = delPaciente.some((a) => a.tipo === 'supresion');
-    const corregido = await prisma.$transaction((tx) => (suprimido ? reaplicarSupresion(pacienteId, tx) : reaplicarRestricciones(pacienteId, delPaciente, tx)));
+    const corregido = await prisma.$transaction((tx) => {
+      if (depurado) return reaplicarDepuracion(pacienteId, tx);
+      return suprimido ? reaplicarSupresion(pacienteId, tx) : reaplicarRestricciones(pacienteId, delPaciente, tx);
+    });
     if (corregido) reaplicadas += 1;
   }
   return { reaplicadas };

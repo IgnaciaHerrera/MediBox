@@ -34,6 +34,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Lo que solo puede hacer el dueño de la base (depurar pacientes al cumplirse
+    # el plazo legal, purgar la auditoría, reaplicar tras restaurar) comparte con
+    # la app el archivo de anotaciones de registro/.
+    volumes:
+      - ./registro:/app/registro
     logging: *logs-con-tope
 
   app:
