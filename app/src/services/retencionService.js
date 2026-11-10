@@ -1,6 +1,7 @@
 const { prisma } = require('../lib/prisma');
 const { registrar } = require('./auditService');
 const { borrarContactosAnteriores } = require('./pacienteService');
+const { podarAnotaciones } = require('./anotacionService');
 
 // Plazos de conservación del inventario del Hito 1 que vencen antes que el
 // registro clínico. Los que fija la ley no se tocan aquí: pacientes, citas y
@@ -29,6 +30,9 @@ function mesesAntes(fecha, meses) {
  *     avisarle de cambios en sus citas. El resto de la ficha se conserva.
  *   - Códigos de verificación (al funcionario o del portal): el hash y la sal
  *     se borran un día después de creados; ya vencieron o se usaron.
+ *   - Anotaciones de supresiones, bloqueos y revocaciones (registro/
+ *     supresiones.jsonl): se quitan al pasar la vigencia de los respaldos,
+ *     cuando ya no existe una copia anterior que las necesite.
  *
  * Es idempotente: correrlo de nuevo no cambia nada hasta que venza otro
  * plazo. Queda en la auditoría como acción del sistema, con los conteos y
@@ -36,7 +40,7 @@ function mesesAntes(fecha, meses) {
  *
  * @param {Date} [ahora] - fecha de referencia; por omisión, ahora.
  * @returns {Promise<{notificacionesEliminadas: number, contactosEliminados: number,
- *   codigosEliminados: number}>}
+ *   codigosEliminados: number, anotacionesPodadas: number}>}
  *
  * Consumidores: src/retencion.js (npm run retencion).
  */
@@ -67,7 +71,10 @@ async function aplicarRetencion(ahora = new Date()) {
     data: { codigoHash: null, sal: null },
   });
 
-  const resumen = { notificacionesEliminadas, contactosEliminados, codigosEliminados };
+  // Las anotaciones para restaurar respaldos duran lo que ellos.
+  const anotacionesPodadas = podarAnotaciones(ahora);
+
+  const resumen = { notificacionesEliminadas, contactosEliminados, codigosEliminados, anotacionesPodadas };
   await registrar({ actor: 'sistema', accion: 'RETENCION', entidad: 'Sistema', entidadId: 0, detalle: resumen });
   return resumen;
 }

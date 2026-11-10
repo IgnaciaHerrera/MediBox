@@ -10,7 +10,7 @@ const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
 const citaService = require('./citaService');
 const consentimientoService = require('./consentimientoService');
-const { registrarSupresion } = require('./supresionService');
+const { registrarSupresion, anotarRestriccion } = require('./anotacionService');
 const { METODOS, exigirVerificacion } = require('./verificacionService');
 const { crearNotificacion } = require('./notificacionService');
 const canalEnvio = require('../lib/canalEnvio');
@@ -669,6 +669,8 @@ async function ejecutar(solicitudId, solicitante, datos) {
       await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
       await consentimientoService.revocarAbiertos(pacienteId, { finalidadClave: solicitud.finalidadClave, canal: solicitud.canal, usuarioId: solicitante.id, verificacionId: solicitud.verificacionId }, tx);
     });
+    // Ya confirmada: se anota para reaplicarla si se restaura un respaldo anterior.
+    await anotarRestriccion({ tipo: 'revocacion', pacienteId, solicitudId, finalidad: solicitud.finalidadClave, canal: solicitud.canal });
     return;
   }
 
@@ -690,12 +692,15 @@ async function ejecutar(solicitudId, solicitante, datos) {
     await citaService.anularCita(citaId, solicitante.id);
   }
 
-  // La supresión queda anotada fuera de la base, para reaplicarla si se
-  // restaura un respaldo anterior. Ya está aplicada y respondida: si el
-  // archivo no se puede escribir, no se le devuelve un error al funcionario
-  // (repetirla daría 409), sino que queda en la auditoría como fallida para
-  // que el administrador la anote a mano antes de cualquier restauración.
-  if (solicitud.derecho === 'supresion') {
+  // El bloqueo y la supresión quedan anotados fuera de la base, para
+  // reaplicarlos si se restaura un respaldo anterior. Ya están aplicados y
+  // respondidos: si el archivo no se puede escribir, no se le devuelve un
+  // error al funcionario (repetirlos daría 409), sino que queda en la
+  // auditoría como fallido para que el administrador lo anote a mano antes de
+  // cualquier restauración. La supresión ya implica el bloqueo: una sola anotación.
+  if (solicitud.derecho === 'bloqueo') {
+    await anotarRestriccion({ tipo: 'bloqueo', pacienteId, solicitudId });
+  } else {
     try {
       registrarSupresion(pacienteId, solicitudId);
     } catch (err) {
@@ -745,6 +750,7 @@ async function desbloquear(solicitudId, solicitante) {
     throw new AppError('El titular ejerció la supresión: su bloqueo es permanente', 409);
   }
   await pacienteService.cambiarBloqueo(solicitud.pacienteId, false, { usuarioId: solicitante.id, solicitudId });
+  await anotarRestriccion({ tipo: 'desbloqueo', pacienteId: solicitud.pacienteId, solicitudId });
 }
 
 // Rol del funcionario que aparece en "quién accedió a sus datos": el titular

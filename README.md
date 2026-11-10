@@ -56,7 +56,7 @@ npm run encuestas              # invitación a la encuesta de ayer, solo con con
 npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer (cada hora)
 npm run auditoria:copiar       # copia la auditoría nueva a AUDITORIA_COPIA_DIR, con su SHA-256 (cada 15 minutos)
 npm run auditoria:verificar    # compara la auditoría con su copia; si no coincide, sale con 1 y levanta una alerta crítica (diario)
-npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
+npm run supresiones:reaplicar  # vuelve a aplicar supresiones, bloqueos y revocaciones (lo corre ops/restaurar-db.sh)
 npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids] [--incidente N]
 npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--incidente N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
 npm run incidente:reconstruir -- --correo cuenta@dominio --desde AAAA-MM-DD[THH:MM] --hasta AAAA-MM-DD[THH:MM] [--incidente N] [--json]  # lo que hizo una cuenta, en orden
@@ -250,6 +250,39 @@ MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/restaurar-db.sh respaldos/me
 Un respaldo solo sirve si se puede restaurar: conviene probar la
 restauración periódicamente, no solo generar los archivos.
 
+### Lo que el titular ya pidió sobrevive a una restauración
+
+Un respaldo anterior a un pedido del titular lo deshace: devuelve el contacto
+suprimido, levanta un bloqueo y vuelve a permitir un uso al que se opuso. Para
+evitarlo, cada una de esas decisiones queda anotada en
+`registro/supresiones.jsonl`, fuera de la base y de sus respaldos (solo el id
+del paciente, la fecha, el tipo y, en una revocación, el uso y el canal; nunca
+un dato personal). `ops/restaurar-db.sh` corre `npm run supresiones:reaplicar`
+al terminar:
+
+| Se anota | Al restaurar |
+|---|---|
+| Supresión | contacto eliminado, consentimientos revocados, sin representante, bloqueado y sin citas futuras |
+| Bloqueo y desbloqueo | queda como lo dejó el último de los dos; un bloqueo anula las citas futuras |
+| Revocación u oposición | se cierra el consentimiento de ese uso, solo si se otorgó antes de la revocación (uno nuevo se respeta) |
+
+Reaplicar es idempotente y cada corrección queda en la auditoría
+(`REAPLICAR_SUPRESION` y `REAPLICAR_RESTRICCION`). Si una anotación no se puede
+escribir, el derecho ya está aplicado y el titular no ve un error: queda
+`ANOTAR_SUPRESION` o `ANOTAR_RESTRICCION` como fallido en la auditoría, y el
+administrador debe anotarla a mano antes de restaurar.
+
+`npm run retencion` quita las anotaciones más antiguas que la vigencia de los
+respaldos (`MEDIBOX_RESPALDO_DIAS`, 30 por omisión, más un día): ya no hay una
+copia anterior que las necesite. Conviene definir esa variable igual para el
+respaldo y para la aplicación.
+
+Lo que **no** se reaplica: las rectificaciones. Hacerlo exigiría guardar el
+valor nuevo fuera de la base, un dato personal. Tras restaurar, privacidad
+revisa desde la auditoría (`UPDATE`) las rectificaciones posteriores a la copia
+y las repite. Tampoco quedan anotados los bloqueos y revocaciones anteriores a
+esta versión: un respaldo previo a ella no los recupera.
+
 Cada respaldo exitoso elimina los anteriores con más de 30 días
 (`MEDIBOX_RESPALDO_DIAS` cambia el plazo). Solo toca archivos
 `medibox-*.dump.gpg` del directorio de destino.
@@ -262,7 +295,7 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 | Historial de cambios, consentimientos y solicitudes de derechos | igual que la ficha | no se eliminan: son la prueba de lo que pidió el titular |
 | Paciente bloqueado (bloqueo o supresión) | igual que la ficha | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante |
 | Códigos de verificación y del portal | 10 minutos, un solo uso | solo se guarda su hash; `npm run retencion` borra el hash y la sal al día siguiente (la fila queda como respaldo de lo que verificó) |
-| Lista de supresiones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores a la supresión | fuera de la base; `ops/restaurar-db.sh` la reaplica |
+| Anotaciones de supresiones, bloqueos y revocaciones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores (30 días) | fuera de la base; `ops/restaurar-db.sh` las reaplica y `npm run retencion` las poda |
 | Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |
 | Notificaciones | 1 año | `npm run retencion` las elimina |
 | Sesiones | 8 horas (las del portal del paciente, 15 minutos) | vencen solas; `npm run sesiones:cerrar` cierra las de una cuenta |

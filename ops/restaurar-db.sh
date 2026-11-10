@@ -32,8 +32,9 @@ descifrar | docker compose -f "$raiz/docker-compose.yml" exec -T db \
 
 echo "Base restaurada desde $archivo"
 
-# Un respaldo anterior a una supresión la desharía: se vuelven a aplicar las
-# supresiones anotadas fuera de la base (registro/supresiones.jsonl).
+# Un respaldo anterior a un pedido del titular lo desharía: se vuelven a aplicar
+# las supresiones, los bloqueos y las revocaciones anotados fuera de la base
+# (registro/supresiones.jsonl).
 docker compose -f "$raiz/docker-compose.yml" exec -T app npm run supresiones:reaplicar
-echo "Supresiones reaplicadas"
+echo "Supresiones, bloqueos y revocaciones reaplicados"
 

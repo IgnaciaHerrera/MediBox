@@ -198,6 +198,17 @@ const EVENTOS = {
     descripcion: 'Reaplicación de una supresión después de restaurar un respaldo.',
     sensible: true,
   },
+  ANOTAR_RESTRICCION: {
+    categoria: 'derechos',
+    entidades: ['Paciente'],
+    descripcion: 'Falla al anotar un bloqueo o una revocación para reaplicarlos tras restaurar un respaldo.',
+  },
+  REAPLICAR_RESTRICCION: {
+    categoria: 'derechos',
+    entidades: ['Paciente'],
+    descripcion: 'Reaplicación de un bloqueo, un desbloqueo o una revocación después de restaurar un respaldo.',
+    sensible: true,
+  },
   EXPORT_TITULAR: {
     categoria: 'derechos',
     entidades: ['Paciente'],
