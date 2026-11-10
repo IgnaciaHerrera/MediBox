@@ -60,9 +60,14 @@
         <label for="sol-finalidad">Uso al que se opone (oposición)</label>
         <select id="sol-finalidad" name="finalidadClave">
           <option value="">—</option>
-          <option value="recordatorios">Recordatorios de citas</option>
-          <option value="investigacion">Investigación y estadística</option>
-          <option value="encuestas">Encuestas de satisfacción</option>
+          <optgroup label="Usos con consentimiento (se revocan)">
+            <option value="recordatorios">Recordatorios de citas</option>
+            <option value="investigacion">Investigación y estadística</option>
+            <option value="encuestas">Encuestas de satisfacción</option>
+          </optgroup>
+          <optgroup label="Tratamientos por ley (se rechaza con fundamento)">
+            <% Object.keys(consentimiento.tratamientosPorLey).forEach(function(clave) { %><option value="<%= clave %>"><%= consentimiento.tratamientosPorLey[clave].nombre %></option><% }) %>
+          </optgroup>
         </select>
       </div>
     </div>

@@ -426,7 +426,7 @@
             <h2 id="descarga-json">JSON</h2>
           </div>
           <p class="portal-descarga-texto">Para llevar tus datos a otro establecimiento: el formato estructurado de la portabilidad, que cualquier sistema puede leer.</p>
-          <button type="submit" name="formato" value="json" class="btn btn-primary btn--auto btn--control">Descargar en JSON</button>
+          <button type="submit" name="formato" value="json" formnovalidate class="btn btn-primary btn--auto btn--control">Descargar en JSON</button>
         </section>
         <section class="panel-card cita-seccion" aria-labelledby="descarga-excel">
           <div class="cita-seccion-head">
@@ -434,7 +434,7 @@
             <h2 id="descarga-excel">Excel</h2>
           </div>
           <p class="portal-descarga-texto">Para revisarlos en una planilla, con una hoja por tema.</p>
-          <button type="submit" name="formato" value="excel" class="btn btn-primary btn--auto btn--control">Descargar en Excel</button>
+          <button type="submit" name="formato" value="excel" formnovalidate class="btn btn-primary btn--auto btn--control">Descargar en Excel</button>
         </section>
         <section class="panel-card cita-seccion" aria-labelledby="descarga-pdf">
           <div class="cita-seccion-head">
@@ -442,6 +442,11 @@
             <h2 id="descarga-pdf">PDF</h2>
           </div>
           <p class="portal-descarga-texto">Para leerlos con calma o imprimirlos. Es la copia de acceso a tus datos.</p>
+          <div class="field">
+            <label for="clave-pdf">Contraseña del PDF</label>
+            <input id="clave-pdf" type="password" name="clave" minlength="8" maxlength="64" autocomplete="new-password" placeholder="De 8 a 64 caracteres" required />
+          </div>
+          <p class="ayuda">Elígela tú: tus datos de salud van dentro, así que el PDF solo se abre con ella. MediBox no la guarda ni puede recuperarla.</p>
           <button type="submit" name="formato" value="pdf" class="btn btn-primary btn--auto btn--control">Descargar en PDF</button>
         </section>
       </form>

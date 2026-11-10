@@ -4,7 +4,7 @@ const { verificarContrasena } = require('../services/authService');
 const { registrar } = require('../services/auditService');
 const { AppError } = require('../lib/AppError');
 const { responderAccion } = require('../lib/responderError');
-const { validarFormato, enviarArchivo } = require('../lib/archivoTitular');
+const { validarFormato, claveDelPdf, enviarArchivo } = require('../lib/archivoTitular');
 
 // El archivo de un titular concentra todos sus datos: se genera solo con una
 // reautenticación reciente del funcionario.
@@ -126,10 +126,14 @@ async function descargar(req, res, next) {
     }
     const id = idDe(req);
     const formato = validarFormato(req.body.formato);
+    // El PDF entregado en persona lo protege la contraseña que elige el titular
+    // (antes de generarlo: generarlo resuelve la solicitud). Al contacto
+    // registrado no se genera nada aquí, así que no hace falta.
+    const clave = req.body.entrega === 'presencial' ? claveDelPdf(formato, req.body.clave) : null;
     const archivo = await derechosService.exportarDatosTitular(id, req.usuario, { entrega: req.body.entrega, formato });
     // Al contacto registrado no se genera nada aquí: el titular lo descarga en el portal.
     if (!archivo) return responderAccion(req, res, 'Se avisó al contacto registrado: el titular descarga su copia en el portal');
-    return await enviarArchivo(res, archivo, formato, `datos-titular-${id}`);
+    return await enviarArchivo(res, archivo, formato, `datos-titular-${id}`, { clave });
   } catch (err) {
     next(err);
   }

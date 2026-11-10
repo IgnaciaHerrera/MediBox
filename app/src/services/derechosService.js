@@ -2,7 +2,7 @@ const Joi = require('joi');
 const { prisma } = require('../lib/prisma');
 const { AppError } = require('../lib/AppError');
 const { cifrar, descifrar } = require('../lib/cifrado');
-const { TRATAMIENTO } = require('../lib/tratamiento');
+const { TRATAMIENTO, TRATAMIENTOS_POR_LEY } = require('../lib/tratamiento');
 const { ETIQUETAS } = require('../lib/archivoTitular');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { logger } = require('../lib/logger');
@@ -10,7 +10,7 @@ const { registrar } = require('./auditService');
 const pacienteService = require('./pacienteService');
 const citaService = require('./citaService');
 const consentimientoService = require('./consentimientoService');
-const { registrarSupresion } = require('./supresionService');
+const { registrarSupresion, anotarRestriccion } = require('./anotacionService');
 const { METODOS, exigirVerificacion } = require('./verificacionService');
 const { crearNotificacion } = require('./notificacionService');
 const canalEnvio = require('../lib/canalEnvio');
@@ -105,6 +105,21 @@ function faltaAcreditar(solicitud) {
   return exigeDocumento(solicitud) && [null, consentimientoService.DECLARADA].includes(solicitud.solicitanteAcreditacion);
 }
 
+// El tratamiento por ley al que se opone una solicitud de oposición, o null si
+// se opone a un uso con consentimiento (o no es una oposición).
+function tratamientoPorLey(clave) {
+  return Object.prototype.hasOwnProperty.call(TRATAMIENTOS_POR_LEY, clave) ? TRATAMIENTOS_POR_LEY[clave] : null;
+}
+
+function oposicionPorLey(solicitud) {
+  return solicitud.derecho === 'oposicion' ? tratamientoPorLey(solicitud.finalidadClave) : null;
+}
+
+// La respuesta de un rechazo fundado: qué se pidió y por qué no procede.
+function rechazoPorLey(tratamiento) {
+  return `Su oposición no procede: ${tratamiento.nombre} es un tratamiento que el hospital hace por ley. ${tratamiento.fundamento}`;
+}
+
 function sumarDias(fecha, dias) {
   return new Date(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
 }
@@ -197,8 +212,11 @@ async function crearSolicitud(pacienteId, value, { recibidaPorId, actor = 'usuar
     if (errorValor) throw new AppError(errorValor.details[0].message, 400);
     valorPropuestoCifrado = cifrar(`solicitud.valor.${value.campo}`, valor);
   }
-  if (value.derecho === 'oposicion' && !(await prisma.finalidad.findFirst({ where: { clave: value.finalidadClave, activa: true } }))) {
-    throw new AppError('Solo es posible oponerse a un uso que requiere consentimiento', 400);
+  // Se puede registrar la oposición a un uso con consentimiento (se atiende
+  // revocándolo) o a un tratamiento que el hospital hace por ley (se rechaza
+  // con fundamento): al titular siempre se le responde.
+  if (value.derecho === 'oposicion' && !tratamientoPorLey(value.finalidadClave) && !(await prisma.finalidad.findFirst({ where: { clave: value.finalidadClave, activa: true } }))) {
+    throw new AppError('Indica a qué uso o tratamiento se opone', 400);
   }
   if (consentimientoService.requiereRepresentante(await pacienteService.edadDe(pacienteId))) {
     if (!value.solicitanteEsRepresentante || !value.solicitanteRelacion) {
@@ -611,6 +629,10 @@ async function obtenerParaGestion(solicitudId, solicitante) {
       motivoProrroga: solicitud.prorrogaMotivoCifrado ? descifrar('solicitud.prorroga', solicitud.prorrogaMotivoCifrado) : null,
       metodosAceptados: METODOS_POR_DERECHO[solicitud.derecho],
       faltaAcreditar: faltaAcreditar(solicitud),
+      // Una oposición a lo que se trata por ley no se ejecuta: se rechaza, con
+      // el fundamento ya redactado para que privacidad lo revise.
+      porLey: oposicionPorLey(solicitud),
+      rechazoSugerido: oposicionPorLey(solicitud) ? rechazoPorLey(oposicionPorLey(solicitud)) : null,
     },
     documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
     relaciones: RELACIONES_SOLICITUD,
@@ -641,6 +663,9 @@ async function obtenerParaGestion(solicitudId, solicitante) {
 async function ejecutar(solicitudId, solicitante, datos) {
   const solicitud = await solicitudOError(solicitudId);
   exigirVerificada(solicitud);
+  if (oposicionPorLey(solicitud)) {
+    throw new AppError('La oposición es a un tratamiento que el hospital hace por ley: no hay nada que revocar, se responde con un rechazo fundado', 409);
+  }
   const respuesta = validarRespuesta(datos);
   const { pacienteId } = solicitud;
   const marca = { usuarioId: solicitante.id, solicitudId };
@@ -669,6 +694,8 @@ async function ejecutar(solicitudId, solicitante, datos) {
       await cerrar(solicitud, solicitante, { estado: 'resuelta', respuesta }, tx);
       await consentimientoService.revocarAbiertos(pacienteId, { finalidadClave: solicitud.finalidadClave, canal: solicitud.canal, usuarioId: solicitante.id, verificacionId: solicitud.verificacionId }, tx);
     });
+    // Ya confirmada: se anota para reaplicarla si se restaura un respaldo anterior.
+    await anotarRestriccion({ tipo: 'revocacion', pacienteId, solicitudId, finalidad: solicitud.finalidadClave, canal: solicitud.canal });
     return;
   }
 
@@ -690,12 +717,15 @@ async function ejecutar(solicitudId, solicitante, datos) {
     await citaService.anularCita(citaId, solicitante.id);
   }
 
-  // La supresión queda anotada fuera de la base, para reaplicarla si se
-  // restaura un respaldo anterior. Ya está aplicada y respondida: si el
-  // archivo no se puede escribir, no se le devuelve un error al funcionario
-  // (repetirla daría 409), sino que queda en la auditoría como fallida para
-  // que el administrador la anote a mano antes de cualquier restauración.
-  if (solicitud.derecho === 'supresion') {
+  // El bloqueo y la supresión quedan anotados fuera de la base, para
+  // reaplicarlos si se restaura un respaldo anterior. Ya están aplicados y
+  // respondidos: si el archivo no se puede escribir, no se le devuelve un
+  // error al funcionario (repetirlos daría 409), sino que queda en la
+  // auditoría como fallido para que el administrador lo anote a mano antes de
+  // cualquier restauración. La supresión ya implica el bloqueo: una sola anotación.
+  if (solicitud.derecho === 'bloqueo') {
+    await anotarRestriccion({ tipo: 'bloqueo', pacienteId, solicitudId });
+  } else {
     try {
       registrarSupresion(pacienteId, solicitudId);
     } catch (err) {
@@ -707,11 +737,14 @@ async function ejecutar(solicitudId, solicitante, datos) {
 
 /**
  * Rechaza una solicitud por el fondo (por ejemplo, una rectificación
- * improcedente). Nunca por falta de verificación: esa queda pendiente.
+ * improcedente o una oposición a un tratamiento por ley). Nunca por falta de
+ * verificación: esa queda pendiente.
  *
  * @param {number} solicitudId
  * @param {{id: number}} solicitante - req.usuario.
- * @param {{respuesta: string}} datos - el motivo, para el titular.
+ * @param {{respuesta?: string}} datos - el motivo, para el titular. Solo en la
+ *   oposición a un tratamiento por ley se puede omitir: se responde con su
+ *   base legal.
  * @returns {Promise<void>}
  * @throws {AppError} 409 si no está verificada; 400 sin respuesta.
  *
@@ -720,7 +753,11 @@ async function ejecutar(solicitudId, solicitante, datos) {
 async function rechazar(solicitudId, solicitante, datos) {
   const solicitud = await solicitudOError(solicitudId);
   exigirVerificada(solicitud);
-  await cerrar(solicitud, solicitante, { estado: 'rechazada', respuesta: validarRespuesta(datos) });
+  // Un rechazo por ley ya trae su fundamento: si privacidad no escribe otra
+  // cosa, se responde con él (y siempre con el aviso de reclamo, en cerrar()).
+  const porLey = oposicionPorLey(solicitud);
+  const escrita = datos && typeof datos.respuesta === 'string' && datos.respuesta.trim();
+  await cerrar(solicitud, solicitante, { estado: 'rechazada', respuesta: porLey && !escrita ? rechazoPorLey(porLey) : validarRespuesta(datos) });
 }
 
 /**
@@ -745,6 +782,7 @@ async function desbloquear(solicitudId, solicitante) {
     throw new AppError('El titular ejerció la supresión: su bloqueo es permanente', 409);
   }
   await pacienteService.cambiarBloqueo(solicitud.pacienteId, false, { usuarioId: solicitante.id, solicitudId });
+  await anotarRestriccion({ tipo: 'desbloqueo', pacienteId: solicitud.pacienteId, solicitudId });
 }
 
 // Rol del funcionario que aparece en "quién accedió a sus datos": el titular
@@ -955,6 +993,7 @@ async function exportarDesdePortal(pacienteId, verificacionId, formato) {
 }
 
 module.exports = {
+  TRATAMIENTOS_POR_LEY,
   DERECHOS,
   PLAZO_RESPUESTA_DIAS,
   PRORROGA_MAXIMA_DIAS,

@@ -46,17 +46,19 @@ npm run test:integration
 npm run seed         # datos de catálogo + usuario admin de desarrollo
 ```
 
-Procesos de operación (pensados para el cron del servidor o para un
-incidente; dentro de Docker se corren con `docker compose exec -T app ...`):
+Procesos de operación. En producción los corre solos el servicio `tareas`
+(ver "Procesos programados" abajo); a mano, o durante un incidente, dentro de
+Docker se corren con `docker compose exec -T app ...`:
 
 ```bash
 npm run retencion              # plazos de conservación (diario)
 npm run recordatorios          # recordatorios de citas, solo con consentimiento vigente (diario)
 npm run encuestas              # invitación a la encuesta de ayer, solo con consentimiento "encuestas" (diario)
-npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer (cada hora)
+npm run alertas                # reglas de accesos anómalos (guarda las alertas y avisa a su responsable) y solicitudes por vencer; con --solo-alertas o --solo-vencimientos, una de las dos (cada hora y a diario, respectivamente)
 npm run auditoria:copiar       # copia la auditoría nueva a AUDITORIA_COPIA_DIR, con su SHA-256 (cada 15 minutos)
 npm run auditoria:verificar    # compara la auditoría con su copia; si no coincide, sale con 1 y levanta una alerta crítica (diario)
-npm run supresiones:reaplicar  # vuelve a aplicar las supresiones (lo corre ops/restaurar-db.sh)
+npm run supresiones:reaplicar  # vuelve a aplicar depuraciones, supresiones, bloqueos y revocaciones (lo corre ops/restaurar-db.sh, con el dueño de la base)
+npm run depuracion             # lista los pacientes bloqueados que cumplieron 15 años desde su última atención; con --confirmar --autoriza <correo> los elimina (con el dueño de la base: ver "Depuración de lo bloqueado")
 npm run incidente:alcance -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--ids] [--incidente N]
 npm run incidente:evidencia -- --desde AAAA-MM-DD --hasta AAAA-MM-DD [--usuario N] [--incidente N]  # copia la auditoría a registro/evidencias con su SHA-256, antes de contener
 npm run incidente:reconstruir -- --correo cuenta@dominio --desde AAAA-MM-DD[THH:MM] --hasta AAAA-MM-DD[THH:MM] [--incidente N] [--json]  # lo que hizo una cuenta, en orden
@@ -72,6 +74,33 @@ Con `--incidente N`, la acción queda en la bitácora de ese incidente
 administradores de la base no puedan modificar (un servidor de respaldos o un
 bucket con bloqueo de objetos). Por omisión es `registro/auditoria-copia`, que
 solo sirve para desarrollo: en el mismo servidor no delata a quien lo controla.
+Por eso, **en producción es obligatoria**: la aplicación y las tareas no arrancan
+sin ella, y `auditoria:copiar` y `auditoria:verificar` se niegan a correr sin
+una ruta absoluta y fuera de la aplicación.
+
+### Procesos programados
+
+El servicio `tareas` de `docker-compose.yml` (`app/src/lib/programador.js`)
+ejecuta los procesos de arriba a su hora, cada uno en su propio proceso y sin
+cron ni dependencias nuevas. Las horas son las de Chile (`TZ`).
+
+| Tarea | Cuándo | Qué hace |
+|---|---|---|
+| `auditoria:copiar` | cada 15 minutos | copia la auditoría nueva a `AUDITORIA_COPIA_DIR` |
+| `alertas` | cada hora | evalúa las reglas de accesos anómalos y avisa a su responsable |
+| `vencimientos` | 08:00 | avisa a privacidad de las solicitudes de derechos vencidas o por vencer |
+| `retencion` | 02:00 | aplica los plazos de conservación y poda las anotaciones |
+| `auditoria:verificar` | 03:00 | compara la auditoría con su copia; si no coincide, alerta crítica |
+| `encuestas` | 09:00 | invita a la encuesta a quienes se atendieron ayer, con consentimiento |
+| `recordatorios` | 18:00 | recuerda las citas de mañana, con consentimiento |
+
+Una tarea que falla o no termina en 30 minutos se registra y no detiene a las
+demás; si la anterior sigue en curso, la siguiente se omite. En producción, el
+servicio se activa con `COMPOSE_PROFILES=operacion` en `.env` y arranca con
+`docker compose up -d`; es un perfil opcional porque en desarrollo la app y
+las pruebas comparten la base y no conviene que corran solos. Para verlos
+trabajar: `docker compose --profile operacion up -d tareas` y
+`docker compose logs -f tareas`.
 
 La auditoría vencida (más de 15 años) la elimina el dueño de la base, porque
 la aplicación no tiene permiso para borrarla:
@@ -79,6 +108,39 @@ la aplicación no tiene permiso para borrarla:
 ```bash
 docker compose run --rm migraciones npm run auditoria:purgar
 ```
+
+### Depuración de lo bloqueado
+
+La supresión y el bloqueo dejan la ficha clínica bloqueada porque la Ley 20.584,
+art. 13, obliga a conservarla al menos 15 años. Cumplido el plazo ya no hay
+obligación que lo justifique, y lo que se conserva sin finalidad se elimina. El
+plazo cuenta **desde la última atención** (la última cita que no se anuló) o, si
+el paciente nunca tuvo una, desde su alta. Conviene confirmar este criterio con
+la línea jurídica.
+
+Como la aplicación no puede borrar pacientes, la depuración la corre el dueño de
+la base, en dos pasos. Primero lista los candidatos, sin nombres y sin eliminar
+nada: pacientes **bloqueados**, con más de 15 años desde su última atención y sin
+una solicitud de derechos abierta. Después, con la cuenta de privacidad que la
+autoriza, los elimina:
+
+```bash
+docker compose run --rm migraciones npm run depuracion
+docker compose run --rm migraciones npm run depuracion -- --confirmar --autoriza privacidad@medibox.local [--solo 12,15]
+```
+
+Se elimina el paciente y todo lo que lo referencia (citas, consentimientos,
+solicitudes, historial y verificaciones), en una transacción por paciente. La
+auditoría no se toca: solo guarda ids y sigue su propio plazo de 15 años. Cada
+eliminación queda en la auditoría (`DEPURAR_PACIENTE`, con quien la autorizó) y
+anotada en `registro/supresiones.jsonl`: si se restaura un respaldo anterior
+(hasta 30 días), `ops/restaurar-db.sh` la vuelve a aplicar con el dueño de la
+base (`REAPLICAR_DEPURACION`).
+
+Un paciente que **no** está bloqueado no se depura aquí, aunque haya cumplido el
+plazo: nadie pidió su supresión, y eliminarlo corresponde a un procedimiento del
+hospital (qué fichas se descartan, con qué acta y quién lo autoriza) que todavía
+no está definido.
 
 ### Variables de entorno para tests locales
 
@@ -250,6 +312,40 @@ MEDIBOX_RESPALDO_CLAVE=~/medibox-respaldo.clave ops/restaurar-db.sh respaldos/me
 Un respaldo solo sirve si se puede restaurar: conviene probar la
 restauración periódicamente, no solo generar los archivos.
 
+### Lo que el titular ya pidió sobrevive a una restauración
+
+Un respaldo anterior a un pedido del titular lo deshace: devuelve el contacto
+suprimido, levanta un bloqueo y vuelve a permitir un uso al que se opuso. Para
+evitarlo, cada una de esas decisiones queda anotada en
+`registro/supresiones.jsonl`, fuera de la base y de sus respaldos (solo el id
+del paciente, la fecha, el tipo y, en una revocación, el uso y el canal; nunca
+un dato personal). `ops/restaurar-db.sh` corre `npm run supresiones:reaplicar`
+al terminar:
+
+| Se anota | Al restaurar |
+|---|---|
+| Depuración | el paciente se elimina otra vez, con todo lo que lo referencia (solo lo puede hacer el dueño de la base: el script usa el servicio `migraciones`) |
+| Supresión | contacto eliminado, consentimientos revocados, sin representante, bloqueado y sin citas futuras |
+| Bloqueo y desbloqueo | queda como lo dejó el último de los dos; un bloqueo anula las citas futuras |
+| Revocación u oposición | se cierra el consentimiento de ese uso, solo si se otorgó antes de la revocación (uno nuevo se respeta) |
+
+Reaplicar es idempotente y cada corrección queda en la auditoría
+(`REAPLICAR_SUPRESION` y `REAPLICAR_RESTRICCION`). Si una anotación no se puede
+escribir, el derecho ya está aplicado y el titular no ve un error: queda
+`ANOTAR_SUPRESION` o `ANOTAR_RESTRICCION` como fallido en la auditoría, y el
+administrador debe anotarla a mano antes de restaurar.
+
+`npm run retencion` quita las anotaciones más antiguas que la vigencia de los
+respaldos (`MEDIBOX_RESPALDO_DIAS`, 30 por omisión, más un día): ya no hay una
+copia anterior que las necesite. Conviene definir esa variable igual para el
+respaldo y para la aplicación.
+
+Lo que **no** se reaplica: las rectificaciones. Hacerlo exigiría guardar el
+valor nuevo fuera de la base, un dato personal. Tras restaurar, privacidad
+revisa desde la auditoría (`UPDATE`) las rectificaciones posteriores a la copia
+y las repite. Tampoco quedan anotados los bloqueos y revocaciones anteriores a
+esta versión: un respaldo previo a ella no los recupera.
+
 Cada respaldo exitoso elimina los anteriores con más de 30 días
 (`MEDIBOX_RESPALDO_DIAS` cambia el plazo). Solo toca archivos
 `medibox-*.dump.gpg` del directorio de destino.
@@ -258,11 +354,12 @@ Cada respaldo exitoso elimina los anteriores con más de 30 días
 
 | Dato | Plazo | Cómo se aplica |
 |---|---|---|
-| Pacientes, citas y auditoría | al menos 15 años (Ley 20.584, art. 13) | no se eliminan; la auditoría es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE) |
+| Pacientes y citas | al menos 15 años (Ley 20.584, art. 13) | no se eliminan por plazo; solo los bloqueados se depuran al cumplirse (ver "Depuración de lo bloqueado") |
+| Auditoría | 15 años | es de solo inserción (un trigger rechaza UPDATE, DELETE y TRUNCATE); `npm run auditoria:purgar` elimina lo que cumplió el plazo |
 | Historial de cambios, consentimientos y solicitudes de derechos | igual que la ficha | no se eliminan: son la prueba de lo que pidió el titular |
-| Paciente bloqueado (bloqueo o supresión) | igual que la ficha | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante |
+| Paciente bloqueado (bloqueo o supresión) | 15 años desde la última atención | se conserva sin usarse; la supresión elimina de verdad el contacto, los consentimientos y al representante; cumplido el plazo, `npm run depuracion` elimina al paciente y todo lo que lo referencia |
 | Códigos de verificación y del portal | 10 minutos, un solo uso | solo se guarda su hash; `npm run retencion` borra el hash y la sal al día siguiente (la fila queda como respaldo de lo que verificó) |
-| Lista de supresiones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores a la supresión | fuera de la base; `ops/restaurar-db.sh` la reaplica |
+| Anotaciones de supresiones, bloqueos y revocaciones (`registro/supresiones.jsonl`) | mientras existan respaldos anteriores (30 días) | fuera de la base; `ops/restaurar-db.sh` las reaplica y `npm run retencion` las poda |
 | Contacto del paciente | 2 años sin citas | `npm run retencion` lo elimina |
 | Notificaciones | 1 año | `npm run retencion` las elimina |
 | Sesiones | 8 horas (las del portal del paciente, 15 minutos) | vencen solas; `npm run sesiones:cerrar` cierra las de una cuenta |
@@ -300,9 +397,24 @@ las hace el propio titular en el **portal del paciente** (ver más abajo).
 - **Derechos ARCO+**: el operador recibe y verifica las solicitudes desde la
   ficha; el rol `privacidad` (usuario demo `privacidad@medibox.local`) las
   resuelve en `/solicitudes`. Acceso y portabilidad generan el archivo del
-  titular en Excel (estructurado: sirve para la portabilidad) o en PDF (para
-  leerlo), con reautenticación del funcionario, entregado en persona o al
-  contacto registrado.
+  titular en JSON (portabilidad), Excel o PDF (para leerlo), con
+  reautenticación del funcionario, entregado en persona o al contacto
+  registrado. El **PDF** lleva los datos de salud del titular, así que solo se
+  entrega protegido: el titular elige una contraseña de 8 a 64 caracteres al
+  pedirlo (en el portal, o escribiéndola él mismo en admisión) y el PDF se cifra
+  con AES-256; MediBox no la guarda, no la registra ni puede recuperarla, y sin
+  ella no se genera. Es una barrera contra el archivo olvidado en un
+  computador compartido o un USB perdido, no contra quien pueda adivinar una
+  contraseña débil: el cifrado estándar de PDF no frena un ataque de fuerza
+  bruta contra una contraseña corta. JSON y Excel **no** se cifran (no hay una
+  forma estándar que abra cualquier lector sin software adicional): se mitigan
+  con el canal, solo en persona o en la sesión autenticada del portal, nunca por
+  correo ni por un enlace. La **oposición** a un uso con consentimiento
+  (recordatorios, investigación, encuestas) lo revoca. La oposición a lo que
+  el hospital hace por ley (la atención, los avisos de citas, el registro de
+  accesos) no procede: se registra igual, y privacidad la rechaza con la base
+  legal ya redactada (`TRATAMIENTOS_POR_LEY` en `app/src/lib/tratamiento.js`) y
+  el aviso de que puede reclamar ante la Agencia.
 - **Auditoría**: registra quién (actor `usuario`, `sistema`, `titular` o
   `portal`), qué, sobre qué, cuándo, desde qué IP y con qué resultado, nunca el
   contenido de los datos. Las acciones posibles están en el catálogo

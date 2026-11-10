@@ -109,6 +109,8 @@ async function detalle(req, res, next) {
         relaciones: consentimientoService.RELACIONES,
         relacionesSolicitud: derechosService.RELACIONES_SOLICITUD,
         documentos: consentimientoService.DOCUMENTOS_REPRESENTACION,
+        // Tratamientos a los que también se puede oponer una solicitud (se rechaza con fundamento).
+        tratamientosPorLey: derechosService.TRATAMIENTOS_POR_LEY,
         // Para las solicitudes de derechos: las presenta el representante de un menor de 14.
         requiereRepresentante: consentimientoService.requiereRepresentante(paciente.edad),
         esAdolescente: paciente.edad >= consentimientoService.EDAD_CONSENTIMIENTO_PROPIO && paciente.edad < 18,

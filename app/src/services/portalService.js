@@ -5,6 +5,7 @@ const { descifrar, indiceCiego } = require('../lib/cifrado');
 const { normalizarRut } = require('../lib/rut');
 const canalEnvio = require('../lib/canalEnvio');
 const { registrar } = require('./auditService');
+const { anotarRestriccion } = require('./anotacionService');
 const pacienteService = require('./pacienteService');
 const consentimientoService = require('./consentimientoService');
 const derechosService = require('./derechosService');
@@ -215,16 +216,19 @@ function otorgar({ pacienteId, verificacionId }, { finalidadClave, textoId, acep
  *
  * Consumidores: routes/portal.js.
  */
-function revocar({ pacienteId, verificacionId }, finalidadClave) {
+async function revocar({ pacienteId, verificacionId }, finalidadClave) {
   // Sin finalidad, revocarAbiertos cerraría todas: aquí siempre es una.
   if (typeof finalidadClave !== 'string' || !finalidadClave) throw new AppError('Elija el uso que quiere revocar', 400);
-  return consentimientoService.revocarAbiertos(pacienteId, {
+  const revocados = await consentimientoService.revocarAbiertos(pacienteId, {
     finalidadClave,
     canal: derechosService.CANAL_PORTAL,
     usuarioId: null,
     verificacionId,
     actor: 'titular',
   });
+  // Se anota para reaplicarla si se restaura un respaldo anterior.
+  if (revocados > 0) await anotarRestriccion({ tipo: 'revocacion', pacienteId, finalidad: finalidadClave, canal: derechosService.CANAL_PORTAL });
+  return revocados;
 }
 
 /**

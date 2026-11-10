@@ -42,7 +42,7 @@
 
     <section class="panel-card panel-lista panel-texto">
       <div class="panel-lista-head"><h2>Qué pide</h2></div>
-      <p><%= QUE_HACE[s.derecho] %></p>
+      <p><%= s.porLey ? 'No procede: es un tratamiento que el hospital hace por ley, así que no hay nada que revocar. Se responde con un rechazo fundado, que lleva el aviso de que puede reclamar ante la Agencia.' : QUE_HACE[s.derecho] %></p>
       <% if (s.solicitanteEsRepresentante) { %>
         <p class="aviso">
           La presenta su <%= s.solicitanteRelacion === 'apoderado' ? 'apoderado' : 'representante (' + s.solicitanteRelacion + ')' %>;
@@ -53,7 +53,7 @@
       <% if (s.derecho === 'rectificacion') { %>
         <p><strong><%= CAMPOS[s.campo] %></strong>: el valor propuesto es <strong><%= s.valorPropuesto %></strong>. Revísalo antes de aplicarlo.</p>
       <% } %>
-      <% if (s.derecho === 'oposicion') { %><p>Uso al que se opone: <strong><%= s.finalidadClave %></strong>.</p><% } %>
+      <% if (s.derecho === 'oposicion') { %><p>Uso al que se opone: <strong><%= s.porLey ? s.porLey.nombre : s.finalidadClave %></strong>.</p><% } %>
       <% if (paciente.bloqueado) { %><p class="aviso">Paciente bloqueado: <%= paciente.motivoBloqueo %></p><% } %>
       <% if (s.motivoProrroga) { %><p>Motivo de la prórroga: <%= s.motivoProrroga %></p><% } %>
       <% if (s.respuesta) { %><p>Respuesta registrada: <%= s.respuesta %></p><% } %>
@@ -101,14 +101,16 @@
               <option value="excel">Excel (planilla)</option>
               <option value="pdf">PDF (para leer o imprimir)</option>
             </select>
+            <input type="password" name="clave" minlength="8" maxlength="64" autocomplete="new-password" placeholder="Contraseña del PDF" aria-label="Contraseña del PDF" />
             <button type="submit" class="btn btn-primary btn--auto btn--control">Entregar</button>
           </form>
         <% } %>
         <p class="ayuda">Nunca por el canal por el que llamaron: en persona, o en el portal del paciente, donde el titular entra con un código que llega a su contacto registrado. A distancia el archivo no pasa por tu correo.</p>
+        <p class="ayuda">Contraseña del PDF: si lo entregas en persona en PDF, el titular la elige y la escribe él mismo (de 8 a 64 caracteres); sin ella no se genera. El PDF solo se abre con esa contraseña y MediBox no la guarda. No hace falta para JSON, Excel ni al avisar al contacto.</p>
       </section>
     <% } %>
 
-    <% if (s.estado === 'verificada' && !esArchivo) { %>
+    <% if (s.estado === 'verificada' && !esArchivo && !s.porLey) { %>
       <section class="panel-card panel-lista panel-texto">
         <div class="panel-lista-head"><h2>Resolver</h2></div>
         <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/ejecutar">
@@ -136,12 +138,13 @@
 
     <% if (s.estado === 'verificada') { %>
       <section class="panel-card panel-lista panel-texto">
-        <div class="panel-lista-head"><h2>Rechazar por el fondo</h2></div>
+        <div class="panel-lista-head"><h2><%= s.porLey ? 'Rechazar con fundamento' : 'Rechazar por el fondo' %></h2></div>
         <form class="consentimiento-form" method="POST" action="/solicitudes/<%= s.id %>/rechazar">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
           <label for="motivo-rechazo">Motivo, para el titular</label>
-          <textarea id="motivo-rechazo" name="respuesta" rows="2" maxlength="2000" required></textarea>
-          <button type="submit" class="btn btn-neutro btn--auto btn--control">Rechazar</button>
+          <textarea id="motivo-rechazo" name="respuesta" rows="<%= s.porLey ? 5 : 2 %>" maxlength="2000" <%= s.porLey ? '' : 'required' %>><%= s.porLey ? s.rechazoSugerido : '' %></textarea>
+          <% if (s.porLey) { %><p class="ayuda">Ya lleva la base legal. Puedes ajustarlo; si lo dejas vacío, se responde con este mismo texto.</p><% } %>
+          <button type="submit" class="btn btn-neutro btn--auto btn--control"><%= s.porLey ? 'Rechazar y responder' : 'Rechazar' %></button>
         </form>
       </section>
     <% } %>

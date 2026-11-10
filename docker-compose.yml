@@ -34,6 +34,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Lo que solo puede hacer el dueño de la base (depurar pacientes al cumplirse
+    # el plazo legal, purgar la auditoría, reaplicar tras restaurar) comparte con
+    # la app el archivo de anotaciones de registro/.
+    volumes:
+      - ./registro:/app/registro
     logging: *logs-con-tope
 
   app:
@@ -56,6 +61,34 @@ services:
     # simulada donde llegan los códigos de verificación.
     volumes:
       - ./registro:/app/registro
+    logging: *logs-con-tope
+
+  # Corre los procesos de operación a su hora (app/src/lib/programador.js):
+  # revisión de alertas, copia y verificación de la auditoría, plazos de
+  # conservación, recordatorios y encuestas. Sin él, esas reglas existen pero
+  # nadie las evalúa. Es opcional (perfil `operacion`) porque en desarrollo la
+  # app y las pruebas comparten la base y no conviene que corran solos; en
+  # producción se activa una vez con COMPOSE_PROFILES=operacion en .env.
+  tareas:
+    profiles: ["operacion"]
+    build: ./app
+    env_file: .env
+    command: ["node", "src/tareas.js"]
+    environment:
+      TZ: America/Santiago
+      # Igual que la app: el rol de mínimo privilegio, nunca el dueño de la base.
+      DATABASE_URL: postgresql://medibox_app:${APP_DB_PASSWORD}@db:5432/${DB_NAME}
+      DB_PASSWORD: ""
+    depends_on:
+      migraciones:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    volumes:
+      - ./registro:/app/registro
+      # La copia externa de la auditoría: AUDITORIA_COPIA_DIR es la ruta de un
+      # almacenamiento de otro equipo montado en este servidor, y se monta en el
+      # contenedor en la misma ruta. Sin ella, en desarrollo, queda en registro/.
+      - ${AUDITORIA_COPIA_DIR:-./registro/auditoria-copia}:${AUDITORIA_COPIA_DIR:-/app/registro/auditoria-copia}
     logging: *logs-con-tope
 
 volumes:

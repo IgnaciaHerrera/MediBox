@@ -4,6 +4,7 @@ const path = require('path');
 const { prisma } = require('../lib/prisma');
 const { logger } = require('../lib/logger');
 const { registrar } = require('./auditService');
+const { problemaCopiaAuditoria } = require('../lib/entorno');
 
 // Copia de la auditoría hacia un almacenamiento aparte. El trigger de solo
 // inserción impide que la aplicación altere audit_log, pero el dueño de la
@@ -46,6 +47,10 @@ const SELECT = {
 };
 
 function directorio() {
+  // En producción la copia debe estar en otro equipo: los comandos que copian
+  // y verifican (que no pasan por el arranque del servidor) lo comprueban igual.
+  const problema = problemaCopiaAuditoria();
+  if (problema) throw new Error(problema);
   return (
     process.env.AUDITORIA_COPIA_DIR ||
     path.join(__dirname, '..', '..', 'registro', 'auditoria-copia')

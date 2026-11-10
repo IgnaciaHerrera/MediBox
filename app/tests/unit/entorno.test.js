@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const os = require('os');
+const path = require('path');
 const { revisarEntorno } = require('../../src/lib/entorno');
 const { VARIABLES_DE_LLAVE } = require('../../src/lib/cifrado');
 
@@ -9,6 +11,7 @@ describe('revisarEntorno', () => {
     process.env.NODE_ENV = 'production';
     process.env.DATABASE_URL = 'postgresql://medibox:una-clave-real@db:5432/medibox';
     process.env.SESSION_SECRET = crypto.randomBytes(48).toString('base64');
+    process.env.AUDITORIA_COPIA_DIR = path.join(os.tmpdir(), 'medibox-copia-externa');
     VARIABLES_DE_LLAVE.forEach((variable) => {
       process.env[variable] = crypto.randomBytes(32).toString('base64');
     });
@@ -38,6 +41,28 @@ describe('revisarEntorno', () => {
     process.env.NODE_ENV = 'development';
     process.env.DATABASE_URL = 'postgresql://medibox:change-me@db:5432/medibox';
     expect(revisarEntorno()).toEqual([]);
+  });
+
+  describe('copia externa de la auditoría', () => {
+    it('en producción exige AUDITORIA_COPIA_DIR: sin ella la copia quedaría en el mismo servidor', () => {
+      delete process.env.AUDITORIA_COPIA_DIR;
+      const problemas = revisarEntorno();
+      expect(problemas).toHaveLength(1);
+      expect(problemas[0]).toMatch(/AUDITORIA_COPIA_DIR/);
+    });
+
+    it('exige una ruta absoluta y fuera de la aplicación', () => {
+      process.env.AUDITORIA_COPIA_DIR = 'registro/auditoria-copia';
+      expect(revisarEntorno().join(' | ')).toMatch(/AUDITORIA_COPIA_DIR.*absoluta/);
+      process.env.AUDITORIA_COPIA_DIR = path.join(__dirname, '..', '..', 'registro', 'auditoria-copia');
+      expect(revisarEntorno().join(' | ')).toMatch(/AUDITORIA_COPIA_DIR.*dentro de la aplicación/);
+    });
+
+    it('fuera de producción no se exige: sirve la carpeta de desarrollo', () => {
+      process.env.NODE_ENV = 'development';
+      delete process.env.AUDITORIA_COPIA_DIR;
+      expect(revisarEntorno()).toEqual([]);
+    });
   });
 
   it('never includes a secret value in its messages', () => {

@@ -4,6 +4,7 @@ const { AppError } = require('../lib/AppError');
 const { cifrar, descifrar } = require('../lib/cifrado');
 const { normalizarRut, rutValido } = require('../lib/rut');
 const { registrar } = require('./auditService');
+const { anotarRestriccion } = require('./anotacionService');
 const pacienteService = require('./pacienteService');
 const { METODOS, exigirVerificacion } = require('./verificacionService');
 
@@ -243,7 +244,10 @@ async function registrarOtorgamiento({ pacienteId, finalidadClave, textoId, cana
 async function revocar({ pacienteId, finalidadClave, canal }, solicitante) {
   validarCanal(canal);
   const verificacion = await exigirVerificacion(pacienteId, solicitante.id, METODOS_CONSENTIMIENTO);
-  return revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId: solicitante.id, verificacionId: verificacion.id });
+  const revocados = await revocarAbiertos(pacienteId, { finalidadClave, canal, usuarioId: solicitante.id, verificacionId: verificacion.id });
+  // Se anota para reaplicarla si se restaura un respaldo anterior.
+  if (revocados > 0) await anotarRestriccion({ tipo: 'revocacion', pacienteId, finalidad: finalidadClave, canal });
+  return revocados;
 }
 
 /**
