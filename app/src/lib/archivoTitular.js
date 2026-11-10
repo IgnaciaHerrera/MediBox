@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const writeExcelFile = require('write-excel-file/node').default;
 const PDFDocument = require('pdfkit');
 const { isoLocal, fechaDMA } = require('./fecha');
@@ -202,15 +203,50 @@ function anchosPdf(columnas, anchoUtil) {
   return columnas.map((c) => (LARGAS.includes(c) ? '*' : normal));
 }
 
+// La contraseña del PDF la elige el titular al pedirlo. No hay un máximo
+// técnico, pero 64 evita abusos; el mínimo de 8 es lo que la guía de la clase
+// y el estándar de contraseñas piden como piso.
+const CLAVE_MINIMA = 8;
+const CLAVE_MAXIMA = 64;
+
+/**
+ * La contraseña con que se protege el PDF: la exige si el formato es PDF y la
+ * ignora en los demás. Se llama antes de generar el archivo, como
+ * validarFormato(): generarlo resuelve la solicitud, y una contraseña inválida
+ * no debe dejarla resuelta. No recorta la contraseña (los espacios cuentan) y
+ * el mensaje nunca la repite.
+ *
+ * @param {string} formato - ya validado con validarFormato().
+ * @param {*} clave - lo que llegó en la petición.
+ * @returns {(string|null)} la contraseña, o null si el formato no se protege.
+ * @throws {AppError} 400 si es un PDF y la contraseña no tiene de 8 a 64 caracteres.
+ *
+ * Consumidores: routes/portal.js, solicitudViewController.descargar.
+ */
+function claveDelPdf(formato, clave) {
+  if (formato !== 'pdf') return null;
+  if (typeof clave !== 'string' || clave.length < CLAVE_MINIMA || clave.length > CLAVE_MAXIMA) {
+    throw new AppError(`El PDF se protege con una contraseña de ${CLAVE_MINIMA} a ${CLAVE_MAXIMA} caracteres: elige una para poder abrirlo`, 400);
+  }
+  return clave;
+}
+
 /**
  * @param {object} archivo - ver secciones().
+ * @param {{clave?: string}} [opciones] - con `clave`, el PDF se cifra con AES-256
+ *   y solo se abre con ella. El servidor no la guarda ni la registra. Los
+ *   permisos dejan imprimirlo y copiarlo, pero no editarlo: la contraseña de
+ *   propietario es aleatoria y se descarta, así que nadie puede cambiarlos.
  * @returns {Promise<Buffer>} un PDF con una tabla por sección.
  *
  * Consumidores: routes/portal.js, solicitudViewController.descargar.
  */
-function aPdf(archivo) {
+function aPdf(archivo, { clave } = {}) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 36, info: { Title: 'Mis datos en MediBox' } });
+    const proteccion = clave
+      ? { userPassword: clave, ownerPassword: crypto.randomBytes(32).toString('hex'), pdfVersion: '1.7ext3', permissions: { printing: 'highResolution', modifying: false, copying: true, annotating: false, fillingForms: false, contentAccessibility: true, documentAssembly: false } }
+      : {};
+    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 36, info: { Title: 'Mis datos en MediBox' }, ...proteccion });
     const partes = [];
     doc.on('data', (parte) => partes.push(parte));
     doc.on('end', () => resolve(Buffer.concat(partes)));
@@ -281,17 +317,19 @@ function validarFormato(valor) {
  * @param {object} archivo - ver secciones().
  * @param {string} formato - ya validado con validarFormato().
  * @param {string} nombre - nombre del archivo, sin extensión.
+ * @param {{clave?: (string|null)}} [opciones] - la contraseña del PDF, ya
+ *   validada con claveDelPdf().
  * @returns {Promise<void>}
  *
  * Consumidores: routes/portal.js, solicitudViewController.descargar.
  */
-async function enviarArchivo(res, archivo, formato, nombre) {
+async function enviarArchivo(res, archivo, formato, nombre, { clave } = {}) {
   const { extension, tipo, generar } = FORMATOS[formato];
-  const contenido = await generar(archivo);
+  const contenido = await generar(archivo, { clave });
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', tipo);
   res.setHeader('Content-Disposition', `attachment; filename="${nombre}.${extension}"`);
   res.send(contenido);
 }
 
-module.exports = { ETIQUETAS, secciones, aExcel, aPdf, anchosPdf, aJson, validarFormato, enviarArchivo };
+module.exports = { ETIQUETAS, secciones, aExcel, aPdf, anchosPdf, aJson, validarFormato, claveDelPdf, enviarArchivo };

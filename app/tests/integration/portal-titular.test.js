@@ -68,10 +68,12 @@ describe('Portal del titular: sus datos y sus derechos', () => {
     expect(texto).toContain('Cómo tratamos mis datos');
     expect(texto).not.toContain('Portal Otro Paciente');
 
-    const pdf = await comoBinario(titular.post('/portal/descargar').send({ formato: 'pdf' }));
+    // El PDF lleva los datos de salud: solo se entrega protegido con la contraseña del titular.
+    const pdf = await comoBinario(titular.post('/portal/descargar').send({ formato: 'pdf', clave: 'clave-del-titular' }));
     expect(pdf.status).toBe(200);
     expect(pdf.headers['content-type']).toBe('application/pdf');
     expect(pdf.body.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pdf.body.toString('latin1')).toContain('/Encrypt');
 
     const solicitud = await prisma.solicitudDerecho.findFirst({ where: { pacienteId: pacientes.titular.id, derecho: 'portabilidad' } });
     expect(solicitud).toMatchObject({ canal: 'portal', estado: 'resuelta', entrega: 'portal', metodoVerificacion: 'codigo_portal', recibidaPorId: null });

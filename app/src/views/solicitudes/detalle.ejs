@@ -101,10 +101,12 @@
               <option value="excel">Excel (planilla)</option>
               <option value="pdf">PDF (para leer o imprimir)</option>
             </select>
+            <input type="password" name="clave" minlength="8" maxlength="64" autocomplete="new-password" placeholder="Contraseña del PDF" aria-label="Contraseña del PDF" />
             <button type="submit" class="btn btn-primary btn--auto btn--control">Entregar</button>
           </form>
         <% } %>
         <p class="ayuda">Nunca por el canal por el que llamaron: en persona, o en el portal del paciente, donde el titular entra con un código que llega a su contacto registrado. A distancia el archivo no pasa por tu correo.</p>
+        <p class="ayuda">Contraseña del PDF: si lo entregas en persona en PDF, el titular la elige y la escribe él mismo (de 8 a 64 caracteres); sin ella no se genera. El PDF solo se abre con esa contraseña y MediBox no la guarda. No hace falta para JSON, Excel ni al avisar al contacto.</p>
       </section>
     <% } %>
 

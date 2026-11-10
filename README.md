@@ -397,9 +397,19 @@ las hace el propio titular en el **portal del paciente** (ver más abajo).
 - **Derechos ARCO+**: el operador recibe y verifica las solicitudes desde la
   ficha; el rol `privacidad` (usuario demo `privacidad@medibox.local`) las
   resuelve en `/solicitudes`. Acceso y portabilidad generan el archivo del
-  titular en Excel (estructurado: sirve para la portabilidad) o en PDF (para
-  leerlo), con reautenticación del funcionario, entregado en persona o al
-  contacto registrado. La **oposición** a un uso con consentimiento
+  titular en JSON (portabilidad), Excel o PDF (para leerlo), con
+  reautenticación del funcionario, entregado en persona o al contacto
+  registrado. El **PDF** lleva los datos de salud del titular, así que solo se
+  entrega protegido: el titular elige una contraseña de 8 a 64 caracteres al
+  pedirlo (en el portal, o escribiéndola él mismo en admisión) y el PDF se cifra
+  con AES-256; MediBox no la guarda, no la registra ni puede recuperarla, y sin
+  ella no se genera. Es una barrera contra el archivo olvidado en un
+  computador compartido o un USB perdido, no contra quien pueda adivinar una
+  contraseña débil: el cifrado estándar de PDF no frena un ataque de fuerza
+  bruta contra una contraseña corta. JSON y Excel **no** se cifran (no hay una
+  forma estándar que abra cualquier lector sin software adicional): se mitigan
+  con el canal, solo en persona o en la sesión autenticada del portal, nunca por
+  correo ni por un enlace. La **oposición** a un uso con consentimiento
   (recordatorios, investigación, encuestas) lo revoca. La oposición a lo que
   el hospital hace por ley (la atención, los avisos de citas, el registro de
   accesos) no procede: se registra igual, y privacidad la rechaza con la base

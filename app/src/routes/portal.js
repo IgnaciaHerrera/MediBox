@@ -8,7 +8,7 @@ const { issueCsrfToken } = require('../middleware/csrf');
 const { AppError } = require('../lib/AppError');
 const { toast } = require('../lib/toast');
 const { TRATAMIENTO } = require('../lib/tratamiento');
-const { ETIQUETAS, validarFormato, enviarArchivo } = require('../lib/archivoTitular');
+const { ETIQUETAS, validarFormato, claveDelPdf, enviarArchivo } = require('../lib/archivoTitular');
 const consentimientoService = require('../services/consentimientoService');
 
 // Portal temporal del titular: público, sin cuentas. Ver
@@ -155,8 +155,10 @@ router.get('/mis-datos', requirePortal, async (req, res, next) => {
 router.post('/descargar', requirePortal, async (req, res, next) => {
   try {
     const formato = validarFormato(req.body.formato);
+    // Antes de generar: generarlo deja la portabilidad resuelta.
+    const clave = claveDelPdf(formato, req.body.clave);
     const archivo = await portalService.descargar(req.titular, formato);
-    return await enviarArchivo(res, archivo, formato, 'mis-datos-medibox');
+    return await enviarArchivo(res, archivo, formato, 'mis-datos-medibox', { clave });
   } catch (err) {
     return next(err);
   }

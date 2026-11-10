@@ -1,4 +1,4 @@
-const { secciones, aExcel, aPdf, anchosPdf } = require('../../src/lib/archivoTitular');
+const { secciones, aExcel, aPdf, anchosPdf, claveDelPdf } = require('../../src/lib/archivoTitular');
 const { textoDelExcel } = require('../helpers/archivo');
 
 // Hora local: el archivo muestra las marcas de tiempo en la hora del servidor.
@@ -50,6 +50,58 @@ describe('archivo del titular: anchos de columna del PDF', () => {
     const largo = { ...archivo, solicitudes: [{ ...archivo.solicitudes[0], respuesta: 'Se corrigió el dato que pidió. '.repeat(20) }] };
     const pdf = await aPdf(largo);
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+});
+
+describe('archivo del titular: PDF protegido con contraseña', () => {
+  const clave = 'una-clave-larga-123';
+  const comoTexto = (pdf) => pdf.toString('latin1');
+
+  it('con contraseña, el PDF queda cifrado con AES-256 y la contraseña no está en el archivo', async () => {
+    const pdf = await aPdf(archivo, { clave });
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(comoTexto(pdf)).toContain('/Encrypt');
+    expect(comoTexto(pdf)).toContain('/AESV3');
+    expect(comoTexto(pdf)).not.toContain(clave);
+  });
+
+  it('sin contraseña, el PDF no se cifra (como antes)', async () => {
+    expect(comoTexto(await aPdf(archivo))).not.toContain('/Encrypt');
+  });
+
+  it('el titular que lo abre puede imprimirlo y copiarlo, pero no editarlo', async () => {
+    // Los permisos van en el diccionario de cifrado (/P): imprimir y copiar sí.
+    const texto = comoTexto(await aPdf(archivo, { clave }));
+    expect(texto).toMatch(/\/P -?\d+/);
+  });
+
+  describe('claveDelPdf', () => {
+    it('el PDF exige una contraseña de 8 a 64 caracteres', () => {
+      expect(claveDelPdf('pdf', clave)).toBe(clave);
+      expect(claveDelPdf('pdf', 'x'.repeat(8))).toBe('x'.repeat(8));
+      expect(claveDelPdf('pdf', 'x'.repeat(64))).toBe('x'.repeat(64));
+      for (const invalida of [undefined, null, '', 'corta', 'x'.repeat(65), 12345678, ['abcdefgh']]) {
+        expect(() => claveDelPdf('pdf', invalida)).toThrow(expect.objectContaining({ statusCode: 400 }));
+      }
+    });
+
+    it('conserva los espacios de la contraseña: no la recorta', () => {
+      expect(claveDelPdf('pdf', '  con espacios  ')).toBe('  con espacios  ');
+    });
+
+    it('los otros formatos no la piden ni la usan', () => {
+      expect(claveDelPdf('excel', undefined)).toBeNull();
+      expect(claveDelPdf('json', 'cualquiera')).toBeNull();
+    });
+
+    it('el mensaje de error nunca repite la contraseña', () => {
+      try {
+        claveDelPdf('pdf', 'corta');
+      } catch (err) {
+        expect(err.message).not.toContain('corta');
+        expect(err.message).toMatch(/8 a 64/);
+      }
+    });
   });
 });
 
