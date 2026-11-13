@@ -56,7 +56,9 @@ describe('Respuesta a incidentes', () => {
     it('copia la auditoría de la ventana fuera de la base y deja su SHA-256 en la auditoría', async () => {
       const desde = new Date(Date.now() - 60 * 1000);
       await registrar({ usuarioId: comprometida.id, accion: 'READ', entidad: 'Paciente', entidadId: 0, detalle: { motivo: 'prueba-evidencia' } });
-      const r = await incidentes.preservarEvidencia({ desde, hasta: new Date(), usuarioId: comprometida.id });
+      // hasta con margen: registrar() usa la hora de la base, que puede ir unos
+      // ms adelantada respecto de la de este proceso.
+      const r = await incidentes.preservarEvidencia({ desde, hasta: new Date(Date.now() + 60 * 1000), usuarioId: comprometida.id });
 
       const contenido = fs.readFileSync(r.archivo, 'utf8');
       expect(crypto.createHash('sha256').update(contenido).digest('hex')).toBe(r.sha256);

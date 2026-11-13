@@ -140,7 +140,9 @@ describe('Alertas de accesos anómalos', () => {
     // Una cuenta nueva en cada corrida: las alertas se guardan, y la misma
     // actividad de una corrida anterior ya no es una alerta nueva.
     const curioso = await usuarioDePrueba(`alertas-curioso-${crypto.randomBytes(4).toString('hex')}@medibox.local`, 'consulta', password);
-    await fila({ usuarioId: curioso.id, accion: 'READ', resultado: 'denegado', entidadId: 98 });
+    // Con la hora de este proceso: la de la base (now()) puede ir unos ms
+    // adelantada y dejar la fila fuera de la ventana, que termina en new Date().
+    await fila({ usuarioId: curioso.id, accion: 'READ', resultado: 'denegado', entidadId: 98, timestamp: new Date(Date.now() - 1000) });
     const antes = new Date();
     const { alertas: cantidad, nuevas } = await alertas.notificarAlertas();
     expect(cantidad).toBeGreaterThan(0);
